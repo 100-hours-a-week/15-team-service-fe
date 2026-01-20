@@ -1,45 +1,53 @@
-import { useCallback, useMemo, useState } from "react";
+import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 
-/**
- * Temporary stub for useChatbot.
- * Expected API (used by ResumeViewerPage):
- * - useChatbot({ onUpdate })
- * - returns { messages, isLoading, handleSendMessage }
- */
-export function useChatbot(options = {}) {
+export const useChatbot = (options = {}) => {
   const { onUpdate } = options;
-
   const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
-  const handleSendMessage = useCallback(
-    async (text) => {
-      setMessages((prev) => [
-        ...prev,
-        { id: String(Date.now()), role: "user", content: text },
-      ]);
+  const handleSendMessage = useCallback(() => {
+    if (!chatInput.trim() || isUpdating) return;
 
-      // "loading" 흉내만 내고, onUpdate가 있으면 샘플 텍스트를 한 번 흘려보냄
-      setIsLoading(true);
-      try {
-        const chunk = "\n# AI updated content (stub)\n";
-        if (typeof onUpdate === "function") onUpdate(chunk);
+    const userMessage = {
+      role: 'user',
+      content: chatInput,
+      timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+    };
 
-        setMessages((prev) => [
-          ...prev,
-          { id: String(Date.now() + 1), role: "ai", content: "stub response" },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [onUpdate]
-  );
+    setMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsUpdating(true);
 
-  return useMemo(
-    () => ({ messages, isLoading, handleSendMessage }),
-    [messages, isLoading, handleSendMessage]
-  );
-}
+    // AI 응답 시뮬레이션
+    setTimeout(() => {
+      const aiMessage = {
+        role: 'assistant',
+        content: '네, 요청하신 내용을 반영하여 이력서를 수정하고 있습니다. 잠시만 기다려주세요.',
+        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages(prev => [...prev, aiMessage]);
 
-export default useChatbot;
+      // YAML 업데이트 시뮬레이션
+      setTimeout(() => {
+        if (onUpdate) {
+          onUpdate('\n# AI가 수정한 내용...');
+        }
+        setIsUpdating(false);
+        toast.success('업데이트가 반영되었습니다');
+      }, 1500);
+    }, 1000);
+  }, [chatInput, isUpdating, onUpdate]);
+
+  return {
+    messages,
+    chatInput,
+    setChatInput,
+    isUpdating,
+    isPaused,
+    setIsPaused,
+    handleSendMessage,
+  };
+};
