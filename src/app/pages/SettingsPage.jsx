@@ -1,26 +1,78 @@
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera } from "lucide-react";
+import { Camera, LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { BottomNav } from "../components/layout/BottomNav";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
+import { SelectGrid } from "../components/common/SelectGrid";
+import { ConfirmDialog } from "../components/modals/ConfirmDialog";
 import { POSITIONS } from "@/app/constants";
+import { formatPhoneNumber, validatePhoneNumber, getPhoneErrorMessage } from "@/app/lib/utils";
+import { useUser } from "../hooks/useUser";
+
+/**
+ * @typedef {import('@/app/types').UserProfile} UserProfile
+ */
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const { user, updateUser, clearUser } = useUser();
 
-  const userData = {
-    name: "예지",
-    position: "백엔드",
-    phone: "010-1234-5678",
-    profileImage: null,
-  };
+  const [isEditing, setIsEditing] = useState(false);
+  /** @type {[UserProfile, React.Dispatch<React.SetStateAction<UserProfile>>]} */
+  const [editData, setEditData] = useState(user);
+  /** @type {[string | undefined, React.Dispatch<React.SetStateAction<string | undefined>>]} */
+  const [phoneError, setPhoneError] = useState(undefined);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
-  const useResumeData = true;
-  const isEditing = false;
+  const handleEdit = useCallback(() => {
+    setIsEditing(true);
+    setEditData(user);
+  }, [user]);
 
-  const handleSave = () => {};
-  const handlePhoneChange = () => {};
-  const handleLogout = () => {};
+  const handleSave = useCallback(() => {
+    if (!editData.phone || validatePhoneNumber(editData.phone)) {
+      updateUser(editData);
+      setIsEditing(false);
+      setPhoneError(undefined);
+      toast.success("프로필이 저장되었습니다");
+    } else {
+      const errorMsg = getPhoneErrorMessage(editData.phone);
+      setPhoneError(errorMsg);
+    }
+  }, [editData, updateUser]);
+
+  const handleCancel = useCallback(() => {
+    setIsEditing(false);
+    setEditData(user);
+    setPhoneError(undefined);
+  }, [user]);
+
+  const handlePhoneChange = useCallback((e) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setEditData((prev) => ({ ...prev, phone: formatted }));
+    if (phoneError) {
+      setPhoneError(undefined);
+    }
+  }, [phoneError]);
+
+  const handleLogout = useCallback(() => {
+    setIsLogoutDialogOpen(true);
+  }, []);
+
+  const handleConfirmLogout = useCallback(() => {
+    clearUser();
+    toast.success("로그아웃되었습니다");
+    setIsLogoutDialogOpen(false);
+    navigate("/");
+  }, [navigate, clearUser]);
+
+  const handleCancelLogout = useCallback(() => {
+    setIsLogoutDialogOpen(false);
+  }, []);
+
+  const [useResumeData, setUseResumeData] = useState(true);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -48,36 +100,31 @@ export function SettingsPage() {
               <div className="space-y-4">
                 <Input
                   label="이름"
-                  value={userData.name}
-                  onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                  name="name"
+                  value={editData.name}
+                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                 />
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-700">희망 포지션</label>
-                  <select
-                    className="min-h-[44px] px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    value={userData.position}
-                    onChange={(e) => setUserData({ ...userData, position: e.target.value })}
-                  >
-                    {POSITIONS.map((pos) => (
-                      <option key={pos} value={pos}>
-                        {pos}
-                      </option>
-                    ))}
-                  </select>
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">희망 포지션</label>
+                  <SelectGrid
+                    items={POSITIONS}
+                    selected={editData.position}
+                    onSelect={(pos) => setEditData({ ...editData, position: pos })}
+                  />
                 </div>
 
                 <Input
                   label="전화번호"
                   type="tel"
                   placeholder="010-1234-5678"
-                  value={userData.phone}
+                  value={editData.phone}
                   onChange={handlePhoneChange}
                   error={phoneError}
                 />
 
                 <div className="flex gap-2 pt-2">
-                  <Button variant="secondary" fullWidth onClick={() => setIsEditing(false)}>
+                  <Button variant="secondary" fullWidth onClick={handleCancel}>
                     취소
                   </Button>
                   <Button variant="primary" fullWidth onClick={handleSave}>
@@ -89,18 +136,18 @@ export function SettingsPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-600">이름</span>
-                  <span className="font-medium">{userData.name}</span>
+                  <span className="font-medium">{user.name}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-600">희망 포지션</span>
-                  <span className="font-medium">{userData.position}</span>
+                  <span className="font-medium">{user.position}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-600">전화번호</span>
-                  <span className="font-medium">{userData.phone || '미등록'}</span>
+                  <span className="font-medium">{user.phone || '미등록'}</span>
                 </div>
 
-                <Button variant="secondary" fullWidth onClick={() => setIsEditing(true)}>
+                <Button variant="secondary" fullWidth onClick={handleEdit}>
                   수정
                 </Button>
               </div>
@@ -142,6 +189,16 @@ export function SettingsPage() {
       </div>
 
       <BottomNav />
+
+      <ConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        onClose={handleCancelLogout}
+        onConfirm={handleConfirmLogout}
+        title="로그아웃"
+        description="정말 로그아웃하시겠습니까?"
+        confirmText="로그아웃"
+        cancelText="취소"
+      />
     </div>
   );
 }

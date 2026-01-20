@@ -1,29 +1,86 @@
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { TopAppBar } from "../../components/layout/TopAppBar";
+import { SelectGrid } from "../../components/common/SelectGrid";
 import { POSITIONS } from '@/app/constants';
+import { formatPhoneNumber, validatePhoneNumber, getPhoneErrorMessage } from '@/app/lib/utils';
+import { useUser } from '../../hooks/useUser';
 
 export function SignupPage() {
   const navigate = useNavigate();
+  const { updateUser } = useUser();
 
-  const formData = {
+  const [formData, setFormData] = useState({
     name: '',
     position: '',
     phone: '',
-  };
+  });
 
-  const agreements = {
+  const [errors, setErrors] = useState({
+    name: undefined,
+    position: undefined,
+    phone: undefined,
+  });
+
+  const [agreements, setAgreements] = useState({
     privacy: false,
     phoneCollection: false,
-  };
+  });
 
-  const handleSubmit = (e) => {
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  }, [errors]);
+
+  const handlePhoneChange = useCallback((e) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setFormData((prev) => ({ ...prev, phone: formatted }));
+    if (errors.phone) {
+      setErrors((prev) => ({ ...prev, phone: undefined }));
+    }
+  }, [errors.phone]);
+
+  const handleSubmit = useCallback((e) => {
     e.preventDefault();
-  };
 
-  const handlePhoneChange = () => {};
+    const newErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "이름을 입력해주세요";
+    }
+
+    if (!formData.position) {
+      newErrors.position = "희망 포지션을 선택해주세요";
+      toast.error("희망 포지션을 선택해주세요");
+    }
+
+    if (!validatePhoneNumber(formData.phone)) {
+      newErrors.phone = getPhoneErrorMessage(formData.phone);
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    const profile = {
+      name: formData.name,
+      position: formData.position,
+      phone: formData.phone,
+      profileImage: null,
+    };
+    updateUser(profile);
+
+    toast.success("회원가입이 완료되었습니다");
+    navigate("/home");
+  }, [formData, navigate, updateUser]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -44,25 +101,27 @@ export function SignupPage() {
           {/* Form Fields */}
           <Input
             label="이름 *"
+            name="name"
             placeholder="이름을 입력하세요"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={handleChange}
+            error={errors.name}
             required
           />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">희망 포지션 *</label>
-            <select
-              className="min-h-[44px] px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              value={formData.position}
-              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-              required
-            >
-              <option value="">포지션을 선택하세요</option>
-              {POSITIONS.map((pos) => (
-                <option key={pos} value={pos}>{pos}</option>
-              ))}
-            </select>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-700">희망 포지션 *</label>
+            <SelectGrid
+              items={POSITIONS}
+              selected={formData.position}
+              onSelect={(pos) => {
+                setFormData({ ...formData, position: pos });
+                if (errors.position) {
+                  setErrors((prev) => ({ ...prev, position: undefined }));
+                }
+              }}
+            />
+            {errors.position && <p className="mt-1 text-sm text-danger">{errors.position}</p>}
           </div>
 
           <Input
@@ -71,7 +130,7 @@ export function SignupPage() {
             placeholder="010-1234-5678"
             value={formData.phone}
             onChange={handlePhoneChange}
-            error={phoneError}
+            error={errors.phone}
           />
 
           {/* Agreements */}

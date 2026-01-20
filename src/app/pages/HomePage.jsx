@@ -1,28 +1,32 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Video } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../components/common/Button";
 import { BottomNav } from "../components/layout/BottomNav";
 import { DropdownMenu } from "../components/common/DropdownMenu";
+import { ConfirmDialog } from "../components/modals/ConfirmDialog";
+import { EditTextDialog } from "../components/modals/EditTextDialog";
+import { ChatRoomListModal } from "../components/features/ChatRoomListModal";
+import { useUser } from "../hooks/useUser";
 
 /**
- * Phase 1: 레이아웃 및 컴포넌트 구조
- *
  * @typedef {import('@/app/types').Resume} Resume
+ * @typedef {import('@/app/types').UserProfile} UserProfile
  */
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { user } = useUser();
 
-  // Phase 1: Mock 데이터 (하드코딩)
-  /** @type {Resume[]} */
-  const resumes = [
+  /** @type {[Resume[], React.Dispatch<React.SetStateAction<Resume[]>>]} */
+  const [resumes, setResumes] = useState([
     {
       id: "12345",
       name: "2025-12-23_12345",
       createdAt: "2025-12-23",
       position: "백엔드",
-      company: "한화시스템",
+      company: "회사1",
     },
     {
       id: "12346",
@@ -31,17 +35,26 @@ export function HomePage() {
       position: "프론트엔드",
       company: "",
     },
-  ];
+  ]);
 
-  // Phase 1: 빈 핸들러 (동작 없음)
-  const handleDeleteResume = () => {};
-  const handleEditResumeName = () => {};
+  /** @type {[{id: string, name: string} | null, React.Dispatch<React.SetStateAction<{id: string, name: string} | null>>]} */
+  const [editTarget, setEditTarget] = useState(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  /** @type {[string | null, React.Dispatch<React.SetStateAction<string | null>>]} */
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const user = {
-    name: "예지",
-    position: "백엔드",
-    profileImage: null,
-  };
+  const handleEditResumeName = useCallback((id, newName) => {
+    setResumes((prev) =>
+      prev.map((resume) => (resume.id === id ? { ...resume, name: newName } : resume))
+    );
+    toast.success("이력서명이 수정되었습니다");
+  }, []);
+
+  const handleDeleteResume = useCallback((id) => {
+    setResumes((prev) => prev.filter((resume) => resume.id !== id));
+    toast.success("이력서가 삭제되었습니다");
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -53,7 +66,10 @@ export function HomePage() {
               <h2 className="mb-2">{user.name}님 어서오세요!</h2>
               <p className="text-sm text-gray-600">희망 포지션: {user.position}</p>
             </div>
-            {user.profileImage && <div className="w-16 h-16 rounded-full bg-gray-200" />}
+            <div className="flex items-center gap-2">
+              <ChatRoomListModal />
+              {user.profileImage && <div className="w-16 h-16 rounded-full bg-gray-200" />}
+            </div>
           </div>
         </div>
       </header>
@@ -95,70 +111,153 @@ export function HomePage() {
 }
 
 /**
- * Phase 1: UI 구조만 렌더링 (모달, 이벤트 핸들러 제외)
- *
  * @typedef {Object} ResumeCardProps
  * @property {Resume} resume
- * @property {() => void} [onDelete] - Phase 1에서는 미사용
- * @property {() => void} [onEdit] - Phase 1에서는 미사용
+ * @property {(id: string) => void} onDelete
+ * @property {(id: string, newName: string) => void} onEdit
  */
 
 /**
  * @param {ResumeCardProps} props
  */
-function ResumeCard({ resume }) {
-  const navigate = useNavigate();
+const ResumeCard = React.memo(
+  ({ resume, onDelete, onEdit }) => {
+    const navigate = useNavigate();
 
-  // Phase 1: 빈 핸들러 (동작 없음)
-  const handleViewResume = () => {
-    navigate(`/resume/${resume.id}`);
-  };
+    /** @type {[{id: string, name: string} | null, React.Dispatch<React.SetStateAction<{id: string, name: string} | null>>]} */
+    const [editTarget, setEditTarget] = useState(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    /** @type {[string | null, React.Dispatch<React.SetStateAction<string | null>>]} */
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const handleStartInterview = () => {
-    navigate(`/interview/start?resumeId=${resume.id}`);
-  };
+    const handleViewResume = useCallback(() => {
+      navigate(`/resume/${resume.id}`);
+    }, [navigate, resume.id]);
 
-  const menuItems = [
-    {
-      label: "이력서명 수정",
-      onClick: () => {}, // Phase 1: 빈 핸들러
-    },
-    {
-      label: "이력서 삭제",
-      onClick: () => {}, // Phase 1: 빈 핸들러
-      variant: "danger",
-    },
-  ];
+    const handleStartInterview = useCallback(() => {
+      navigate(`/interview/start?resumeId=${resume.id}`);
+    }, [navigate, resume.id]);
 
-  return (
-    <div className="bg-white rounded-2xl p-4 border border-gray-200 relative">
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h4 className="mb-1 truncate">{resume.name}</h4>
-          <p className="text-sm text-gray-500">{resume.createdAt}</p>
+    const handleResumeNameEdit = useCallback(
+      (e) => {
+        e.stopPropagation();
+        setEditTarget({ id: resume.id, name: resume.name });
+        setIsEditDialogOpen(true);
+      },
+      [resume.id, resume.name]
+    );
+
+    const handleConfirmEdit = useCallback(
+      (newValue) => {
+        if (!editTarget) return;
+        onEdit(editTarget.id, newValue);
+        setIsEditDialogOpen(false);
+        setEditTarget(null);
+      },
+      [editTarget, onEdit]
+    );
+
+    const handleCancelEdit = useCallback(() => {
+      setIsEditDialogOpen(false);
+      setEditTarget(null);
+    }, []);
+
+    const handleDeleteClick = useCallback(
+      (e) => {
+        e.stopPropagation();
+        setDeleteTarget(resume.id);
+        setIsDeleteDialogOpen(true);
+      },
+      [resume.id]
+    );
+
+    const handleConfirmDelete = useCallback(() => {
+      if (!deleteTarget) return;
+      onDelete(deleteTarget);
+      setIsDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    }, [deleteTarget, onDelete]);
+
+    const handleCancelDelete = useCallback(() => {
+      setIsDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    }, []);
+
+    const menuItems = [
+      {
+        label: "이력서명 수정",
+        onClick: handleResumeNameEdit,
+      },
+      {
+        label: "이력서 삭제",
+        onClick: handleDeleteClick,
+        variant: "danger",
+      },
+    ];
+
+    return (
+      <>
+        <div className="bg-white rounded-2xl p-4 border border-gray-200 relative">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h4 className="mb-1 truncate">{resume.name}</h4>
+              <p className="text-sm text-gray-500">{resume.createdAt}</p>
+            </div>
+
+            <DropdownMenu items={menuItems} />
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs">{resume.position}</span>
+            <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+              {resume.company || "미지정"}
+            </span>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={handleViewResume}>
+              <FileText className="w-4 h-4" strokeWidth={1.5} />
+              이력서 보기
+            </Button>
+            <Button variant="primary" className="flex-1" onClick={handleStartInterview}>
+              <Video className="w-4 h-4" strokeWidth={1.5} />
+              모의 면접
+            </Button>
+          </div>
         </div>
 
-        <DropdownMenu items={menuItems} />
-      </div>
+        <EditTextDialog
+          isOpen={isEditDialogOpen}
+          onClose={handleCancelEdit}
+          onConfirm={handleConfirmEdit}
+          initialValue={editTarget?.name || ""}
+          title="이력서명 수정"
+          label="이력서명"
+          placeholder="이력서명을 입력하세요"
+          errorMessage="이력서명을 입력해주세요"
+        />
 
-      {/* Position and Company Chips */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs">{resume.position}</span>
-        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-          {resume.company || "미지정"}
-        </span>
-      </div>
+        <ConfirmDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={handleCancelDelete}
+          onConfirm={handleConfirmDelete}
+          title="이력서 삭제"
+          description="정말 이력서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+          confirmText="삭제"
+          cancelText="취소"
+        />
+      </>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.resume.id === nextProps.resume.id &&
+      prevProps.resume.name === nextProps.resume.name &&
+      prevProps.onDelete === nextProps.onDelete &&
+      prevProps.onEdit === nextProps.onEdit
+    );
+  }
+);
 
-      <div className="flex gap-2">
-        <Button variant="secondary" className="flex-1" onClick={handleViewResume}>
-          <FileText className="w-4 h-4" strokeWidth={1.5} />
-          이력서 보기
-        </Button>
-        <Button variant="primary" className="flex-1" onClick={handleStartInterview}>
-          <Video className="w-4 h-4" strokeWidth={1.5} />
-          모의 면접
-        </Button>
-      </div>
-    </div>
-  );
-}
+ResumeCard.displayName = "ResumeCard";

@@ -29,6 +29,7 @@ export function SelectGrid({
       {items.map((item) => (
         <button
           key={item}
+          type="button"
           onClick={() => onSelect(item)}
           className={cn(
             "p-4 rounded-xl border-2 transition-all min-h-[56px]",

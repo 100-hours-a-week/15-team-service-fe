@@ -16,10 +16,11 @@ import { cn } from '../../lib/utils';
  * Text input modal with validation
  *
  * Implementation Decision - Positioning:
- * - Uses fixed positioning to ensure modal appears at viewport center
- * - Portal renders to document.body (default Radix behavior)
- * - Max-width: max-w-[390px] to match mobile app constraint
- * - Always visible at screen center regardless of scroll position
+ * - Uses absolute positioning scoped to app container
+ * - Portal renders to #app-container (NOT document.body)
+ * - Overlay covers only the app container area (absolute inset-0 bg-black/40)
+ * - Max-width: max-w-[350px] for comfortable padding within mobile viewport
+ * - Gray background outside app container is NOT darkened
  *
  * @typedef {Object} EditTextDialogProps
  * @property {boolean} isOpen
@@ -81,15 +82,15 @@ export function EditTextDialog({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={handleClose}>
-      <AlertDialogPortal>
+      <AlertDialogPortal container={document.getElementById('app-container')}>
         <AlertDialogPrimitive.Overlay
           className={cn(
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50"
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 absolute inset-0 z-50 bg-black/40"
           )}
         />
         <AlertDialogPrimitive.Content
           className={cn(
-            "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[390px] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200"
+            "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 absolute top-[50%] left-[50%] z-50 grid w-full max-w-[350px] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200"
           )}
         >
           <AlertDialogHeader>

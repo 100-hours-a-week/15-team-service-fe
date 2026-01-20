@@ -1,9 +1,12 @@
+import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from "../../components/common/Button";
 import { TopAppBar } from "../../components/layout/TopAppBar";
 import { BottomNav } from "../../components/layout/BottomNav";
 import { StepProgress } from "../../components/common/StepProgress";
 import { SelectGrid } from "../../components/common/SelectGrid";
+import { ConfirmDialog } from "../../components/modals/ConfirmDialog";
 import { POSITIONS } from '@/app/constants';
 
 /**
@@ -15,18 +18,56 @@ export function CreateResumePage() {
   const location = useLocation();
   const selectedRepos = location.state?.selectedRepos || [];
 
-  const step = 1;
-  const loading = false;
-  const formData = {
+  // Phase 2: State management for multi-step form
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
     position: '',
     company: '',
-  };
-  const isConfirmDialogOpen = false;
+  });
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
-  const handleNext = () => {};
-  const handleOpenConfirmDialog = () => {};
-  const handleCloseConfirmDialog = () => {};
-  const handleConfirmGenerate = () => {};
+  /**
+   * Step 1 → Step 2 navigation
+   * Validates position selection before proceeding
+   */
+  const handleNext = useCallback(() => {
+    if (!formData.position) {
+      toast.error('희망 포지션을 선택해주세요');
+      return;
+    }
+    setStep(2);
+  }, [formData.position]);
+
+  /**
+   * Opens confirmation dialog before starting resume generation
+   */
+  const handleOpenConfirmDialog = useCallback(() => {
+    setIsConfirmDialogOpen(true);
+  }, []);
+
+  /**
+   * Closes confirmation dialog without action
+   */
+  const handleCloseConfirmDialog = useCallback(() => {
+    setIsConfirmDialogOpen(false);
+  }, []);
+
+  /**
+   * Confirms resume generation and starts loading flow
+   * Simulates AI resume generation with 2-second delay
+   * Navigates to home page after completion
+   */
+  const handleConfirmGenerate = useCallback(() => {
+    setIsConfirmDialogOpen(false);
+    setLoading(true);
+
+    // Simulate AI resume generation
+    setTimeout(() => {
+      toast.success('이력서가 생성되었습니다');
+      navigate('/home');
+    }, 2000);
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -111,7 +152,7 @@ export function CreateResumePage() {
 
               <input
                 type="text"
-                placeholder="예: 한화시스템"
+                placeholder="예: 회사1"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 className="w-full min-h-[44px] px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
