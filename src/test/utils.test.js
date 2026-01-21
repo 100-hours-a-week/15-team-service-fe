@@ -10,7 +10,10 @@ describe('utils', () => {
   });
 
   it('cn은 truthy 클래스만 결합한다', () => {
-    const result = cn('btn', false, ['active', null], { hidden: false, ok: true });
+    const result = cn('btn', false, ['active', null], {
+      hidden: false,
+      ok: true,
+    });
     expect(result).toBe('btn active ok');
   });
 });
