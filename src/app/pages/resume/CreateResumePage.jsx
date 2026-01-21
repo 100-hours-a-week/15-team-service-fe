@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button } from "../../components/common/Button";
-import { TopAppBar } from "../../components/layout/TopAppBar";
-import { BottomNav } from "../../components/layout/BottomNav";
-import { StepProgress } from "../../components/common/StepProgress";
-import { SelectGrid } from "../../components/common/SelectGrid";
-import { ConfirmDialog } from "../../components/modals/ConfirmDialog";
+import { Button } from '../../components/common/Button';
+import { TopAppBar } from '../../components/layout/TopAppBar';
+import { BottomNav } from '../../components/layout/BottomNav';
+import { StepProgress } from '../../components/common/StepProgress';
+import { SelectGrid } from '../../components/common/SelectGrid';
+import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import { POSITIONS } from '@/app/constants';
 
 /**
@@ -103,10 +103,15 @@ export function CreateResumePage() {
           {/* Selected Repos Info */}
           {selectedRepos.length > 0 && (
             <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-primary/20">
-              <p className="text-xs text-primary mb-2">선택된 레포지토리 ({selectedRepos.length}개)</p>
+              <p className="text-xs text-primary mb-2">
+                선택된 레포지토리 ({selectedRepos.length}개)
+              </p>
               <div className="space-y-2">
-                {selectedRepos.map(repo => (
-                  <div key={repo.id} className="flex items-center justify-between">
+                {selectedRepos.map((repo) => (
+                  <div
+                    key={repo.id}
+                    className="flex items-center justify-between"
+                  >
                     <h4 className="text-primary font-medium">{repo.name}</h4>
                     <span className="text-xs text-primary/60">#{repo.id}</span>
                   </div>
@@ -154,7 +159,9 @@ export function CreateResumePage() {
                 type="text"
                 placeholder="예: 회사1"
                 value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, company: e.target.value })
+                }
                 className="w-full min-h-[44px] px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
 
@@ -166,11 +173,7 @@ export function CreateResumePage() {
                 >
                   AI로 이력서 생성
                 </Button>
-                <Button
-                  variant="ghost"
-                  fullWidth
-                  onClick={() => setStep(1)}
-                >
+                <Button variant="ghost" fullWidth onClick={() => setStep(1)}>
                   이전
                 </Button>
               </div>

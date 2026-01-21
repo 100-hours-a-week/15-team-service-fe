@@ -22,20 +22,20 @@ export function SelectGrid({
   onSelect,
   renderItem = (item) => item,
   columns = 2,
-  className
+  className,
 }) {
   return (
-    <div className={cn("grid gap-3", `grid-cols-${columns}`, className)}>
+    <div className={cn('grid gap-3', `grid-cols-${columns}`, className)}>
       {items.map((item) => (
         <button
           key={item}
           type="button"
           onClick={() => onSelect(item)}
           className={cn(
-            "p-4 rounded-xl border-2 transition-all min-h-[56px]",
+            'p-4 rounded-xl border-2 transition-all min-h-[56px]',
             selected === item
-              ? "border-primary bg-blue-50 text-primary"
-              : "border-gray-200 bg-white hover:border-gray-300"
+              ? 'border-primary bg-blue-50 text-primary'
+              : 'border-gray-200 bg-white hover:border-gray-300'
           )}
         >
           {renderItem(item)}

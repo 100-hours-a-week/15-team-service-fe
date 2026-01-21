@@ -16,11 +16,7 @@ import { cn } from '@/app/lib/utils';
 /**
  * @param {DropdownMenuProps} props
  */
-export const DropdownMenu = ({
-  items,
-  trigger,
-  className
-}) => {
+export const DropdownMenu = ({ items, trigger, className }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   /**
@@ -41,11 +37,13 @@ export const DropdownMenu = ({
           setIsOpen(!isOpen);
         }}
         className={cn(
-          "p-2 -mr-2 min-w-[44px] min-h-[44px] flex items-center justify-center",
+          'p-2 -mr-2 min-w-[44px] min-h-[44px] flex items-center justify-center',
           className
         )}
       >
-        {trigger || <MoreVertical className="w-5 h-5 text-gray-500" strokeWidth={1.5} />}
+        {trigger || (
+          <MoreVertical className="w-5 h-5 text-gray-500" strokeWidth={1.5} />
+        )}
       </button>
 
       {isOpen && (
@@ -63,8 +61,8 @@ export const DropdownMenu = ({
                 key={idx}
                 onClick={(e) => handleItemClick(item, e)}
                 className={cn(
-                  "w-full px-4 py-2 text-left text-sm hover:bg-gray-50",
-                  item.variant === 'danger' && "text-[#EF4444]"
+                  'w-full px-4 py-2 text-left text-sm hover:bg-gray-50',
+                  item.variant === 'danger' && 'text-[#EF4444]'
                 )}
               >
                 {item.label}

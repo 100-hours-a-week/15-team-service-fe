@@ -51,26 +51,16 @@ import { Button } from '../common/Button';
 /**
  * @param {PreviewModalProps} props
  */
-export function PreviewModal({
-  isOpen,
-  onClose,
-  onDownload,
-  children,
-}) {
+export function PreviewModal({ isOpen, onClose, onDownload, children }) {
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent
-        side="bottom"
-        className="h-[90vh] flex flex-col"
-      >
+      <SheetContent side="bottom" className="h-[90vh] flex flex-col">
         <SheetHeader>
           <SheetTitle>이력서 미리보기</SheetTitle>
         </SheetHeader>
 
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto py-4">
-          {children}
-        </div>
+        <div className="flex-1 overflow-y-auto py-4">{children}</div>
 
         <SheetFooter className="border-t border-gray-200 pt-4">
           <div className="flex gap-3 w-full max-w-[390px] mx-auto">

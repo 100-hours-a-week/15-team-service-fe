@@ -18,7 +18,7 @@ export const YAMLViewer = forwardRef(
         <div
           ref={ref}
           className={cn(
-            "max-w-[390px] mx-auto bg-gray-900 rounded-2xl p-4 overflow-auto",
+            'max-w-[390px] mx-auto bg-gray-900 rounded-2xl p-4 overflow-auto',
             className
           )}
           style={{ maxHeight }}

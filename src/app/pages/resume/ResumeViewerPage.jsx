@@ -1,14 +1,14 @@
-import { useRef, useState, useCallback } from "react";
-import { useParams, useBlocker } from "react-router-dom";
-import { Save, Download, MessageCircle } from "lucide-react";
-import { toast } from "sonner";
-import { TopAppBar } from "../../components/layout/TopAppBar";
-import { BottomNav } from "../../components/layout/BottomNav";
-import { ChatbotBottomSheet } from "../../components/features/ChatbotBottomSheet";
-import { ParsedResumeViewer } from "../../components/features/ParsedResumeViewer";
-import { GenericPreviewModal } from "../../components/modals/GenericPreviewModal";
-import { WarningDialog } from "../../components/modals/WarningDialog";
-import { useChatbot } from "@/app/hooks/useChatbot";
+import { useRef, useState, useCallback } from 'react';
+import { useParams, useBlocker } from 'react-router-dom';
+import { Save, Download, MessageCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { TopAppBar } from '../../components/layout/TopAppBar';
+import { BottomNav } from '../../components/layout/BottomNav';
+import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
+import { ParsedResumeViewer } from '../../components/features/ParsedResumeViewer';
+import { GenericPreviewModal } from '../../components/modals/GenericPreviewModal';
+import { WarningDialog } from '../../components/modals/WarningDialog';
+import { useChatbot } from '@/app/hooks/useChatbot';
 
 const SAMPLE_YAML = `name: 유저1
 position: 백엔드 개발자
@@ -106,7 +106,7 @@ export function ResumeViewerPage() {
    */
   const handleSave = useCallback(() => {
     setHasUnsavedChanges(false);
-    toast.success("저장되었습니다");
+    toast.success('저장되었습니다');
   }, []);
 
   /**
@@ -115,7 +115,7 @@ export function ResumeViewerPage() {
    */
   const handleSaveAndStay = useCallback(() => {
     setHasUnsavedChanges(false);
-    toast.success("저장되었습니다");
+    toast.success('저장되었습니다');
     if (blocker.state === 'blocked') {
       blocker.reset(); // Cancel navigation, stay on page
     }
@@ -138,7 +138,7 @@ export function ResumeViewerPage() {
    * When implemented, will use jsPDF + html2canvas for Korean font support
    */
   const handleDownload = useCallback(() => {
-    toast("PDF 다운로드 준비 중입니다");
+    toast('PDF 다운로드 준비 중입니다');
   }, []);
 
   /**
@@ -147,7 +147,7 @@ export function ResumeViewerPage() {
    */
   const handleConfirmDownload = useCallback(async () => {
     setShowPreview(false);
-    toast("PDF 다운로드 준비 중입니다");
+    toast('PDF 다운로드 준비 중입니다');
   }, []);
 
   return (

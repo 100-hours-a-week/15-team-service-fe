@@ -1,10 +1,18 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Calendar, Filter, ChevronLeft, ChevronRight } from "lucide-react";
-import { BottomNav } from "../../components/layout/BottomNav";
-import { DropdownMenu } from "../../components/common/DropdownMenu";
-import { Collapsible, CollapsibleContent } from "../../components/ui/collapsible";
-import { Pagination, PaginationContent, PaginationItem, PaginationEllipsis } from "../../components/ui/pagination";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BottomNav } from '../../components/layout/BottomNav';
+import { DropdownMenu } from '../../components/common/DropdownMenu';
+import {
+  Collapsible,
+  CollapsibleContent,
+} from '../../components/ui/collapsible';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationEllipsis,
+} from '../../components/ui/pagination';
 import {
   POSITIONS,
   INTERVIEW_TYPE_LABELS,
@@ -12,8 +20,13 @@ import {
   ITEMS_PER_PAGE,
   FILTER_ALL_LABEL,
   FILTER_UNSPECIFIED_LABEL,
-} from "@/app/constants";
-import { extractUniqueCompanies, sortInterviews, generatePageNumbers, cn } from "@/app/lib/utils";
+} from '@/app/constants';
+import {
+  extractUniqueCompanies,
+  sortInterviews,
+  generatePageNumbers,
+  cn,
+} from '@/app/lib/utils';
 
 /**
  * @typedef {import('@/app/types').Interview} Interview
@@ -26,27 +39,27 @@ export function InterviewListPage() {
 
   const interviews = [
     {
-      id: "1",
-      name: "2025-12-23_기술_백엔드_한화시스템",
-      date: "2025-12-23",
-      type: "technical",
-      position: "백엔드",
-      company: "한화시스템",
+      id: '1',
+      name: '2025-12-23_기술_백엔드_한화시스템',
+      date: '2025-12-23',
+      type: 'technical',
+      position: '백엔드',
+      company: '한화시스템',
     },
     {
-      id: "2",
-      name: "2025-12-22_인성_백엔드_미지정",
-      date: "2025-12-22",
-      type: "personality",
-      position: "백엔드",
-      company: "",
+      id: '2',
+      name: '2025-12-22_인성_백엔드_미지정',
+      date: '2025-12-22',
+      type: 'personality',
+      position: '백엔드',
+      company: '',
     },
   ];
 
-  const filterType = "all";
-  const filterPosition = "all";
-  const filterCompany = "all";
-  const filterSort = "newest";
+  const filterType = 'all';
+  const filterPosition = 'all';
+  const filterCompany = 'all';
+  const filterSort = 'newest';
   const currentPage = 1;
   const isFilterOpen = false;
 
@@ -94,31 +107,39 @@ export function InterviewListPage() {
             <div className="max-w-[390px] mx-auto space-y-4">
               {/* Type Filter */}
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">유형</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  유형
+                </label>
                 <div className="flex bg-white rounded-xl border border-gray-200 p-1">
                   <button
-                    onClick={() => handleTypeChange("all")}
+                    onClick={() => handleTypeChange('all')}
                     className={cn(
-                      "flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]",
-                      filterType === "all" ? "bg-primary text-white" : "text-gray-600"
+                      'flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]',
+                      filterType === 'all'
+                        ? 'bg-primary text-white'
+                        : 'text-gray-600'
                     )}
                   >
                     {FILTER_ALL_LABEL}
                   </button>
                   <button
-                    onClick={() => handleTypeChange("technical")}
+                    onClick={() => handleTypeChange('technical')}
                     className={cn(
-                      "flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]",
-                      filterType === "technical" ? "bg-primary text-white" : "text-gray-600"
+                      'flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]',
+                      filterType === 'technical'
+                        ? 'bg-primary text-white'
+                        : 'text-gray-600'
                     )}
                   >
                     {INTERVIEW_TYPE_LABELS.technical}
                   </button>
                   <button
-                    onClick={() => handleTypeChange("personality")}
+                    onClick={() => handleTypeChange('personality')}
                     className={cn(
-                      "flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]",
-                      filterType === "personality" ? "bg-primary text-white" : "text-gray-600"
+                      'flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]',
+                      filterType === 'personality'
+                        ? 'bg-primary text-white'
+                        : 'text-gray-600'
                     )}
                   >
                     {INTERVIEW_TYPE_LABELS.personality}
@@ -128,15 +149,17 @@ export function InterviewListPage() {
 
               {/* Position Filter */}
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">직무</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  직무
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => handlePositionChange("all")}
+                    onClick={() => handlePositionChange('all')}
                     className={cn(
-                      "px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]",
-                      filterPosition === "all"
-                        ? "border-primary bg-blue-50 text-primary"
-                        : "border-gray-200 bg-white hover:border-gray-300"
+                      'px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]',
+                      filterPosition === 'all'
+                        ? 'border-primary bg-blue-50 text-primary'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
                     )}
                   >
                     {FILTER_ALL_LABEL}
@@ -146,10 +169,10 @@ export function InterviewListPage() {
                       key={position}
                       onClick={() => handlePositionChange(position)}
                       className={cn(
-                        "px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]",
+                        'px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]',
                         filterPosition === position
-                          ? "border-primary bg-blue-50 text-primary"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? 'border-primary bg-blue-50 text-primary'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
                       )}
                     >
                       {position}
@@ -160,15 +183,17 @@ export function InterviewListPage() {
 
               {/* Company Filter (Data-driven) */}
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">회사</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  회사
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => handleCompanyChange("all")}
+                    onClick={() => handleCompanyChange('all')}
                     className={cn(
-                      "px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]",
-                      filterCompany === "all"
-                        ? "border-primary bg-blue-50 text-primary"
-                        : "border-gray-200 bg-white hover:border-gray-300"
+                      'px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]',
+                      filterCompany === 'all'
+                        ? 'border-primary bg-blue-50 text-primary'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
                     )}
                   >
                     {FILTER_ALL_LABEL}
@@ -178,10 +203,10 @@ export function InterviewListPage() {
                       key={company}
                       onClick={() => handleCompanyChange(company)}
                       className={cn(
-                        "px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]",
+                        'px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]',
                         filterCompany === company
-                          ? "border-primary bg-blue-50 text-primary"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? 'border-primary bg-blue-50 text-primary'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
                       )}
                     >
                       {company}
@@ -192,15 +217,19 @@ export function InterviewListPage() {
 
               {/* Sort Filter */}
               <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">정렬</label>
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  정렬
+                </label>
                 <div className="flex bg-white rounded-xl border border-gray-200 p-1">
                   {Object.entries(SORT_LABELS).map(([key, label]) => (
                     <button
                       key={key}
                       onClick={() => handleSortChange(key)}
                       className={cn(
-                        "flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]",
-                        filterSort === key ? "bg-primary text-white" : "text-gray-600"
+                        'flex-1 px-3 py-2 text-sm rounded-lg transition-colors min-h-[44px]',
+                        filterSort === key
+                          ? 'bg-primary text-white'
+                          : 'text-gray-600'
                       )}
                     >
                       {label}
@@ -231,13 +260,20 @@ export function InterviewListPage() {
           ) : filteredAndSortedInterviews.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center border border-gray-200 space-y-3">
               <p className="text-gray-500">필터 조건에 맞는 면접이 없습니다.</p>
-              <button onClick={handleResetFilters} className="px-4 py-2 text-sm text-primary hover:underline">
+              <button
+                onClick={handleResetFilters}
+                className="px-4 py-2 text-sm text-primary hover:underline"
+              >
                 필터 초기화
               </button>
             </div>
           ) : (
             paginatedInterviews.map((interview) => (
-              <InterviewCard key={interview.id} interview={interview} onDelete={handleDeleteInterview} />
+              <InterviewCard
+                key={interview.id}
+                interview={interview}
+                onDelete={handleDeleteInterview}
+              />
             ))
           )}
         </div>
@@ -255,8 +291,10 @@ export function InterviewListPage() {
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     className={cn(
-                      "flex items-center gap-1 px-3 py-2 rounded-lg min-h-[44px] min-w-[44px] transition-colors",
-                      currentPage === 1 ? "text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100"
+                      'flex items-center gap-1 px-3 py-2 rounded-lg min-h-[44px] min-w-[44px] transition-colors',
+                      currentPage === 1
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:bg-gray-100'
                     )}
                     aria-label="이전 페이지"
                   >
@@ -267,17 +305,21 @@ export function InterviewListPage() {
                 {/* Page Numbers */}
                 {pageNumbers.map((pageNum, index) => (
                   <PaginationItem key={`page-${index}`}>
-                    {pageNum === "ellipsis" ? (
+                    {pageNum === 'ellipsis' ? (
                       <PaginationEllipsis />
                     ) : (
                       <button
                         onClick={() => handlePageChange(pageNum)}
                         className={cn(
-                          "flex items-center justify-center rounded-lg min-h-[44px] min-w-[44px] text-sm transition-colors",
-                          currentPage === pageNum ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
+                          'flex items-center justify-center rounded-lg min-h-[44px] min-w-[44px] text-sm transition-colors',
+                          currentPage === pageNum
+                            ? 'bg-primary text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
                         )}
                         aria-label={`페이지 ${pageNum}`}
-                        aria-current={currentPage === pageNum ? "page" : undefined}
+                        aria-current={
+                          currentPage === pageNum ? 'page' : undefined
+                        }
                       >
                         {pageNum}
                       </button>
@@ -291,10 +333,10 @@ export function InterviewListPage() {
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className={cn(
-                      "flex items-center gap-1 px-3 py-2 rounded-lg min-h-[44px] min-w-[44px] transition-colors",
+                      'flex items-center gap-1 px-3 py-2 rounded-lg min-h-[44px] min-w-[44px] transition-colors',
                       currentPage === totalPages
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-700 hover:bg-gray-100'
                     )}
                     aria-label="다음 페이지"
                   >
@@ -346,7 +388,7 @@ const InterviewCard = React.memo(
       onDelete(deleteTarget);
       setIsDeleteDialogOpen(false);
       setDeleteTarget(null);
-      toast.success("면접 기록이 삭제되었습니다");
+      toast.success('면접 기록이 삭제되었습니다');
     }, [deleteTarget, onDelete]);
 
     const handleCancelDelete = useCallback(() => {
@@ -360,13 +402,13 @@ const InterviewCard = React.memo(
 
     const menuItems = [
       {
-        label: "내용명 변경",
+        label: '내용명 변경',
         onClick: handleNameChange,
       },
       {
-        label: "삭제",
+        label: '삭제',
         onClick: handleDelete,
-        variant: "danger",
+        variant: 'danger',
       },
     ];
 
@@ -391,14 +433,20 @@ const InterviewCard = React.memo(
           <div className="flex items-center gap-2 text-sm">
             <span
               className={`px-3 py-1 rounded-full ${
-                interview.type === "technical" ? "bg-purple-50 text-purple-700" : "bg-green-50 text-green-700"
+                interview.type === 'technical'
+                  ? 'bg-purple-50 text-purple-700'
+                  : 'bg-green-50 text-green-700'
               }`}
             >
-              {interview.type === "technical" ? "기술" : "인성"}
+              {interview.type === 'technical' ? '기술' : '인성'}
             </span>
-            <span className="px-3 py-1 bg-blue-50 text-primary rounded-full">{interview.position}</span>
+            <span className="px-3 py-1 bg-blue-50 text-primary rounded-full">
+              {interview.position}
+            </span>
             {interview.company && (
-              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full">{interview.company}</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full">
+                {interview.company}
+              </span>
             )}
           </div>
         </div>
@@ -420,4 +468,4 @@ const InterviewCard = React.memo(
   }
 );
 
-InterviewCard.displayName = "InterviewCard";
+InterviewCard.displayName = 'InterviewCard';

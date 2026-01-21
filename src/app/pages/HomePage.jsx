@@ -1,14 +1,14 @@
-import React, { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { FileText, Video } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "../components/common/Button";
-import { BottomNav } from "../components/layout/BottomNav";
-import { DropdownMenu } from "../components/common/DropdownMenu";
-import { ConfirmDialog } from "../components/modals/ConfirmDialog";
-import { EditTextDialog } from "../components/modals/EditTextDialog";
-import { ChatRoomListModal } from "../components/features/ChatRoomListModal";
-import { useUser } from "../hooks/useUser";
+import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FileText, Video } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '../components/common/Button';
+import { BottomNav } from '../components/layout/BottomNav';
+import { DropdownMenu } from '../components/common/DropdownMenu';
+import { ConfirmDialog } from '../components/modals/ConfirmDialog';
+import { EditTextDialog } from '../components/modals/EditTextDialog';
+import { ChatRoomListModal } from '../components/features/ChatRoomListModal';
+import { useUser } from '../hooks/useUser';
 
 /**
  * @typedef {import('@/app/types').Resume} Resume
@@ -22,18 +22,18 @@ export function HomePage() {
   /** @type {[Resume[], React.Dispatch<React.SetStateAction<Resume[]>>]} */
   const [resumes, setResumes] = useState([
     {
-      id: "12345",
-      name: "2025-12-23_12345",
-      createdAt: "2025-12-23",
-      position: "백엔드",
-      company: "회사1",
+      id: '12345',
+      name: '2025-12-23_12345',
+      createdAt: '2025-12-23',
+      position: '백엔드',
+      company: '회사1',
     },
     {
-      id: "12346",
-      name: "2025-12-22_12346",
-      createdAt: "2025-12-22",
-      position: "프론트엔드",
-      company: "",
+      id: '12346',
+      name: '2025-12-22_12346',
+      createdAt: '2025-12-22',
+      position: '프론트엔드',
+      company: '',
     },
   ]);
 
@@ -46,14 +46,16 @@ export function HomePage() {
 
   const handleEditResumeName = useCallback((id, newName) => {
     setResumes((prev) =>
-      prev.map((resume) => (resume.id === id ? { ...resume, name: newName } : resume))
+      prev.map((resume) =>
+        resume.id === id ? { ...resume, name: newName } : resume
+      )
     );
-    toast.success("이력서명이 수정되었습니다");
+    toast.success('이력서명이 수정되었습니다');
   }, []);
 
   const handleDeleteResume = useCallback((id) => {
     setResumes((prev) => prev.filter((resume) => resume.id !== id));
-    toast.success("이력서가 삭제되었습니다");
+    toast.success('이력서가 삭제되었습니다');
   }, []);
 
   return (
@@ -64,11 +66,15 @@ export function HomePage() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h2 className="mb-2">{user.name}님 어서오세요!</h2>
-              <p className="text-sm text-gray-600">희망 포지션: {user.position}</p>
+              <p className="text-sm text-gray-600">
+                희망 포지션: {user.position}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <ChatRoomListModal />
-              {user.profileImage && <div className="w-16 h-16 rounded-full bg-gray-200" />}
+              {user.profileImage && (
+                <div className="w-16 h-16 rounded-full bg-gray-200" />
+              )}
             </div>
           </div>
         </div>
@@ -81,7 +87,7 @@ export function HomePage() {
             <h3>내 이력서</h3>
             <Button
               variant="ghost"
-              onClick={() => navigate("/repo-select")}
+              onClick={() => navigate('/repo-select')}
               className="text-primary px-3 py-1 min-h-0 h-auto"
             >
               + 새로 만들기
@@ -91,14 +97,22 @@ export function HomePage() {
           {resumes.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
               <p className="text-gray-500 mb-4">생성한 이력서가 없습니다.</p>
-              <Button variant="primary" onClick={() => navigate("/repo-select")}>
+              <Button
+                variant="primary"
+                onClick={() => navigate('/repo-select')}
+              >
                 이력서 생성
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               {resumes.map((resume) => (
-                <ResumeCard key={resume.id} resume={resume} onDelete={handleDeleteResume} onEdit={handleEditResumeName} />
+                <ResumeCard
+                  key={resume.id}
+                  resume={resume}
+                  onDelete={handleDeleteResume}
+                  onEdit={handleEditResumeName}
+                />
               ))}
             </div>
           )}
@@ -186,13 +200,13 @@ const ResumeCard = React.memo(
 
     const menuItems = [
       {
-        label: "이력서명 수정",
+        label: '이력서명 수정',
         onClick: handleResumeNameEdit,
       },
       {
-        label: "이력서 삭제",
+        label: '이력서 삭제',
         onClick: handleDeleteClick,
-        variant: "danger",
+        variant: 'danger',
       },
     ];
 
@@ -209,18 +223,28 @@ const ResumeCard = React.memo(
           </div>
 
           <div className="flex items-center gap-2 mb-3">
-            <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs">{resume.position}</span>
+            <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs">
+              {resume.position}
+            </span>
             <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-              {resume.company || "미지정"}
+              {resume.company || '미지정'}
             </span>
           </div>
 
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={handleViewResume}>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={handleViewResume}
+            >
               <FileText className="w-4 h-4" strokeWidth={1.5} />
               이력서 보기
             </Button>
-            <Button variant="primary" className="flex-1" onClick={handleStartInterview}>
+            <Button
+              variant="primary"
+              className="flex-1"
+              onClick={handleStartInterview}
+            >
               <Video className="w-4 h-4" strokeWidth={1.5} />
               모의 면접
             </Button>
@@ -231,7 +255,7 @@ const ResumeCard = React.memo(
           isOpen={isEditDialogOpen}
           onClose={handleCancelEdit}
           onConfirm={handleConfirmEdit}
-          initialValue={editTarget?.name || ""}
+          initialValue={editTarget?.name || ''}
           title="이력서명 수정"
           label="이력서명"
           placeholder="이력서명을 입력하세요"
@@ -260,4 +284,4 @@ const ResumeCard = React.memo(
   }
 );
 
-ResumeCard.displayName = "ResumeCard";
+ResumeCard.displayName = 'ResumeCard';

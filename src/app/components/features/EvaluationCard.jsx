@@ -21,13 +21,9 @@ import { cn } from '@/app/lib/utils';
 /**
  * @param {EvaluationSectionProps} props
  */
-const EvaluationSection = ({
-  title,
-  titleColor,
-  children
-}) => (
+const EvaluationSection = ({ title, titleColor, children }) => (
   <div>
-    <h4 className={cn("mb-2", titleColor)}>{title}</h4>
+    <h4 className={cn('mb-2', titleColor)}>{title}</h4>
     {children}
   </div>
 );
@@ -44,8 +40,11 @@ const EvaluationSection = ({
 const BulletList = ({ items, bulletColor }) => (
   <ul className="space-y-1.5 text-sm text-gray-700">
     {items.map((item, idx) => (
-      <li key={`${item.substring(0, 20)}-${idx}`} className="flex items-start gap-2">
-        <span className={cn(bulletColor, "mt-1")}>•</span>
+      <li
+        key={`${item.substring(0, 20)}-${idx}`}
+        className="flex items-start gap-2"
+      >
+        <span className={cn(bulletColor, 'mt-1')}>•</span>
         <span>{item}</span>
       </li>
     ))}
@@ -57,7 +56,12 @@ const BulletList = ({ items, bulletColor }) => (
  */
 export const EvaluationCard = ({ data, className }) => {
   return (
-    <div className={cn("bg-white rounded-2xl p-5 border border-gray-200", className)}>
+    <div
+      className={cn(
+        'bg-white rounded-2xl p-5 border border-gray-200',
+        className
+      )}
+    >
       <h3 className="mb-4">전체 평가</h3>
 
       <div className="space-y-4">

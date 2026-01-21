@@ -16,9 +16,7 @@ export const Input = forwardRef(
     return (
       <div className="flex flex-col gap-2">
         {label && (
-          <label className="text-sm font-medium text-gray-700">
-            {label}
-          </label>
+          <label className="text-sm font-medium text-gray-700">{label}</label>
         )}
         <input
           ref={ref}
@@ -32,9 +30,7 @@ export const Input = forwardRef(
           )}
           {...props}
         />
-        {error && (
-          <p className="text-sm text-[#EF4444]">{error}</p>
-        )}
+        {error && <p className="text-sm text-[#EF4444]">{error}</p>}
       </div>
     );
   }
