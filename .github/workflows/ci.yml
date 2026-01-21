@@ -38,7 +38,7 @@ jobs:
 
       # Step 1.2) CodeQL Init (SAST 준비)
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
 
@@ -63,7 +63,7 @@ jobs:
 
       # Step 5) npm audit (취약점 검사)
       - name: npm audit
-        run: npm audit --audit-level=high --json > test-results/audit.json || true
+        run: npm audit --audit-level=high
 
       # Step 6) Formatting check
       - name: Formatting check
@@ -79,7 +79,7 @@ jobs:
 
       # Step 9) CodeQL Analyze (SAST 실행/업로드)
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:javascript-typescript"
 
@@ -88,7 +88,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: fe-artifacts-node${{ matrix.node-version }}
+          name: fe-test-artifacts-node${{ matrix.node-version }}
           path: |
             test-results/
             coverage/
