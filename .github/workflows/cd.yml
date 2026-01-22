@@ -7,6 +7,11 @@ on:
     branches: ["main", "feature/cicd"]
 
   workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: "FrontEnd CI run-id (artifact source)"
+        required: false
+        type: string
 
 concurrency:
   group: cd-frontend-main
@@ -31,6 +36,8 @@ jobs:
         with:
           name: web-dist
           path: dist
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event_name == 'workflow_dispatch' && inputs.ci_run_id || github.event.workflow_run.id }}
 
       # dist를 단일 파일로 묶어 전송(파일 수가 많을 때 안정적)
       - name: Pack dist
