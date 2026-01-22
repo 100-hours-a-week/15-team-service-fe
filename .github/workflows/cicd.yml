@@ -161,12 +161,13 @@ jobs:
           port: 22
           script_stop: true
           command_timeout: 15m
-          envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL
+          envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL,BRANCH_NAME
           WEB_ROOT: ${{ vars.WEB_ROOT }}
           NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
           HEALTH_URL: ${{ vars.HEALTH_URL }}
           HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
           HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
+          BRANCH_NAME: ${{ github.ref_name }}
           script: |
             set -euo pipefail
             WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"
@@ -204,7 +205,7 @@ jobs:
               sleep "$HEALTH_INTERVAL"
               elapsed=$((elapsed + HEALTH_INTERVAL))
             done
-            echo "[7/7] deploy done (release=$TS, branch=${GITHUB_REF_NAME})"
+            echo "[7/7] deploy done (release=$TS, branch=${BRANCH_NAME:-unknown})"
 
   deploy-reuse-artifact:
     name: Deploy (reuse artifact)
