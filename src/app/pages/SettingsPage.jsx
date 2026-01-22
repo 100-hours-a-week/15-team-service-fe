@@ -1,15 +1,19 @@
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { Camera, LogOut } from "lucide-react";
-import { toast } from "sonner";
-import { BottomNav } from "../components/layout/BottomNav";
-import { Button } from "../components/common/Button";
-import { Input } from "../components/common/Input";
-import { SelectGrid } from "../components/common/SelectGrid";
-import { ConfirmDialog } from "../components/modals/ConfirmDialog";
-import { POSITIONS } from "@/app/constants";
-import { formatPhoneNumber, validatePhoneNumber, getPhoneErrorMessage } from "@/app/lib/utils";
-import { useUser } from "../hooks/useUser";
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Camera, LogOut } from 'lucide-react';
+import { toast } from 'sonner';
+import { BottomNav } from '../components/layout/BottomNav';
+import { Button } from '../components/common/Button';
+import { Input } from '../components/common/Input';
+import { SelectGrid } from '../components/common/SelectGrid';
+import { ConfirmDialog } from '../components/modals/ConfirmDialog';
+import { POSITIONS } from '@/app/constants';
+import {
+  formatPhoneNumber,
+  validatePhoneNumber,
+  getPhoneErrorMessage,
+} from '@/app/lib/utils';
+import { useUser } from '../hooks/useUser';
 
 /**
  * @typedef {import('@/app/types').UserProfile} UserProfile
@@ -36,7 +40,7 @@ export function SettingsPage() {
       updateUser(editData);
       setIsEditing(false);
       setPhoneError(undefined);
-      toast.success("프로필이 저장되었습니다");
+      toast.success('프로필이 저장되었습니다');
     } else {
       const errorMsg = getPhoneErrorMessage(editData.phone);
       setPhoneError(errorMsg);
@@ -49,13 +53,16 @@ export function SettingsPage() {
     setPhoneError(undefined);
   }, [user]);
 
-  const handlePhoneChange = useCallback((e) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setEditData((prev) => ({ ...prev, phone: formatted }));
-    if (phoneError) {
-      setPhoneError(undefined);
-    }
-  }, [phoneError]);
+  const handlePhoneChange = useCallback(
+    (e) => {
+      const formatted = formatPhoneNumber(e.target.value);
+      setEditData((prev) => ({ ...prev, phone: formatted }));
+      if (phoneError) {
+        setPhoneError(undefined);
+      }
+    },
+    [phoneError]
+  );
 
   const handleLogout = useCallback(() => {
     setIsLogoutDialogOpen(true);
@@ -63,9 +70,9 @@ export function SettingsPage() {
 
   const handleConfirmLogout = useCallback(() => {
     clearUser();
-    toast.success("로그아웃되었습니다");
+    toast.success('로그아웃되었습니다');
     setIsLogoutDialogOpen(false);
-    navigate("/");
+    navigate('/');
   }, [navigate, clearUser]);
 
   const handleCancelLogout = useCallback(() => {
@@ -102,15 +109,21 @@ export function SettingsPage() {
                   label="이름"
                   name="name"
                   value={editData.name}
-                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditData({ ...editData, name: e.target.value })
+                  }
                 />
 
                 <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">희망 포지션</label>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    희망 포지션
+                  </label>
                   <SelectGrid
                     items={POSITIONS}
                     selected={editData.position}
-                    onSelect={(pos) => setEditData({ ...editData, position: pos })}
+                    onSelect={(pos) =>
+                      setEditData({ ...editData, position: pos })
+                    }
                   />
                 </div>
 
@@ -161,7 +174,9 @@ export function SettingsPage() {
             <label className="flex items-start justify-between py-3">
               <div className="flex-1 pr-4">
                 <p className="font-medium mb-1">이력서 정보 자동 사용</p>
-                <p className="text-sm text-gray-600">모의 면접 시작 시 이력서 정보를 기본값으로 사용합니다</p>
+                <p className="text-sm text-gray-600">
+                  모의 면접 시작 시 이력서 정보를 기본값으로 사용합니다
+                </p>
               </div>
               <div className="relative inline-block w-12 h-7 flex-shrink-0">
                 <input

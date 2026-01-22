@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Button } from "../common/Button";
+import React, { useState } from 'react';
+import { Button } from '../common/Button';
 
 /**
  * Temporary placeholder for ChatRoomListModal.
@@ -25,13 +25,17 @@ export function ChatRoomListModal() {
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold">채팅방</h3>
-              <button className="text-sm text-gray-500" onClick={() => setOpen(false)}>
+              <button
+                className="text-sm text-gray-500"
+                onClick={() => setOpen(false)}
+              >
                 닫기
               </button>
             </div>
 
             <p className="text-sm text-gray-600">
-              ChatRoomListModal 컴포넌트가 아직 구현되지 않았습니다. (빌드 통과용)
+              ChatRoomListModal 컴포넌트가 아직 구현되지 않았습니다. (빌드
+              통과용)
             </p>
           </div>
         </div>

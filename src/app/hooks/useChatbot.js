@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from 'react';
 
 /**
  * Temporary stub for useChatbot.
@@ -16,18 +16,18 @@ export function useChatbot(options = {}) {
     async (text) => {
       setMessages((prev) => [
         ...prev,
-        { id: String(Date.now()), role: "user", content: text },
+        { id: String(Date.now()), role: 'user', content: text },
       ]);
 
       // "loading" 흉내만 내고, onUpdate가 있으면 샘플 텍스트를 한 번 흘려보냄
       setIsLoading(true);
       try {
-        const chunk = "\n# AI updated content (stub)\n";
-        if (typeof onUpdate === "function") onUpdate(chunk);
+        const chunk = '\n# AI updated content (stub)\n';
+        if (typeof onUpdate === 'function') onUpdate(chunk);
 
         setMessages((prev) => [
           ...prev,
-          { id: String(Date.now() + 1), role: "ai", content: "stub response" },
+          { id: String(Date.now() + 1), role: 'ai', content: 'stub response' },
         ]);
       } finally {
         setIsLoading(false);

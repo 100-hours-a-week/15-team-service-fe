@@ -1,0 +1,124 @@
+name: CD (Frontend deploy via SSH)
+
+on:
+  workflow_run:
+    workflows: ["FrontEnd CI"]
+    types: [completed]
+    branches: ["main", "feature/cicd"]
+
+  workflow_dispatch:
+
+concurrency:
+  group: cd-frontend-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout (metadata only)
+        uses: actions/checkout@v4
+
+      # CI에서 업로드된 dist 아티팩트를 다운로드 (재사용)
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      # dist를 단일 파일로 묶어 전송(파일 수가 많을 때 안정적)
+      - name: Pack dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          tar -C dist -czf dist.tgz .
+
+      # 서버로 dist.tgz 업로드 (scp-action 사용)
+      - name: Upload dist.tgz to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          source: "dist.tgz"
+          target: "/tmp"
+
+      - name: Deploy via SSH (atomic switch + health check)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          script_stop: true
+          command_timeout: 15m
+
+          # 원격 스크립트에서 사용할 환경변수 전달 목록
+          envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL
+          WEB_ROOT: ${{ vars.WEB_ROOT }}
+          NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+          # 초 단위
+          HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
+          HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
+
+          script: |
+            set -euo pipefail
+
+            # ----- defaults -----
+            WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"
+            NGINX_RELOAD="${NGINX_RELOAD:-false}"
+
+            HEALTH_URL="${HEALTH_URL:-http://127.0.0.1/}"
+            HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
+            HEALTH_INTERVAL="${HEALTH_INTERVAL:-3}"
+
+            RELEASES_DIR="$WEB_ROOT/releases"
+            CURRENT_LINK="$WEB_ROOT/current"
+            TS="$(date +%Y%m%d-%H%M%S)"
+            NEW_DIR="$RELEASES_DIR/$TS"
+
+            echo "[1/7] prepare dirs"
+            sudo mkdir -p "$RELEASES_DIR"
+            sudo mkdir -p "$NEW_DIR"
+
+            echo "[2/7] extract dist into new release"
+            # /tmp/dist.tgz는 scp-action으로 업로드됨
+            sudo tar -C "$NEW_DIR" -xzf /tmp/dist.tgz
+            sudo rm -f /tmp/dist.tgz
+
+            # 최소 검증 (빌드 산출물 유효성)
+            echo "[3/7] validate dist"
+            sudo test -f "$NEW_DIR/index.html"
+
+            echo "[4/7] atomic switch current -> new release"
+            sudo ln -sfn "$NEW_DIR" "$CURRENT_LINK"
+
+            echo "[5/7] (optional) nginx reload"
+            if [[ "$NGINX_RELOAD" == "true" ]]; then
+              sudo nginx -t
+              sudo systemctl reload nginx
+            fi
+
+            echo "[6/7] health check"
+            elapsed=0
+            until curl -fsS "$HEALTH_URL" > /dev/null; do
+              if [ "$elapsed" -ge "$HEALTH_TIMEOUT" ]; then
+                echo "Health check failed after ${HEALTH_TIMEOUT}s"
+                # 참고: 정적 서빙이면 nginx 상태 확인이 유용
+                sudo systemctl status nginx --no-pager || true
+                exit 1
+              fi
+              sleep "$HEALTH_INTERVAL"
+              elapsed=$((elapsed + HEALTH_INTERVAL))
+            done
+
+            echo "[7/7] deploy done (release=$TS, branch=main)"

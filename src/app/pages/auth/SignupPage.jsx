@@ -2,12 +2,16 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from "../../components/common/Button";
-import { Input } from "../../components/common/Input";
-import { TopAppBar } from "../../components/layout/TopAppBar";
-import { SelectGrid } from "../../components/common/SelectGrid";
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+import { TopAppBar } from '../../components/layout/TopAppBar';
+import { SelectGrid } from '../../components/common/SelectGrid';
 import { POSITIONS } from '@/app/constants';
-import { formatPhoneNumber, validatePhoneNumber, getPhoneErrorMessage } from '@/app/lib/utils';
+import {
+  formatPhoneNumber,
+  validatePhoneNumber,
+  getPhoneErrorMessage,
+} from '@/app/lib/utils';
 import { useUser } from '../../hooks/useUser';
 
 export function SignupPage() {
@@ -31,56 +35,65 @@ export function SignupPage() {
     phoneCollection: false,
   });
 
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
-  }, [errors]);
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      if (errors[name]) {
+        setErrors((prev) => ({ ...prev, [name]: undefined }));
+      }
+    },
+    [errors]
+  );
 
-  const handlePhoneChange = useCallback((e) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setFormData((prev) => ({ ...prev, phone: formatted }));
-    if (errors.phone) {
-      setErrors((prev) => ({ ...prev, phone: undefined }));
-    }
-  }, [errors.phone]);
+  const handlePhoneChange = useCallback(
+    (e) => {
+      const formatted = formatPhoneNumber(e.target.value);
+      setFormData((prev) => ({ ...prev, phone: formatted }));
+      if (errors.phone) {
+        setErrors((prev) => ({ ...prev, phone: undefined }));
+      }
+    },
+    [errors.phone]
+  );
 
-  const handleSubmit = useCallback((e) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
 
-    const newErrors = {};
+      const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "이름을 입력해주세요";
-    }
+      if (!formData.name.trim()) {
+        newErrors.name = '이름을 입력해주세요';
+      }
 
-    if (!formData.position) {
-      newErrors.position = "희망 포지션을 선택해주세요";
-      toast.error("희망 포지션을 선택해주세요");
-    }
+      if (!formData.position) {
+        newErrors.position = '희망 포지션을 선택해주세요';
+        toast.error('희망 포지션을 선택해주세요');
+      }
 
-    if (!validatePhoneNumber(formData.phone)) {
-      newErrors.phone = getPhoneErrorMessage(formData.phone);
-    }
+      if (!validatePhoneNumber(formData.phone)) {
+        newErrors.phone = getPhoneErrorMessage(formData.phone);
+      }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
 
-    const profile = {
-      name: formData.name,
-      position: formData.position,
-      phone: formData.phone,
-      profileImage: null,
-    };
-    updateUser(profile);
+      const profile = {
+        name: formData.name,
+        position: formData.position,
+        phone: formData.phone,
+        profileImage: null,
+      };
+      updateUser(profile);
 
-    toast.success("회원가입이 완료되었습니다");
-    navigate("/home");
-  }, [formData, navigate, updateUser]);
+      toast.success('회원가입이 완료되었습니다');
+      navigate('/home');
+    },
+    [formData, navigate, updateUser]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -110,7 +123,9 @@ export function SignupPage() {
           />
 
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">희망 포지션 *</label>
+            <label className="block mb-2 text-sm font-medium text-gray-700">
+              희망 포지션 *
+            </label>
             <SelectGrid
               items={POSITIONS}
               selected={formData.position}
@@ -121,7 +136,9 @@ export function SignupPage() {
                 }
               }}
             />
-            {errors.position && <p className="mt-1 text-sm text-danger">{errors.position}</p>}
+            {errors.position && (
+              <p className="mt-1 text-sm text-danger">{errors.position}</p>
+            )}
           </div>
 
           <Input
@@ -139,11 +156,14 @@ export function SignupPage() {
               <input
                 type="checkbox"
                 checked={agreements.privacy}
-                onChange={(e) => setAgreements({ ...agreements, privacy: e.target.checked })}
+                onChange={(e) =>
+                  setAgreements({ ...agreements, privacy: e.target.checked })
+                }
                 className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <span className="text-sm flex-1">
-                개인정보 처리방침에 동의합니다. <span className="text-primary">*</span>
+                개인정보 처리방침에 동의합니다.{' '}
+                <span className="text-primary">*</span>
               </span>
             </label>
 
@@ -151,7 +171,12 @@ export function SignupPage() {
               <input
                 type="checkbox"
                 checked={agreements.phoneCollection}
-                onChange={(e) => setAgreements({ ...agreements, phoneCollection: e.target.checked })}
+                onChange={(e) =>
+                  setAgreements({
+                    ...agreements,
+                    phoneCollection: e.target.checked,
+                  })
+                }
                 className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <span className="text-sm flex-1">
@@ -164,7 +189,9 @@ export function SignupPage() {
             type="submit"
             variant="primary"
             fullWidth
-            disabled={!formData.name || !formData.position || !agreements.privacy}
+            disabled={
+              !formData.name || !formData.position || !agreements.privacy
+            }
           >
             가입 완료
           </Button>

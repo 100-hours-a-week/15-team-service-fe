@@ -51,22 +51,22 @@ export function WarningDialog({
         {/* Overlay - absolute positioning to cover only app container */}
         <AlertDialogPrimitive.Overlay
           className={cn(
-            "absolute inset-0 z-50 bg-black/40",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            'absolute inset-0 z-50 bg-black/40',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
         />
 
         {/* Modal Content - absolute positioning for app container center */}
         <AlertDialogPrimitive.Content
           className={cn(
-            "absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]",
-            "z-50 grid w-full max-w-[350px] gap-4",
-            "rounded-lg border p-6 shadow-lg bg-white",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            "duration-200"
+            'absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]',
+            'z-50 grid w-full max-w-[350px] gap-4',
+            'rounded-lg border p-6 shadow-lg bg-white',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            'duration-200'
           )}
         >
           {/* Header */}
@@ -86,9 +86,9 @@ export function WarningDialog({
               onClick={onPrimaryAction}
               autoFocus
               className={cn(
-                "min-h-[44px] px-4 py-2 rounded-lg font-medium",
-                "bg-primary text-white hover:bg-primary/90",
-                "transition-colors"
+                'min-h-[44px] px-4 py-2 rounded-lg font-medium',
+                'bg-primary text-white hover:bg-primary/90',
+                'transition-colors'
               )}
             >
               {primaryButtonText}
@@ -98,9 +98,9 @@ export function WarningDialog({
             <button
               onClick={onSecondaryAction}
               className={cn(
-                "min-h-[44px] px-4 py-2 rounded-lg font-medium",
-                "bg-white text-gray-700 border border-gray-200",
-                "hover:bg-gray-50 transition-colors"
+                'min-h-[44px] px-4 py-2 rounded-lg font-medium',
+                'bg-white text-gray-700 border border-gray-200',
+                'hover:bg-gray-50 transition-colors'
               )}
             >
               {secondaryButtonText}

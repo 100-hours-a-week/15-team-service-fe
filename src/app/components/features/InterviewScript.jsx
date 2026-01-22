@@ -40,7 +40,11 @@ const ScriptEntryItem = React.memo(({ entry }) => (
       <span className={`font-medium ${getSpeakerColor(entry.speaker)}`}>
         {entry.speaker}:
       </span>{' '}
-      <span className={entry.speaker === 'AI' ? 'text-gray-600 italic' : 'text-gray-700'}>
+      <span
+        className={
+          entry.speaker === 'AI' ? 'text-gray-600 italic' : 'text-gray-700'
+        }
+      >
         {entry.content}
       </span>
     </p>
@@ -55,10 +59,15 @@ ScriptEntryItem.displayName = 'ScriptEntryItem';
 export const InterviewScript = ({
   entries,
   maxHeight = '400px',
-  className
+  className,
 }) => {
   return (
-    <div className={cn("bg-white rounded-2xl p-5 border border-gray-200", className)}>
+    <div
+      className={cn(
+        'bg-white rounded-2xl p-5 border border-gray-200',
+        className
+      )}
+    >
       <h3 className="mb-4">면접 스크립트</h3>
       <div className="space-y-3 overflow-y-auto" style={{ maxHeight }}>
         {entries.map((entry, idx) => (
