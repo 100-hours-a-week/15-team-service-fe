@@ -1,19 +1,9 @@
-/**
- * User API Endpoints
- * Handles user profile and settings management
- *
- * Implementation Notes:
- * - All endpoints require ROLE_ACTIVE authentication (HttpOnly cookies)
- * - User profile syncs with React Query cache after updates
- * - User settings are separate from profile (notification, interview defaults)
- */
-
 import apiClient from '../client';
 import { API_CONFIG } from '../config';
 
 /**
  * Fetch current user profile
- * @returns {Promise<Object>} User profile with id, profileImageUrl, name, positionId, phone
+ * @returns {Promise<Object>}
  * @throws {Error} 401 AUTH_UNAUTHORIZED, 404 USER_NOT_FOUND
  */
 export const fetchUser = async () => {
@@ -36,7 +26,7 @@ export const fetchUser = async () => {
 export const updateUser = async (updates) => {
   const response = await apiClient.patch(
     API_CONFIG.ENDPOINTS.USER_INFO,
-    updates,
+    updates
   );
   return response.data.data;
 };
@@ -62,7 +52,7 @@ export const fetchUserSettings = async () => {
 export const updateUserSettings = async (settings) => {
   const response = await apiClient.patch(
     API_CONFIG.ENDPOINTS.USER_SETTINGS,
-    settings,
+    settings
   );
   return response.data.data;
 };
