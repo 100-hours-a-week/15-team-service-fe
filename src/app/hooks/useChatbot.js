@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 export const useChatbot = (options = {}) => {
   const { onUpdate } = options;
@@ -6,52 +7,95 @@ export const useChatbot = (options = {}) => {
   const [chatInput, setChatInput] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const timersRef = useRef({ update: null, finish: null });
+
+  const clearTimers = useCallback(() => {
+    if (timersRef.current.update) {
+      clearTimeout(timersRef.current.update);
+      timersRef.current.update = null;
+    }
+    if (timersRef.current.finish) {
+      clearTimeout(timersRef.current.finish);
+      timersRef.current.finish = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+    };
+  }, [clearTimers]);
+
+  const getTimestamp = () =>
+    new Date().toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  const appendMessage = useCallback((role, content) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role,
+        content,
+        timestamp: getTimestamp(),
+      },
+    ]);
+  }, []);
+
+  const scheduleResponse = useCallback(() => {
+    clearTimers();
+
+    timersRef.current.update = setTimeout(() => {
+      if (typeof onUpdate === 'function') {
+        onUpdate('\n# AI가 수정한 내용...');
+      }
+    }, 1000);
+
+    timersRef.current.finish = setTimeout(() => {
+      appendMessage('ai', '업데이트 내용을 반영했어요.');
+      setIsUpdating(false);
+      setIsPaused(false);
+      toast.success('업데이트가 반영되었습니다');
+    }, 1500);
+  }, [appendMessage, clearTimers, onUpdate]);
+
+  const handleInputChange = useCallback((value) => {
+    setChatInput(value);
+  }, []);
 
   const handleSendMessage = useCallback(() => {
-    if (!chatInput.trim() || isUpdating) return;
+    const trimmed = chatInput.trim();
+    if (!trimmed || isUpdating) return;
 
-  const handleSendMessage = useCallback(
-    async (text) => {
-      setMessages((prev) => [
-        ...prev,
-        { id: String(Date.now()), role: 'user', content: text },
-      ]);
+    appendMessage('user', trimmed);
+    setChatInput('');
+    setIsUpdating(true);
+    setIsPaused(false);
+    scheduleResponse();
+  }, [appendMessage, chatInput, isUpdating, scheduleResponse]);
 
-      // "loading" 흉내만 내고, onUpdate가 있으면 샘플 텍스트를 한 번 흘려보냄
-      setIsLoading(true);
-      try {
-        const chunk = '\n# AI updated content (stub)\n';
-        if (typeof onUpdate === 'function') onUpdate(chunk);
+  const handleTogglePause = useCallback(() => {
+    if (!isUpdating) return;
 
-        setMessages((prev) => [
-          ...prev,
-          { id: String(Date.now() + 1), role: 'ai', content: 'stub response' },
-        ]);
-      } finally {
-        setIsLoading(false);
+    setIsPaused((prev) => {
+      const next = !prev;
+      if (next) {
+        clearTimers();
+      } else {
+        scheduleResponse();
       }
-    },
-    [onUpdate]
-  );
-
-      // YAML 업데이트 시뮬레이션
-      setTimeout(() => {
-        if (onUpdate) {
-          onUpdate('\n# AI가 수정한 내용...');
-        }
-        setIsUpdating(false);
-        toast.success('업데이트가 반영되었습니다');
-      }, 1500);
-    }, 1000);
-  }, [chatInput, isUpdating, onUpdate]);
+      return next;
+    });
+  }, [clearTimers, isUpdating, scheduleResponse]);
 
   return {
     messages,
     chatInput,
-    setChatInput,
     isUpdating,
     isPaused,
-    setIsPaused,
-    handleSendMessage,
+    onInputChange: handleInputChange,
+    onSendMessage: handleSendMessage,
+    onTogglePause: handleTogglePause,
   };
 };
