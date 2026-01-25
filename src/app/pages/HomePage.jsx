@@ -7,8 +7,9 @@ import { BottomNav } from '../components/layout/BottomNav';
 import { DropdownMenu } from '../components/common/DropdownMenu';
 import { ConfirmDialog } from '../components/modals/ConfirmDialog';
 import { EditTextDialog } from '../components/modals/EditTextDialog';
-import { ChatRoomListModal } from '../components/features/ChatRoomListModal';
-import { useUser } from '../hooks/useUser';
+import { ChatRoomListSheet } from '../components/features/ChatRoomListSheet';
+import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
+import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 
 /**
  * @typedef {import('@/app/types').Resume} Resume
@@ -17,7 +18,8 @@ import { useUser } from '../hooks/useUser';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { data: profileData } = useUserProfile();
+  const { data: positions = [] } = usePositions();
 
   /** @type {[Resume[], React.Dispatch<React.SetStateAction<Resume[]>>]} */
   const [resumes, setResumes] = useState([
@@ -37,13 +39,6 @@ export function HomePage() {
     },
   ]);
 
-  /** @type {[{id: string, name: string} | null, React.Dispatch<React.SetStateAction<{id: string, name: string} | null>>]} */
-  const [editTarget, setEditTarget] = useState(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  /** @type {[string | null, React.Dispatch<React.SetStateAction<string | null>>]} */
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
   const handleEditResumeName = useCallback((id, newName) => {
     setResumes((prev) =>
       prev.map((resume) =>
@@ -58,6 +53,12 @@ export function HomePage() {
     toast.success('이력서가 삭제되었습니다');
   }, []);
 
+  const displayName = profileData?.name ?? '사용자';
+  const displayPosition = profileData
+    ? positions.find((position) => position.id === profileData.positionId)?.name ||
+      ''
+    : '';
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
@@ -65,14 +66,14 @@ export function HomePage() {
         <div className="max-w-[390px] mx-auto">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h2 className="mb-2">{user.name}님 어서오세요!</h2>
+              <h2 className="mb-2">{displayName}님 어서오세요!</h2>
               <p className="text-sm text-gray-600">
-                희망 포지션: {user.position}
+                희망 포지션: {displayPosition}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <ChatRoomListModal />
-              {user.profileImage && (
+              <ChatRoomListSheet />
+              {profileData?.profileImageUrl && (
                 <div className="w-16 h-16 rounded-full bg-gray-200" />
               )}
             </div>

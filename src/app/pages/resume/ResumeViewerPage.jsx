@@ -6,7 +6,7 @@ import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
 import { ParsedResumeViewer } from '../../components/features/ParsedResumeViewer';
-import { GenericPreviewModal } from '../../components/modals/GenericPreviewModal';
+import { PreviewSheet } from '../../components/modals/PreviewSheet';
 import { WarningDialog } from '../../components/modals/WarningDialog';
 import { useChatbot } from '@/app/hooks/useChatbot';
 
@@ -81,7 +81,15 @@ export function ResumeViewerPage() {
    * - Sets hasUnsavedChanges flag to true when content is modified
    * - Appends content to yamlContent state progressively
    */
-  const { messages, isLoading, handleSendMessage } = useChatbot({
+  const {
+    messages,
+    chatInput,
+    isUpdating,
+    isPaused,
+    onInputChange,
+    onSendMessage,
+    onTogglePause,
+  } = useChatbot({
     onUpdate: (content) => {
       setYamlContent((prev) => prev + content);
       setHasUnsavedChanges(true);
@@ -109,6 +117,15 @@ export function ResumeViewerPage() {
     toast.success('저장되었습니다');
   }, []);
 
+  const handleOpenPreview = useCallback(() => {
+    setShowPreview(true);
+  }, []);
+
+  const handleSaveAndPreview = useCallback(() => {
+    handleSave();
+    setShowPreview(true);
+  }, [handleSave]);
+
   /**
    * Save and stay handler - For unsaved changes warning dialog
    * Saves changes, resets flag, and cancels navigation (blocker.reset)
@@ -133,15 +150,6 @@ export function ResumeViewerPage() {
   }, [blocker]);
 
   /**
-   * Download handler - PDF export placeholder
-   * Design decision: No actual PDF generation yet, just shows toast
-   * When implemented, will use jsPDF + html2canvas for Korean font support
-   */
-  const handleDownload = useCallback(() => {
-    toast('PDF 다운로드 준비 중입니다');
-  }, []);
-
-  /**
    * Confirm download handler - For preview modal
    * Opens preview modal before PDF download
    */
@@ -158,14 +166,14 @@ export function ResumeViewerPage() {
         action={
           <div className="flex items-center gap-0">
             <button
-              onClick={handleSave}
+              onClick={handleSaveAndPreview}
               className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="이력서 저장"
             >
               <Save className="w-5 h-5 text-gray-900" strokeWidth={1.5} />
             </button>
             <button
-              onClick={handleDownload}
+              onClick={handleOpenPreview}
               className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="PDF 다운로드"
             >
@@ -196,21 +204,22 @@ export function ResumeViewerPage() {
         isOpen={showChatbot}
         onClose={() => setShowChatbot(false)}
         messages={messages}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
+        chatInput={chatInput}
+        onInputChange={onInputChange}
+        onSendMessage={onSendMessage}
+        isUpdating={isUpdating}
+        isPaused={isPaused}
+        onTogglePause={onTogglePause}
       />
 
-      {/* Preview Modal */}
-      <GenericPreviewModal
+      {/* Preview Sheet */}
+      <PreviewSheet
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
-        title="이력서 미리보기"
-        cancelButtonText="취소"
-        actionButtonText="PDF 다운로드"
-        onAction={handleConfirmDownload}
+        onDownload={handleConfirmDownload}
       >
         <ParsedResumeViewer yamlContent={yamlContent} />
-      </GenericPreviewModal>
+      </PreviewSheet>
 
       {/* Unsaved Changes Warning Dialog */}
       <WarningDialog
