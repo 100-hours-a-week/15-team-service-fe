@@ -245,13 +245,13 @@ export function SignupPage() {
                   }}
                   className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <span className="text-sm flex-1">
+                <span className="text-sm flex-1 relative top-[2px]">
                   개인정보 처리방침에 동의합니다.{' '}
                   <span className="text-primary">*</span>
                 </span>
               </label>
               {errors.privacy && (
-                <p className="mt-1 ml-8 text-sm text-danger">
+                <p className="mt-1 ml-8 text-sm text-destructive">
                   {errors.privacy}
                 </p>
               )}
@@ -278,7 +278,7 @@ export function SignupPage() {
                     }}
                     className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span className="text-sm flex-1">
+                  <span className="text-sm flex-1 relative top-[2px]">
                     전화번호 수집·이용에 동의합니다.{' '}
                     <span className="text-primary">*</span>
                   </span>
