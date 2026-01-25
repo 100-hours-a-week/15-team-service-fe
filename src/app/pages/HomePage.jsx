@@ -55,8 +55,8 @@ export function HomePage() {
 
   const displayName = profileData?.name ?? '사용자';
   const displayPosition = profileData
-    ? positions.find((position) => position.id === profileData.positionId)?.name ||
-      ''
+    ? positions.find((position) => position.id === profileData.positionId)
+        ?.name || ''
     : '';
 
   return (
