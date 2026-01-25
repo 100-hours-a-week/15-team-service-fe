@@ -1,26 +1,36 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { TopAppBar } from '../../components/layout/TopAppBar';
-import { SelectGrid } from '../../components/common/SelectGrid';
-import { POSITIONS } from '@/app/constants';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import {
   formatPhoneNumber,
   validatePhoneNumber,
   getPhoneErrorMessage,
+  stripPhoneFormat,
+  validateName,
+  getNameErrorMessage,
 } from '@/app/lib/utils';
-import { useUser } from '../../hooks/useUser';
+import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
+import { useCompleteOnboarding } from '@/app/hooks/mutations/useAuthMutations';
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { updateUser } = useUser();
+  const { data: positions = [] } = usePositions();
+  const { mutateAsync: completeOnboarding, isPending } =
+    useCompleteOnboarding();
 
   const [formData, setFormData] = useState({
     name: '',
-    position: '',
+    positionId: '',
     phone: '',
   });
 
@@ -28,6 +38,8 @@ export function SignupPage() {
     name: undefined,
     position: undefined,
     phone: undefined,
+    privacy: undefined,
+    phoneCollection: undefined,
   });
 
   const [agreements, setAgreements] = useState({
@@ -50,30 +62,56 @@ export function SignupPage() {
     (e) => {
       const formatted = formatPhoneNumber(e.target.value);
       setFormData((prev) => ({ ...prev, phone: formatted }));
-      if (errors.phone) {
-        setErrors((prev) => ({ ...prev, phone: undefined }));
+
+      if (errors.phone || errors.phoneCollection) {
+        setErrors((prev) => ({
+          ...prev,
+          phone: undefined,
+          phoneCollection: undefined,
+        }));
+      }
+
+      if (!formatted && agreements.phoneCollection) {
+        setAgreements((prev) => ({ ...prev, phoneCollection: false }));
       }
     },
-    [errors.phone]
+    [errors.phone, errors.phoneCollection, agreements.phoneCollection]
   );
 
   const handleSubmit = useCallback(
-    (e) => {
+    async (e) => {
       e.preventDefault();
 
       const newErrors = {};
 
-      if (!formData.name.trim()) {
-        newErrors.name = '이름을 입력해주세요';
+      // Validate name (2-10 chars, no spaces, no emoji)
+      const trimmedName = formData.name.trim();
+      if (!validateName(trimmedName)) {
+        newErrors.name = getNameErrorMessage(trimmedName);
       }
 
-      if (!formData.position) {
+      // Validate position
+      if (!formData.positionId) {
         newErrors.position = '희망 포지션을 선택해주세요';
-        toast.error('희망 포지션을 선택해주세요');
       }
 
-      if (!validatePhoneNumber(formData.phone)) {
+      // Validate phone format
+      if (formData.phone && !validatePhoneNumber(formData.phone)) {
         newErrors.phone = getPhoneErrorMessage(formData.phone);
+      }
+
+      // Validate privacy agreement (required)
+      if (!agreements.privacy) {
+        newErrors.privacy = '개인정보 처리방침에 동의해주세요';
+      }
+
+      // Validate phone policy agreement (required if phone is provided)
+      const normalizedPhone = formData.phone
+        ? stripPhoneFormat(formData.phone)
+        : null;
+
+      if (normalizedPhone && !agreements.phoneCollection) {
+        newErrors.phoneCollection = '전화번호 수집·이용에 동의해주세요';
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -81,23 +119,55 @@ export function SignupPage() {
         return;
       }
 
-      const profile = {
-        name: formData.name,
-        position: formData.position,
-        phone: formData.phone,
-        profileImage: null,
-      };
-      updateUser(profile);
+      // Submit onboarding
+      try {
+        await completeOnboarding({
+          profileImageUrl: null,
+          name: trimmedName,
+          positionId: formData.positionId,
+          phone: normalizedPhone,
+          privacyAgreed: true,
+          phonePolicyAgreed: normalizedPhone ? true : undefined,
+        });
+      } catch (error) {
+        const errorCode = error.response?.data?.code;
 
-      toast.success('회원가입이 완료되었습니다');
+        if (errorCode === 'NAME_INVALID_INPUT') {
+          setErrors((prev) => ({
+            ...prev,
+            name: '이름은 공백과 이모티콘을 제외한 2~10자로 입력해주세요.',
+          }));
+        } else if (errorCode === 'PHONE_INVALID_FORMAT') {
+          setErrors((prev) => ({
+            ...prev,
+            phone: '올바른 전화번호 형식이 아닙니다.',
+          }));
+        } else if (errorCode === 'POSITION_SELECTION_REQUIRED') {
+          setErrors((prev) => ({
+            ...prev,
+            position: '희망 포지션을 선택해주세요.',
+          }));
+        }
+
+        return;
+      }
+
       navigate('/home');
     },
-    [formData, navigate, updateUser]
+    [
+      agreements.phoneCollection,
+      agreements.privacy,
+      completeOnboarding,
+      formData.name,
+      formData.phone,
+      formData.positionId,
+      navigate,
+    ]
   );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <TopAppBar title="회원가입" showBack />
+      <TopAppBar title="회원가입" />
 
       <form onSubmit={handleSubmit} className="px-5 py-6 pb-24">
         <div className="max-w-[390px] mx-auto space-y-6">
@@ -107,7 +177,7 @@ export function SignupPage() {
               <Camera className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
             </div>
             <button type="button" className="text-sm text-primary">
-              증명사진 업로드 (선택)
+              프로필 사진 업로드 (선택)
             </button>
           </div>
 
@@ -115,7 +185,7 @@ export function SignupPage() {
           <Input
             label="이름 *"
             name="name"
-            placeholder="이름을 입력하세요"
+            placeholder="이름을 입력하세요."
             value={formData.name}
             onChange={handleChange}
             error={errors.name}
@@ -126,16 +196,26 @@ export function SignupPage() {
             <label className="block mb-2 text-sm font-medium text-gray-700">
               희망 포지션 *
             </label>
-            <SelectGrid
-              items={POSITIONS}
-              selected={formData.position}
-              onSelect={(pos) => {
-                setFormData({ ...formData, position: pos });
+            <Select
+              value={formData.positionId ? String(formData.positionId) : ''}
+              onValueChange={(value) => {
+                setFormData({ ...formData, positionId: Number(value) });
                 if (errors.position) {
                   setErrors((prev) => ({ ...prev, position: undefined }));
                 }
               }}
-            />
+            >
+              <SelectTrigger className="w-full min-h-[44px] px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent data-[placeholder]:text-gray-400">
+                <SelectValue placeholder="포지션을 선택하세요." />
+              </SelectTrigger>
+              <SelectContent>
+                {positions.map((position) => (
+                  <SelectItem key={position.id} value={String(position.id)}>
+                    {position.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.position && (
               <p className="mt-1 text-sm text-danger">{errors.position}</p>
             )}
@@ -151,38 +231,65 @@ export function SignupPage() {
           />
 
           {/* Agreements */}
-          <div className="space-y-3 pt-4">
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={agreements.privacy}
-                onChange={(e) =>
-                  setAgreements({ ...agreements, privacy: e.target.checked })
-                }
-                className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span className="text-sm flex-1">
-                개인정보 처리방침에 동의합니다.{' '}
-                <span className="text-primary">*</span>
-              </span>
-            </label>
+          <div className="space-y-4 pt-4">
+            <div>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={agreements.privacy}
+                  onChange={(e) => {
+                    setAgreements({ ...agreements, privacy: e.target.checked });
+                    if (errors.privacy) {
+                      setErrors((prev) => ({ ...prev, privacy: undefined }));
+                    }
+                  }}
+                  className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span className="text-sm flex-1 relative top-[2px]">
+                  개인정보 처리방침에 동의합니다.{' '}
+                  <span className="text-primary">*</span>
+                </span>
+              </label>
+              {errors.privacy && (
+                <p className="mt-1 ml-8 text-sm text-destructive">
+                  {errors.privacy}
+                </p>
+              )}
+            </div>
 
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={agreements.phoneCollection}
-                onChange={(e) =>
-                  setAgreements({
-                    ...agreements,
-                    phoneCollection: e.target.checked,
-                  })
-                }
-                className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span className="text-sm flex-1">
-                전화번호 수집·이용에 동의합니다 (선택)
-              </span>
-            </label>
+            {/* Phone collection agreement - only show when phone is entered */}
+            {formData.phone && (
+              <div>
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={agreements.phoneCollection}
+                    onChange={(e) => {
+                      setAgreements({
+                        ...agreements,
+                        phoneCollection: e.target.checked,
+                      });
+                      if (errors.phoneCollection) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          phoneCollection: undefined,
+                        }));
+                      }
+                    }}
+                    className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm flex-1 relative top-[2px]">
+                    전화번호 수집·이용에 동의합니다.{' '}
+                    <span className="text-primary">*</span>
+                  </span>
+                </label>
+                {errors.phoneCollection && (
+                  <p className="mt-1 ml-8 text-sm text-danger">
+                    {errors.phoneCollection}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <Button
@@ -190,7 +297,10 @@ export function SignupPage() {
             variant="primary"
             fullWidth
             disabled={
-              !formData.name || !formData.position || !agreements.privacy
+              isPending ||
+              !formData.name ||
+              !formData.positionId ||
+              !agreements.privacy
             }
           >
             가입 완료
