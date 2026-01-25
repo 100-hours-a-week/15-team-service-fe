@@ -1,67 +1,236 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, LogOut } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Camera } from 'lucide-react';
 import { BottomNav } from '../components/layout/BottomNav';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { SelectGrid } from '../components/common/SelectGrid';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { ConfirmDialog } from '../components/modals/ConfirmDialog';
-import { POSITIONS } from '@/app/constants';
 import {
   formatPhoneNumber,
   validatePhoneNumber,
   getPhoneErrorMessage,
+  stripPhoneFormat,
+  validateName,
+  getNameErrorMessage,
 } from '@/app/lib/utils';
-import { useUser } from '../hooks/useUser';
+import {
+  useUserProfile,
+  useUserSettings,
+} from '@/app/hooks/queries/useUserQuery';
+import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
+import {
+  useUpdateUser,
+  useUpdateUserSettings,
+} from '@/app/hooks/mutations/useUserMutations';
+import { useLogout } from '@/app/hooks/mutations/useAuthMutations';
 
 /**
  * @typedef {import('@/app/types').UserProfile} UserProfile
  */
 
 export function SettingsPage() {
-  const navigate = useNavigate();
-  const { user, updateUser, clearUser } = useUser();
+  const { data: profileData } = useUserProfile();
+  const { data: settingsData } = useUserSettings();
+  const { data: positions = [] } = usePositions();
+  const { mutateAsync: updateUserProfile, isPending: isSavingProfile } =
+    useUpdateUser();
+  const { mutate: updateSettings } = useUpdateUserSettings();
+  const { mutateAsync: logout } = useLogout();
 
   const [isEditing, setIsEditing] = useState(false);
   /** @type {[UserProfile, React.Dispatch<React.SetStateAction<UserProfile>>]} */
-  const [editData, setEditData] = useState(user);
-  /** @type {[string | undefined, React.Dispatch<React.SetStateAction<string | undefined>>]} */
-  const [phoneError, setPhoneError] = useState(undefined);
+  const [editData, setEditData] = useState({
+    name: '',
+    position: '',
+    phone: '',
+    profileImage: null,
+  });
+  const [errors, setErrors] = useState({
+    name: undefined,
+    position: undefined,
+    phone: undefined,
+  });
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [localSettings, setLocalSettings] = useState({
+    notificationEnabled: true,
+    interviewResumeDefaultsEnabled: false,
+  });
+  const hasProfileSynced = useRef(false);
+  const settingsDebounceRef = useRef(null);
+  const displayName = profileData?.name ?? '';
+  const displayPosition = profileData
+    ? positions.find((position) => position.id === profileData.positionId)
+        ?.name || ''
+    : '';
+  const displayPhone = profileData?.phone
+    ? formatPhoneNumber(profileData.phone)
+    : '미등록';
+
+  useEffect(() => {
+    if (!profileData || hasProfileSynced.current) return;
+    if (positions.length === 0) return;
+
+    const positionName =
+      positions.find((position) => position.id === profileData.positionId)
+        ?.name || '';
+
+    setEditData({
+      name: profileData.name,
+      position: positionName,
+      phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
+      profileImage: profileData.profileImageUrl ?? null,
+    });
+
+    hasProfileSynced.current = true;
+  }, [profileData, positions]);
+
+  useEffect(() => {
+    if (!settingsData) return;
+    setLocalSettings({
+      notificationEnabled: settingsData.notificationEnabled,
+      interviewResumeDefaultsEnabled:
+        settingsData.interviewResumeDefaultsEnabled,
+    });
+  }, [settingsData]);
+
+  useEffect(() => {
+    return () => {
+      if (settingsDebounceRef.current) {
+        clearTimeout(settingsDebounceRef.current);
+      }
+    };
+  }, []);
 
   const handleEdit = useCallback(() => {
-    setIsEditing(true);
-    setEditData(user);
-  }, [user]);
+    if (!profileData) return;
+    const positionName =
+      positions.find((position) => position.id === profileData.positionId)
+        ?.name || '';
 
-  const handleSave = useCallback(() => {
-    if (!editData.phone || validatePhoneNumber(editData.phone)) {
-      updateUser(editData);
-      setIsEditing(false);
-      setPhoneError(undefined);
-      toast.success('프로필이 저장되었습니다');
-    } else {
-      const errorMsg = getPhoneErrorMessage(editData.phone);
-      setPhoneError(errorMsg);
+    setEditData({
+      name: profileData.name,
+      position: positionName,
+      phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
+      profileImage: profileData.profileImageUrl ?? null,
+    });
+    setIsEditing(true);
+  }, [profileData, positions]);
+
+  const handleSave = useCallback(async () => {
+    const newErrors = {};
+    const trimmedName = editData.name.trim();
+
+    // Validate name (2-10 chars, no spaces, no emoji)
+    if (!validateName(trimmedName)) {
+      newErrors.name = getNameErrorMessage(trimmedName);
     }
-  }, [editData, updateUser]);
+
+    // Validate position
+    const selectedPosition = positions.find(
+      (position) => position.name === editData.position
+    );
+
+    if (!selectedPosition) {
+      newErrors.position = '희망 포지션을 선택해주세요';
+    }
+
+    // Validate phone format
+    if (editData.phone && !validatePhoneNumber(editData.phone)) {
+      newErrors.phone = getPhoneErrorMessage(editData.phone);
+    }
+
+    // If any errors, show them inline and stop
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Normalize phone
+    const normalizedPhone = editData.phone
+      ? stripPhoneFormat(editData.phone)
+      : '';
+    const phoneValue = normalizedPhone ? normalizedPhone : null;
+
+    try {
+      const updatedProfile = await updateUserProfile({
+        name: trimmedName,
+        positionId: selectedPosition.id,
+        phone: phoneValue,
+        profileImageUrl: editData.profileImage ?? null,
+        privacyAgreed: true,
+        phonePolicyAgreed: phoneValue ? true : undefined,
+      });
+
+      const updatedPositionName =
+        positions.find((position) => position.id === updatedProfile.positionId)
+          ?.name || editData.position;
+
+      setEditData({
+        name: updatedProfile.name,
+        position: updatedPositionName,
+        phone: updatedProfile.phone
+          ? formatPhoneNumber(updatedProfile.phone)
+          : '',
+        profileImage: updatedProfile.profileImageUrl ?? null,
+      });
+
+      setIsEditing(false);
+      setErrors({ name: undefined, position: undefined, phone: undefined });
+    } catch (error) {
+      // Handle field-specific backend errors
+      const errorCode = error.response?.data?.code;
+
+      if (errorCode === 'NAME_INVALID_INPUT') {
+        setErrors((prev) => ({
+          ...prev,
+          name: '이름은 2~10자로 입력해주세요 (공백/이모지 불가)',
+        }));
+      } else if (errorCode === 'PHONE_INVALID_FORMAT') {
+        setErrors((prev) => ({
+          ...prev,
+          phone: '올바른 전화번호 형식이 아닙니다',
+        }));
+      } else if (errorCode === 'POSITION_SELECTION_REQUIRED') {
+        setErrors((prev) => ({
+          ...prev,
+          position: '희망 포지션을 선택해주세요',
+        }));
+      }
+    }
+  }, [editData, positions, updateUserProfile]);
 
   const handleCancel = useCallback(() => {
+    if (profileData) {
+      const positionName =
+        positions.find((position) => position.id === profileData.positionId)
+          ?.name || '';
+
+      setEditData({
+        name: profileData.name,
+        position: positionName,
+        phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
+        profileImage: profileData.profileImageUrl ?? null,
+      });
+    }
     setIsEditing(false);
-    setEditData(user);
-    setPhoneError(undefined);
-  }, [user]);
+    setErrors({ name: undefined, position: undefined, phone: undefined });
+  }, [profileData, positions]);
 
   const handlePhoneChange = useCallback(
     (e) => {
       const formatted = formatPhoneNumber(e.target.value);
       setEditData((prev) => ({ ...prev, phone: formatted }));
-      if (phoneError) {
-        setPhoneError(undefined);
+      if (errors.phone) {
+        setErrors((prev) => ({ ...prev, phone: undefined }));
       }
     },
-    [phoneError]
+    [errors.phone]
   );
 
   const handleLogout = useCallback(() => {
@@ -69,17 +238,29 @@ export function SettingsPage() {
   }, []);
 
   const handleConfirmLogout = useCallback(() => {
-    clearUser();
-    toast.success('로그아웃되었습니다');
-    setIsLogoutDialogOpen(false);
-    navigate('/');
-  }, [navigate, clearUser]);
+    logout().finally(() => {
+      setIsLogoutDialogOpen(false);
+    });
+  }, [logout]);
 
   const handleCancelLogout = useCallback(() => {
     setIsLogoutDialogOpen(false);
   }, []);
 
-  const [useResumeData, setUseResumeData] = useState(true);
+  const handleToggleSetting = useCallback(
+    (field, value) => {
+      setLocalSettings((prev) => ({ ...prev, [field]: value }));
+
+      if (settingsDebounceRef.current) {
+        clearTimeout(settingsDebounceRef.current);
+      }
+
+      settingsDebounceRef.current = setTimeout(() => {
+        updateSettings({ [field]: value });
+      }, 500);
+    },
+    [updateSettings]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -109,22 +290,44 @@ export function SettingsPage() {
                   label="이름"
                   name="name"
                   value={editData.name}
-                  onChange={(e) =>
-                    setEditData({ ...editData, name: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setEditData({ ...editData, name: e.target.value });
+                    if (errors.name) {
+                      setErrors((prev) => ({ ...prev, name: undefined }));
+                    }
+                  }}
+                  error={errors.name}
                 />
 
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-700">
                     희망 포지션
                   </label>
-                  <SelectGrid
-                    items={POSITIONS}
-                    selected={editData.position}
-                    onSelect={(pos) =>
-                      setEditData({ ...editData, position: pos })
-                    }
-                  />
+                  <Select
+                    value={editData.position}
+                    onValueChange={(value) => {
+                      setEditData({ ...editData, position: value });
+                      if (errors.position) {
+                        setErrors((prev) => ({ ...prev, position: undefined }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="포지션을 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((position) => (
+                        <SelectItem key={position.id} value={position.name}>
+                          {position.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.position && (
+                    <p className="mt-1 text-sm text-danger">
+                      {errors.position}
+                    </p>
+                  )}
                 </div>
 
                 <Input
@@ -133,14 +336,19 @@ export function SettingsPage() {
                   placeholder="010-1234-5678"
                   value={editData.phone}
                   onChange={handlePhoneChange}
-                  error={phoneError}
+                  error={errors.phone}
                 />
 
                 <div className="flex gap-2 pt-2">
                   <Button variant="secondary" fullWidth onClick={handleCancel}>
                     취소
                   </Button>
-                  <Button variant="primary" fullWidth onClick={handleSave}>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={handleSave}
+                    disabled={isSavingProfile}
+                  >
                     저장
                   </Button>
                 </div>
@@ -149,15 +357,15 @@ export function SettingsPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-600">이름</span>
-                  <span className="font-medium">{user.name}</span>
+                  <span className="font-medium">{displayName}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-600">희망 포지션</span>
-                  <span className="font-medium">{user.position}</span>
+                  <span className="font-medium">{displayPosition}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-gray-600">전화번호</span>
-                  <span className="font-medium">{user.phone || '미등록'}</span>
+                  <span className="font-medium">{displayPhone}</span>
                 </div>
 
                 <Button variant="secondary" fullWidth onClick={handleEdit}>
@@ -169,20 +377,47 @@ export function SettingsPage() {
 
           {/* Interview Settings */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200">
-            <h3 className="mb-4">모의면접 설정</h3>
+            <h3 className="mb-4">알림 및 모의 면접 설정</h3>
 
             <label className="flex items-start justify-between py-3">
               <div className="flex-1 pr-4">
-                <p className="font-medium mb-1">이력서 정보 자동 사용</p>
+                <p className="font-medium mb-1">알림 받기</p>
                 <p className="text-sm text-gray-600">
-                  모의 면접 시작 시 이력서 정보를 기본값으로 사용합니다
+                  이력서 생성 및 수정 알림을 받을 수 있습니다.
                 </p>
               </div>
               <div className="relative inline-block w-12 h-7 flex-shrink-0">
                 <input
                   type="checkbox"
-                  checked={useResumeData}
-                  onChange={(e) => setUseResumeData(e.target.checked)}
+                  checked={localSettings.notificationEnabled}
+                  onChange={(e) =>
+                    handleToggleSetting('notificationEnabled', e.target.checked)
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-12 h-7 bg-gray-200 peer-checked:bg-primary rounded-full peer transition-colors cursor-pointer" />
+                <div className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
+              </div>
+            </label>
+
+            <label className="flex items-start justify-between py-3 border-t border-gray-100">
+              <div className="flex-1 pr-4">
+                <p className="font-medium mb-1">이력서 정보 자동 사용</p>
+                <p className="text-sm text-gray-600">
+                  모의 면접 시작 시 이력서 정보를 기본 값으로 사용할 수
+                  있습니다.
+                </p>
+              </div>
+              <div className="relative inline-block w-12 h-7 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={localSettings.interviewResumeDefaultsEnabled}
+                  onChange={(e) =>
+                    handleToggleSetting(
+                      'interviewResumeDefaultsEnabled',
+                      e.target.checked
+                    )
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-12 h-7 bg-gray-200 peer-checked:bg-primary rounded-full peer transition-colors cursor-pointer" />

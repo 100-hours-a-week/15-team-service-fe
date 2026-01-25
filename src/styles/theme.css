@@ -200,3 +200,10 @@
     line-height: 1.4;
   }
 }
+
+#app-container [data-sonner-toaster].app-toaster {
+  position: absolute !important;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(390px, 100%);
+}
