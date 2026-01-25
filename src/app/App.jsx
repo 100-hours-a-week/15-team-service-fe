@@ -4,12 +4,11 @@ import {
   Navigate,
   Outlet,
 } from 'react-router-dom';
-import { Provider } from 'react-redux';
 import { Toaster } from 'sonner';
 
-import { store } from './store';
 import { OnboardingPage } from './pages/auth/OnboardingPage';
 import { SignupPage } from './pages/auth/SignupPage';
+import { AuthCallbackPage } from './pages/auth/AuthCallbackPage';
 import { HomePage } from './pages/HomePage';
 import { RepoSelectPage } from './pages/resume/RepoSelectPage';
 import { CreateResumePage } from './pages/resume/CreateResumePage';
@@ -21,44 +20,35 @@ import { InterviewDetailPage } from './pages/interview/InterviewDetailPage';
 import { InterviewListPage } from './pages/interview/InterviewListPage';
 import { SettingsPage } from './pages/SettingsPage';
 
-/**
- * Root layout component for the application
- *
- * Implementation Decision:
- * - Migrated from BrowserRouter to createBrowserRouter to support useBlocker hook
- * - Wraps all routes with app-container (390px max-width mobile viewport)
- * - Includes Toaster for global toast notifications
- * - Redux Provider wraps entire app for global user state management
- */
 function RootLayout() {
   return (
-    <Provider store={store}>
-      <div className="min-h-screen bg-gray-50">
-        <div
-          id="app-container"
-          className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative"
-        >
-          <Outlet />
-        </div>
-        <Toaster position="top-center" />
+    <div className="min-h-screen bg-gray-50">
+      <div
+        id="app-container"
+        className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative"
+      >
+        <Outlet />
       </div>
-    </Provider>
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          className: 'mx-auto',
+          style: {
+            maxWidth: '390px',
+            width: '100%',
+          },
+        }}
+      />
+    </div>
   );
 }
 
-/**
- * Application router configuration
- *
- * Implementation Decision:
- * - Uses createBrowserRouter (React Router v7 data router API)
- * - Required for useBlocker hook in ResumeViewerPage
- * - All routes nested under RootLayout for consistent app container
- */
 const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
       { path: '/', element: <OnboardingPage /> },
+      { path: '/auth/callback', element: <AuthCallbackPage /> },
       { path: '/signup', element: <SignupPage /> },
       { path: '/home', element: <HomePage /> },
       { path: '/repo-select', element: <RepoSelectPage /> },
