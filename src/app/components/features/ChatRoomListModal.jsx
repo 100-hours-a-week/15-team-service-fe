@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { MessageSquare } from 'lucide-react';
-import * as Dialog from '@radix-ui/react-dialog';
+import React, { useState } from 'react';
+import { Button } from '../common/Button';
 
 /**
  * Mock data for chat rooms
@@ -97,15 +96,22 @@ export function ChatRoomListModal() {
           className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-700 hover:text-primary transition-colors"
           aria-label="채팅방 목록 열기"
         >
-          <MessageSquare className="w-6 h-6" />
-        </button>
-      </Dialog.Trigger>
+          <div
+            className="w-[360px] max-w-[90vw] rounded-xl bg-white p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold">채팅방</h3>
+              <button
+                className="text-sm text-gray-500"
+                onClick={() => setOpen(false)}
+              >
+                닫기
+              </button>
+            </div>
 
-      <Dialog.Portal container={document.getElementById('app-container')}>
-        <Dialog.Overlay className="absolute inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 w-[360px] max-h-[85vh] overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg p-5">
-          <div className="mb-4">
-            <h3 className="font-semibold">채팅방 목록</h3>
+            <p className="text-sm text-gray-600">
+            </p>
           </div>
 
           <div className="space-y-3">

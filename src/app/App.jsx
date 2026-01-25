@@ -1,4 +1,9 @@
-import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+  Outlet,
+} from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { Toaster } from 'sonner';
 
@@ -29,7 +34,10 @@ function RootLayout() {
   return (
     <Provider store={store}>
       <div className="min-h-screen bg-gray-50">
-        <div id="app-container" className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative">
+        <div
+          id="app-container"
+          className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative"
+        >
           <Outlet />
         </div>
         <Toaster position="top-center" />
@@ -50,19 +58,19 @@ const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
-      { path: "/", element: <OnboardingPage /> },
-      { path: "/signup", element: <SignupPage /> },
-      { path: "/home", element: <HomePage /> },
-      { path: "/repo-select", element: <RepoSelectPage /> },
-      { path: "/create-resume", element: <CreateResumePage /> },
-      { path: "/resume/:id", element: <ResumeViewerPage /> },
-      { path: "/interview/start", element: <InterviewStartPage /> },
-      { path: "/interview/session", element: <InterviewSessionPage /> },
-      { path: "/interview/summary", element: <InterviewSummaryPage /> },
-      { path: "/interview/detail/:id", element: <InterviewDetailPage /> },
-      { path: "/interviews", element: <InterviewListPage /> },
-      { path: "/settings", element: <SettingsPage /> },
-      { path: "*", element: <Navigate to="/" replace /> },
+      { path: '/', element: <OnboardingPage /> },
+      { path: '/signup', element: <SignupPage /> },
+      { path: '/home', element: <HomePage /> },
+      { path: '/repo-select', element: <RepoSelectPage /> },
+      { path: '/create-resume', element: <CreateResumePage /> },
+      { path: '/resume/:id', element: <ResumeViewerPage /> },
+      { path: '/interview/start', element: <InterviewStartPage /> },
+      { path: '/interview/session', element: <InterviewSessionPage /> },
+      { path: '/interview/summary', element: <InterviewSummaryPage /> },
+      { path: '/interview/detail/:id', element: <InterviewDetailPage /> },
+      { path: '/interviews', element: <InterviewListPage /> },
+      { path: '/settings', element: <SettingsPage /> },
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
 ]);

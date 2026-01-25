@@ -11,15 +11,11 @@ import { cn } from '@/app/lib/utils';
 /**
  * @param {StepProgressProps} props
  */
-export const StepProgress = ({
-  current,
-  total,
-  className
-}) => {
+export const StepProgress = ({ current, total, className }) => {
   const percentage = (current / total) * 100;
 
   return (
-    <div className={cn("bg-white px-5 py-4", className)}>
+    <div className={cn('bg-white px-5 py-4', className)}>
       <div className="max-w-[390px] mx-auto">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-sm font-medium text-primary">

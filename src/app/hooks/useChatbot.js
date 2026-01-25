@@ -1,5 +1,4 @@
-import { useState, useCallback } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useMemo, useState } from 'react';
 
 export const useChatbot = (options = {}) => {
   const { onUpdate } = options;
@@ -11,24 +10,29 @@ export const useChatbot = (options = {}) => {
   const handleSendMessage = useCallback(() => {
     if (!chatInput.trim() || isUpdating) return;
 
-    const userMessage = {
-      role: 'user',
-      content: chatInput,
-      timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-    };
+  const handleSendMessage = useCallback(
+    async (text) => {
+      setMessages((prev) => [
+        ...prev,
+        { id: String(Date.now()), role: 'user', content: text },
+      ]);
 
-    setMessages(prev => [...prev, userMessage]);
-    setChatInput('');
-    setIsUpdating(true);
+      // "loading" 흉내만 내고, onUpdate가 있으면 샘플 텍스트를 한 번 흘려보냄
+      setIsLoading(true);
+      try {
+        const chunk = '\n# AI updated content (stub)\n';
+        if (typeof onUpdate === 'function') onUpdate(chunk);
 
-    // AI 응답 시뮬레이션
-    setTimeout(() => {
-      const aiMessage = {
-        role: 'assistant',
-        content: '네, 요청하신 내용을 반영하여 이력서를 수정하고 있습니다. 잠시만 기다려주세요.',
-        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages(prev => [...prev, aiMessage]);
+        setMessages((prev) => [
+          ...prev,
+          { id: String(Date.now() + 1), role: 'ai', content: 'stub response' },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [onUpdate]
+  );
 
       // YAML 업데이트 시뮬레이션
       setTimeout(() => {
