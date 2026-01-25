@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Button } from '../common/Button';
+import { useState } from 'react';
+import { MessageSquare } from 'lucide-react';
+import { Drawer } from 'vaul';
 
 /**
  * Mock data for chat rooms
@@ -56,26 +57,7 @@ const CHAT_ROOMS = [
   },
 ];
 
-/**
- * ChatRoomListModal Component
- *
- * Displays a dialog with a list of chat rooms when the message button is clicked.
- * Uses Radix UI Dialog with app-container scoped overlay.
- *
- * Implementation decisions:
- * - Portal: Renders to #app-container (NOT document.body)
- * - Dialog positioning: absolute with center alignment (top-50% left-50% translate)
- * - Overlay: Semi-transparent black backdrop scoped to app container (absolute inset-0 bg-black/40)
- * - Width: w-[360px] to fit comfortably within 390px mobile constraint
- * - Max-height: max-h-[85vh] with overflow-y-auto for scrollable list (increased from 70vh)
- * - Card hover state: hover:bg-gray-50 for visual feedback
- * - Text truncation: truncate class on last message to prevent overflow
- * - Click handler: Empty for now (to be implemented with actual chat navigation)
- * - Touch target: min-w-[44px] min-h-[44px] for accessibility
- *
- * @returns {JSX.Element} Message button with chat room list dialog
- */
-export function ChatRoomListModal() {
+export function ChatRoomListSheet() {
   const [isOpen, setIsOpen] = useState(false);
 
   /**
@@ -83,38 +65,40 @@ export function ChatRoomListModal() {
    * TODO: Implement navigation to specific chat room
    * @param {string} roomId - Chat room ID
    */
-  const handleRoomClick = (roomId) => {
-    // To be implemented: navigate to chat room
-    // Currently no action (waiting for backend integration)
+  const handleRoomClick = () => {
+    setIsOpen(false);
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Dialog.Trigger asChild>
+    <Drawer.Root open={isOpen} onOpenChange={setIsOpen} dismissible={true}>
+      <Drawer.Trigger asChild>
         <button
           type="button"
           className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-700 hover:text-primary transition-colors"
           aria-label="채팅방 목록 열기"
         >
-          <div
-            className="w-[360px] max-w-[90vw] rounded-xl bg-white p-4 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold">채팅방</h3>
-              <button
-                className="text-sm text-gray-500"
-                onClick={() => setOpen(false)}
-              >
-                닫기
-              </button>
-            </div>
+          <MessageSquare className="w-6 h-6" />
+        </button>
+      </Drawer.Trigger>
 
-            <p className="text-sm text-gray-600">
-            </p>
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-y-0 left-1/2 z-50 w-full max-w-[390px] -translate-x-1/2 bg-black/40" />
+        <Drawer.Content
+          className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 flex flex-col w-full max-w-[390px] mx-auto"
+          style={{ height: '70vh' }}
+        >
+          {/* Drag handle */}
+          <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 my-4" />
+
+          {/* Header */}
+          <div className="px-5 pb-4 border-b border-gray-200">
+            <Drawer.Title className="text-base font-semibold">
+              채팅방 목록
+            </Drawer.Title>
           </div>
 
-          <div className="space-y-3">
+          {/* Scrollable room list */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
             {CHAT_ROOMS.map((room) => (
               <button
                 key={room.id}
@@ -137,8 +121,8 @@ export function ChatRoomListModal() {
               </button>
             ))}
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 }

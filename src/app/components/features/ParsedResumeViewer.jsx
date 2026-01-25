@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { Mail, Phone, Github } from 'lucide-react';
 import { parseYAMLToResume } from '@/app/lib/utils';
 
@@ -8,7 +8,7 @@ import { parseYAMLToResume } from '@/app/lib/utils';
  */
 
 /**
- * @type {React.ForwardRefExoticComponent<ParsedResumeViewerProps & React.RefAttributes<HTMLDivElement>>}
+ * @type {import('react').ForwardRefExoticComponent<ParsedResumeViewerProps & import('react').RefAttributes<HTMLDivElement>>}
  */
 export const ParsedResumeViewer = forwardRef(({ yamlContent }, ref) => {
   const resume = parseYAMLToResume(yamlContent);
