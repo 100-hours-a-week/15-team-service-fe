@@ -1,16 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
 
-/**
- * Temporary stub for useChatbot.
- * Expected API (used by ResumeViewerPage):
- * - useChatbot({ onUpdate })
- * - returns { messages, isLoading, handleSendMessage }
- */
-export function useChatbot(options = {}) {
+export const useChatbot = (options = {}) => {
   const { onUpdate } = options;
-
   const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const handleSendMessage = useCallback(() => {
+    if (!chatInput.trim() || isUpdating) return;
 
   const handleSendMessage = useCallback(
     async (text) => {
@@ -36,10 +34,24 @@ export function useChatbot(options = {}) {
     [onUpdate]
   );
 
-  return useMemo(
-    () => ({ messages, isLoading, handleSendMessage }),
-    [messages, isLoading, handleSendMessage]
-  );
-}
+      // YAML 업데이트 시뮬레이션
+      setTimeout(() => {
+        if (onUpdate) {
+          onUpdate('\n# AI가 수정한 내용...');
+        }
+        setIsUpdating(false);
+        toast.success('업데이트가 반영되었습니다');
+      }, 1500);
+    }, 1000);
+  }, [chatInput, isUpdating, onUpdate]);
 
-export default useChatbot;
+  return {
+    messages,
+    chatInput,
+    setChatInput,
+    isUpdating,
+    isPaused,
+    setIsPaused,
+    handleSendMessage,
+  };
+};

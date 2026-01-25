@@ -1,13 +1,51 @@
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import yaml from 'js-yaml';
+import { FILTER_UNSPECIFIED_LABEL } from '@/app/constants';
+
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
 /**
- * Common utility functions
+ * 텍스트가 지정된 길이를 초과하면 말줄임표(...)로 자릅니다
+ * @param text - 원본 텍스트
+ * @param maxLength - 최대 길이 (기본값: 20)
+ * @returns 잘린 텍스트 또는 원본 텍스트
  */
+export function truncateText(text, maxLength = 20) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return text.slice(0, maxLength) + '...';
+}
 
-// noop
-export function noop() {}
+/**
+ * 초 단위 시간을 "분 초" 형식으로 변환합니다
+ * @param seconds - 초 단위 시간
+ * @returns "분 초" 형식의 문자열 (예: "2분 30초")
+ */
+export function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}분 ${secs}초`;
+}
 
-// ---- date / time ----
-export function formatDate(value) {
-  return value;
+/**
+ * 초 단위 시간을 "시간 분 초" 형식으로 변환합니다
+ * 1시간 미만인 경우 formatTime과 동일하게 "분 초"만 반환합니다
+ * @param seconds - 초 단위 시간
+ * @returns "시간 분 초" 또는 "분 초" 형식의 문자열
+ */
+export function formatDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}시간 ${mins}분 ${secs}초`;
+  }
+  return formatTime(seconds);
 }
 
 export function formatTime(seconds = 0) {
@@ -37,8 +75,6 @@ export function formatPhoneNumber(input = '') {
   if (digits.length === 10) {
     return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
-}
 
 export function validatePhoneNumber(input = '') {
   const digits = String(input).replace(/\D/g, '');
@@ -91,10 +127,20 @@ export function parseYAMLToResume(yamlText = '') {
   }
 }
 
-// ---- interview list ----
-export function extractUniqueCompanies(interviews = []) {
-  return [...new Set(interviews.map((i) => i.company).filter(Boolean))];
-}
+/**
+ * 페이지네이션을 위한 페이지 번호 배열을 생성합니다
+ * 모바일 최적화: 현재 페이지를 중심으로 최대 7개 페이지 번호 표시
+ * @param currentPage - 현재 페이지 번호 (1-indexed)
+ * @param totalPages - 전체 페이지 수
+ * @returns 표시할 페이지 번호 배열 (예: [1, 'ellipsis', 5, 6, 7, 'ellipsis', 20])
+ */
+export function generatePageNumbers(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    // 7페이지 이하: 모든 페이지 번호 표시
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const pages = [];
 
 export function sortInterviews(interviews = [], sortOption = 'newest') {
   const toTime = (d) => Date.parse(d) || 0;
@@ -105,6 +151,17 @@ export function sortInterviews(interviews = [], sortOption = 'newest') {
   );
 }
 
-export function generatePageNumbers(currentPage = 1, totalPages = 1) {
-  return Array.from({ length: totalPages }, (_, i) => i + 1);
+/**
+ * YAML 문자열을 파싱하여 이력서 객체로 변환합니다
+ * @param yamlContent - YAML 형식의 이력서 문자열
+ * @returns 파싱된 이력서 객체 또는 null (파싱 실패 시)
+ */
+export function parseYAMLToResume(yamlContent) {
+  try {
+    const parsed = yaml.load(yamlContent);
+    return parsed;
+  } catch (error) {
+    console.error('Failed to parse YAML:', error);
+    return null;
+  }
 }
