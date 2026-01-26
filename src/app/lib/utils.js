@@ -48,6 +48,31 @@ export function formatDuration(seconds = 0) {
 }
 
 /**
+ * ISO 8601 타임스탬프를 한국어 형식으로 변환합니다.
+ * @param {string | null} isoTimestamp - ISO 8601 timestamp from API
+ * @returns {string} "YYYY.MM.DD 오전/오후 H:MM" 형식의 문자열 (변환 실패 시 빈 문자열)
+ */
+export function formatKoreanTimestamp(isoTimestamp) {
+  if (!isoTimestamp) return '';
+
+  try {
+    const date = new Date(isoTimestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    const period = hours < 12 ? '오전' : '오후';
+    const displayHours = hours % 12 || 12;
+
+    return `${year}.${month}.${day} ${period} ${displayHours}:${minutes}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
  * 이모티콘 존재 여부를 검증합니다.
  */
 const EMOJI_REGEX = /\p{Emoji_Presentation}/gu;
