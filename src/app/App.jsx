@@ -28,17 +28,17 @@ function RootLayout() {
         className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative"
       >
         <Outlet />
+        <Toaster
+          position="top-center"
+          className="app-toaster"
+          style={{
+            '--width': 'min(390px, 100%)',
+          }}
+          toastOptions={{
+            className: 'mx-auto',
+          }}
+        />
       </div>
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          className: 'mx-auto',
-          style: {
-            maxWidth: '390px',
-            width: '100%',
-          },
-        }}
-      />
     </div>
   );
 }

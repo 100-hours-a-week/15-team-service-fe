@@ -33,6 +33,9 @@ export const API_CONFIG = {
 
     // Positions
     POSITIONS: '/positions',
+
+    // Chats
+    CHATS: '/chats',
   },
   TIMEOUT: 30000,
   STREAMING_TIMEOUT: 300000,
