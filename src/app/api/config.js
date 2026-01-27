@@ -36,6 +36,7 @@ export const API_CONFIG = {
 
     // Chats
     CHATS: '/chats',
+    CHAT_MESSAGES: (roomId) => `/chats/${roomId}`,
   },
   TIMEOUT: 30000,
   STREAMING_TIMEOUT: 300000,
