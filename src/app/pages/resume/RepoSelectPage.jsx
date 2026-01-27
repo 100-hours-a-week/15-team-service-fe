@@ -1,67 +1,33 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useCallback, useMemo } from 'react';
-import { Search, Lock, RefreshCw, ChevronDown } from 'lucide-react';
+import { Search, Lock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { Button } from '../../components/common/Button';
 import { REPO_SORT_OPTIONS } from '@/app/constants';
+import { useRepositories } from '@/app/hooks/queries/useRepositoryQueries';
 
 /**
  * Maximum number of repositories that can be selected
- *
- * Implementation Decision: Set to 6 based on user requirement
- * - Users can select up to 6 repositories for resume generation
- * - Enforced through handleRepoClick handler with toast notification
- * - Visual feedback: disabled state on unselected cards when limit reached
  */
 const MAX_REPO_SELECTION = 6;
 
 /**
  * @typedef {import('@/app/types').Repository} Repository
- * @typedef {import('@/app/types').RepoSortOption} RepoSortOption
- * @typedef {'loading' | 'empty' | 'error' | 'loaded'} ViewState
  */
-
-/** @type {Repository[]} */
-const MOCK_REPOS = [
-  {
-    id: 12345,
-    name: 'commitme-web',
-    owner: 'yezi',
-    isPrivate: false,
-    updatedAt: '2025-12-20',
-  },
-  {
-    id: 67890,
-    name: 'backend-api',
-    owner: 'yezi',
-    isPrivate: true,
-    updatedAt: '2025-12-15',
-  },
-  {
-    id: 11223,
-    name: 'data-pipeline',
-    owner: 'yezi',
-    isPrivate: false,
-    updatedAt: '2025-12-10',
-  },
-  {
-    id: 44556,
-    name: 'mobile-app',
-    owner: 'yezi',
-    isPrivate: true,
-    updatedAt: '2025-12-05',
-  },
-];
 
 export function RepoSelectPage() {
   const navigate = useNavigate();
 
-  // View state management
-  const viewState = 'loaded';
-  const repos = MOCK_REPOS;
+  // Fetch repositories from API
+  const {
+    data: repos = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useRepositories();
 
-  // Phase 2: Selection and filtering state
+  // Selection and filtering state
   /** @type {[Repository[], React.Dispatch<React.SetStateAction<Repository[]>>]} */
   const [selectedRepos, setSelectedRepos] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,26 +36,18 @@ export function RepoSelectPage() {
   const [showSortMenu, setShowSortMenu] = useState(false);
 
   /**
-   * Phase 2: Repository selection handler with limit enforcement
-   *
-   * Implementation Decisions:
-   * - Toast notification: Provides immediate, non-intrusive feedback when limit is reached
-   * - Deselection always allowed: Enables users to swap repositories even when at limit
-   * - State update pattern: Functional update to ensure latest state
-   *
-   * @param {Repository} repo - The repository to toggle selection
+   * Repository selection handler with limit enforcement
+   * @param {Repository} repo
    */
   const handleRepoClick = useCallback((repo) => {
     setSelectedRepos((prev) => {
       const isSelected = prev.some((r) => r.id === repo.id);
       if (isSelected) {
-        // Deselection always allowed (enables swapping)
         return prev.filter((r) => r.id !== repo.id);
       } else {
-        // Check limit before adding
         if (prev.length >= MAX_REPO_SELECTION) {
           toast.error(`최대 ${MAX_REPO_SELECTION}개까지만 선택할 수 있습니다`);
-          return prev; // No state change
+          return prev;
         }
         return [...prev, repo];
       }
@@ -97,18 +55,16 @@ export function RepoSelectPage() {
   }, []);
 
   /**
-   * Phase 2: Search input handler
-   *
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The change event
+   * Search input handler
+   * @param {React.ChangeEvent<HTMLInputElement>} e
    */
   const handleSearchChange = useCallback((e) => {
     setSearchQuery(e.target.value);
   }, []);
 
   /**
-   * Phase 2: Sort option change handler
-   *
-   * @param {string} option - The sort option key
+   * Sort option change handler
+   * @param {string} option
    */
   const handleSortChange = useCallback((option) => {
     setSortOption(option);
@@ -116,23 +72,14 @@ export function RepoSelectPage() {
   }, []);
 
   /**
-   * Phase 2: Continue button handler
-   *
-   * Navigates to create-resume page with selected repositories in location state
+   * Continue button handler - navigates with selected repos
    */
   const handleContinue = useCallback(() => {
     navigate('/create-resume', { state: { selectedRepos } });
   }, [navigate, selectedRepos]);
 
   /**
-   * Phase 2: Filtered and sorted repository list
-   *
-   * Processing pipeline:
-   * 1. Filter by search query (case-insensitive match on repo name)
-   * 2. Filter by privacy setting (all/public/private)
-   * 3. Sort by selected option (recent/name/oldest)
-   *
-   * Performance: Memoized to avoid recalculation on every render
+   * Filtered and sorted repository list
    */
   const sortedAndFilteredRepos = useMemo(() => {
     let filtered = repos;
@@ -172,7 +119,7 @@ export function RepoSelectPage() {
   }, [repos, searchQuery, filterPrivate, sortOption]);
 
   // Loading State
-  if (viewState === 'loading') {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <TopAppBar title="레포지토리 선택" showBack />
@@ -194,16 +141,16 @@ export function RepoSelectPage() {
     );
   }
 
-  // Empty State
-  if (viewState === 'empty') {
+  // Error State
+  if (isError) {
     return (
       <div className="min-h-screen bg-gray-50">
         <TopAppBar title="레포지토리 선택" showBack />
         <div className="flex flex-col items-center justify-center px-5 py-24">
-          <div className="max-w-[390px] w-full bg-white rounded-2xl p-8 text-center border border-gray-200">
-            <p className="text-gray-500 mb-4">표시할 레포지토리가 없습니다.</p>
-            <Button variant="ghost" onClick={() => {}}>
-              새로고침
+          <div className="max-w-[390px] w-full bg-white rounded-2xl p-8 text-center border border-gray-200 space-y-4">
+            <p className="text-gray-500">레포지토리를 불러오지 못했습니다</p>
+            <Button variant="primary" onClick={() => refetch()}>
+              재시도
             </Button>
           </div>
         </div>
@@ -211,16 +158,16 @@ export function RepoSelectPage() {
     );
   }
 
-  // Error State
-  if (viewState === 'error') {
+  // Empty State
+  if (repos.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <TopAppBar title="레포지토리 선택" showBack />
         <div className="flex flex-col items-center justify-center px-5 py-24">
-          <div className="max-w-[390px] w-full bg-white rounded-2xl p-8 text-center border border-gray-200 space-y-4">
-            <p className="text-gray-500">레포지토리를 불러오지 못했습니다</p>
-            <Button variant="primary" onClick={() => {}}>
-              재시도
+          <div className="max-w-[390px] w-full bg-white rounded-2xl p-8 text-center border border-gray-200">
+            <p className="text-gray-500 mb-4">표시할 레포지토리가 없습니다.</p>
+            <Button variant="ghost" onClick={() => refetch()}>
+              새로고침
             </Button>
           </div>
         </div>
@@ -320,11 +267,6 @@ export function RepoSelectPage() {
             {sortedAndFilteredRepos.map((repo) => {
               const isSelected = selectedRepos.some((r) => r.id === repo.id);
               const isMaxReached = selectedRepos.length >= MAX_REPO_SELECTION;
-              /**
-               * Disable logic: Only unselected cards are disabled when limit reached
-               * - Selected cards remain clickable for deselection
-               * - Allows users to swap repositories
-               */
               const isDisabled = !isSelected && isMaxReached;
 
               return (
@@ -332,16 +274,6 @@ export function RepoSelectPage() {
                   key={repo.id}
                   onClick={() => handleRepoClick(repo)}
                   disabled={isDisabled}
-                  /**
-                   * Card styling decisions:
-                   * - Selected: border-primary bg-blue-50 (existing pattern)
-                   * - Disabled: bg-gray-50 opacity-60 cursor-not-allowed
-                   *   * Gray background for clear disabled state
-                   *   * 60% opacity maintains readability while showing disabled state
-                   *   * cursor-not-allowed for immediate visual feedback
-                   *   * No hover effect to reinforce non-interactive state
-                   * - Default: border-gray-200 with hover effect
-                   */
                   className={`w-full bg-white rounded-2xl p-4 border-2 transition-all text-left relative ${
                     isSelected
                       ? 'border-primary bg-blue-50'
@@ -353,10 +285,6 @@ export function RepoSelectPage() {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        {/* Disabled text colors maintain visual hierarchy:
-                            - Title: text-gray-400 (lighter than normal black)
-                            - Metadata: text-gray-300 (even lighter)
-                            - Lock icon: text-gray-300 (matches metadata) */}
                         <h4 className={isDisabled ? 'text-gray-400' : ''}>
                           {repo.name}
                         </h4>
@@ -421,13 +349,6 @@ export function RepoSelectPage() {
       {/* Sticky Bottom CTA */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-5 py-4">
         <div className="max-w-[390px] mx-auto">
-          {/* Selection Progress Indicator
-              Implementation Decisions:
-              - Positioned above continue button for contextual awareness
-              - Shows "X/6개 선택됨" format for clear progress indication
-              - Only visible when at least 1 repo is selected (reduces visual clutter)
-              - Count turns text-primary font-medium when limit reached (positive visual emphasis)
-              - Centered text matches button alignment for visual consistency */}
           {selectedRepos.length > 0 && (
             <p className="text-sm text-gray-600 text-center mb-2">
               <span

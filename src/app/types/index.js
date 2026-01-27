@@ -64,10 +64,59 @@
  * @property {string} owner
  * @property {boolean} isPrivate
  * @property {string} updatedAt - ISO 8601 format
+ * @property {string} [htmlUrl] - Full GitHub URL
  */
 
 /**
  * @typedef {'recent' | 'name'} RepoSortOption
+ */
+
+// Resume API Types
+// ========================================
+
+/**
+ * @typedef {Object} ResumeSummary
+ * @property {number} resumeId
+ * @property {string} name
+ * @property {number} positionId
+ * @property {string} positionName
+ * @property {number} [companyId]
+ * @property {string} [companyName]
+ * @property {number} currentVersionNo
+ * @property {string} updatedAt
+ */
+
+/**
+ * @typedef {Object} ResumeDetail
+ * @property {number} resumeId
+ * @property {string} name
+ * @property {number} positionId
+ * @property {string} positionName
+ * @property {number} [companyId]
+ * @property {string} [companyName]
+ * @property {number} currentVersionNo
+ * @property {string} content - JSON string
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * @typedef {'QUEUED' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'DRAFT'} ResumeVersionStatus
+ */
+
+/**
+ * @typedef {Object} ResumeVersion
+ * @property {number} resumeId
+ * @property {number} versionNo
+ * @property {ResumeVersionStatus} status
+ * @property {string} content - JSON string
+ * @property {string} [aiTaskId]
+ * @property {string} [errorLog]
+ * @property {string} [startedAt]
+ * @property {string} [finishedAt]
+ * @property {string} [committedAt]
+ * @property {string} createdAt
+ * @property {string} updatedAt
  */
 
 // Chatbot Types

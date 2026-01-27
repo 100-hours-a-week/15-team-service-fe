@@ -7,7 +7,8 @@ import { BottomNav } from '../../components/layout/BottomNav';
 import { StepProgress } from '../../components/common/StepProgress';
 import { SelectGrid } from '../../components/common/SelectGrid';
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
-import { POSITIONS } from '@/app/constants';
+import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
+import { useCreateResume } from '@/app/hooks/mutations/useResumeMutations';
 
 /**
  * @typedef {import('@/app/types').Repository} Repository
@@ -16,28 +17,33 @@ import { POSITIONS } from '@/app/constants';
 export function CreateResumePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  /** @type {Repository[]} */
   const selectedRepos = location.state?.selectedRepos || [];
 
-  // Phase 2: State management for multi-step form
+  // Fetch positions from API
+  const { data: positions = [], isLoading: isLoadingPositions } = usePositions();
+
+  // Create resume mutation
+  const createResumeMutation = useCreateResume();
+
+  // State management for multi-step form
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    position: '',
+    positionId: null,
     company: '',
   });
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   /**
-   * Step 1 → Step 2 navigation
-   * Validates position selection before proceeding
+   * Step 1 -> Step 2 navigation
    */
   const handleNext = useCallback(() => {
-    if (!formData.position) {
+    if (!formData.positionId) {
       toast.error('희망 포지션을 선택해주세요');
       return;
     }
     setStep(2);
-  }, [formData.position]);
+  }, [formData.positionId]);
 
   /**
    * Opens confirmation dialog before starting resume generation
@@ -54,22 +60,32 @@ export function CreateResumePage() {
   }, []);
 
   /**
-   * Confirms resume generation and starts loading flow
-   * Simulates AI resume generation with 2-second delay
-   * Navigates to home page after completion
+   * Confirms resume generation and calls API
    */
   const handleConfirmGenerate = useCallback(() => {
     setIsConfirmDialogOpen(false);
-    setLoading(true);
 
-    // Simulate AI resume generation
-    setTimeout(() => {
-      toast.success('이력서가 생성되었습니다');
-      navigate('/home');
-    }, 2000);
-  }, [navigate]);
+    // Build repo URLs from selected repositories
+    const repoUrls = selectedRepos.map(
+      (repo) => repo.htmlUrl || `https://github.com/${repo.owner}/${repo.name}`
+    );
 
-  if (loading) {
+    createResumeMutation.mutate(
+      {
+        repoUrls,
+        positionId: formData.positionId,
+        // companyId is optional - backend will handle company name separately if needed
+      },
+      {
+        onSuccess: () => {
+          navigate('/home');
+        },
+      }
+    );
+  }, [selectedRepos, formData.positionId, createResumeMutation, navigate]);
+
+  // Loading state while creating resume
+  if (createResumeMutation.isPending) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <TopAppBar title="이력서 생성 중" />
@@ -90,6 +106,14 @@ export function CreateResumePage() {
       </div>
     );
   }
+
+  // Transform positions for SelectGrid (expects string array)
+  const positionItems = positions.map((p) => p.name);
+
+  // Find selected position name for display
+  const selectedPositionName = positions.find(
+    (p) => p.id === formData.positionId
+  )?.name;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -129,17 +153,31 @@ export function CreateResumePage() {
                 </p>
               </div>
 
-              <SelectGrid
-                items={POSITIONS}
-                selected={formData.position}
-                onSelect={(pos) => setFormData({ ...formData, position: pos })}
-              />
+              {isLoadingPositions ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="h-12 bg-gray-200 rounded-xl animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <SelectGrid
+                  items={positionItems}
+                  selected={selectedPositionName || ''}
+                  onSelect={(posName) => {
+                    const position = positions.find((p) => p.name === posName);
+                    setFormData({ ...formData, positionId: position?.id || null });
+                  }}
+                />
+              )}
 
               <Button
                 variant="primary"
                 fullWidth
                 onClick={handleNext}
-                disabled={!formData.position}
+                disabled={!formData.positionId}
               >
                 다음
               </Button>
