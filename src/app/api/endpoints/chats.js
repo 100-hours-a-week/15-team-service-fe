@@ -20,26 +20,33 @@ export const fetchChats = async () => {
  * @returns {Promise<{chats: Array, before: string | null, next: string | null}>}
  * @throws {Error} 401 if not authenticated, 400 if invalid cursor/size
  */
-export const fetchChatMessages = async (chatroomId, cursor = null, size = 20) => {
+export const fetchChatMessages = async (
+  chatroomId,
+  cursor = null,
+  size = 20
+) => {
   const params = { size };
   if (cursor) {
     params.after = cursor;
   }
 
-  const response = await apiClient.get(API_CONFIG.ENDPOINTS.CHAT_MESSAGES(chatroomId), {
-    params,
-  });
+  const response = await apiClient.get(
+    API_CONFIG.ENDPOINTS.CHAT_MESSAGES(chatroomId),
+    {
+      params,
+    }
+  );
   return response.data.data;
 };
 
 /**
  * Send a message to a chatroom
  * TODO: Implement after POST API spec is provided
- * @param {number} chatroomId - Chatroom ID
- * @param {object} payload - Message payload (text, files, etc.)
+ * @param {number} _chatroomId - Chatroom ID
+ * @param {object} _payload - Message payload (text, files, etc.)
  * @returns {Promise<object>} Created message object
  */
-export const sendChatMessage = async (chatroomId, payload) => {
+export const sendChatMessage = async (_chatroomId, _payload) => {
   // TODO: Implement after POST /chats/{chatroomId} spec is provided
   throw new Error('POST /chats/{chatroomId} API spec not yet provided');
 };
