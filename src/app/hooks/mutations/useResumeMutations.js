@@ -18,7 +18,6 @@ export function useCreateResume() {
     mutationFn: createResume,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resumes'] });
-      toast.success('이력서 생성이 시작되었습니다');
     },
     onError: (error) => {
       const errorCode = error.response?.data?.code;

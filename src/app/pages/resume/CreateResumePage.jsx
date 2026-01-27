@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
@@ -9,6 +10,7 @@ import { SelectGrid } from '../../components/common/SelectGrid';
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import { useCreateResume } from '@/app/hooks/mutations/useResumeMutations';
+import { useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
 
 /**
  * @typedef {import('@/app/types').Repository} Repository
@@ -33,6 +35,40 @@ export function CreateResumePage() {
     company: '',
   });
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [createdResumeId, setCreatedResumeId] = useState(null);
+
+  // Poll for resume generation status
+  const { data: versionData } = useResumeVersion(
+    createdResumeId,
+    1, // First version
+    {
+      enabled: !!createdResumeId,
+      refetchInterval: (query) => {
+        const status = query.state.data?.status;
+        if (status === 'QUEUED' || status === 'PROCESSING') {
+          return 3000; // Poll every 3 seconds
+        }
+        return false; // Stop polling
+      },
+    }
+  );
+
+  const generationStatus = versionData?.status;
+  const isGenerating = createdResumeId && (
+    !generationStatus ||
+    generationStatus === 'QUEUED' ||
+    generationStatus === 'PROCESSING'
+  );
+  const isGenerationFailed = generationStatus === 'FAILED';
+  const isGenerationSucceeded = generationStatus === 'SUCCEEDED';
+
+  // Navigate to home when generation succeeds
+  useEffect(() => {
+    if (isGenerationSucceeded) {
+      toast.success('이력서가 생성되었습니다');
+      navigate('/home');
+    }
+  }, [isGenerationSucceeded, navigate]);
 
   /**
    * Step 1 -> Step 2 navigation
@@ -77,15 +113,29 @@ export function CreateResumePage() {
         // companyId is optional - backend will handle company name separately if needed
       },
       {
-        onSuccess: () => {
-          navigate('/home');
+        onSuccess: (data) => {
+          // data is resumeId returned from API
+          setCreatedResumeId(data);
         },
       }
     );
-  }, [selectedRepos, formData.positionId, createResumeMutation, navigate]);
+  }, [selectedRepos, formData.positionId, createResumeMutation]);
 
-  // Loading state while creating resume
-  if (createResumeMutation.isPending) {
+  /**
+   * Reset generation state and allow retry
+   */
+  const handleRetryGeneration = useCallback(() => {
+    setCreatedResumeId(null);
+  }, []);
+
+  // Loading state while creating resume (API request pending or generation in progress)
+  if (createResumeMutation.isPending || isGenerating) {
+    const statusMessage = !createdResumeId
+      ? '요청 중...'
+      : generationStatus === 'QUEUED'
+        ? '대기 중...'
+        : '분석 중...';
+
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <TopAppBar title="이력서 생성 중" />
@@ -93,13 +143,43 @@ export function CreateResumePage() {
           <div className="max-w-[390px] w-full">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
               <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <h3>이력서를 생성 중입니다</h3>
-              <p className="text-sm text-gray-500">
-                나가도 백그라운드에서 진행됩니다
+              <h3>AI가 이력서를 생성 중입니다</h3>
+              <p className="text-sm text-gray-500">{statusMessage}</p>
+              <p className="text-xs text-gray-400">
+                잠시만 기다려주세요. 페이지를 벗어나도 진행됩니다.
               </p>
               <Button variant="ghost" onClick={() => navigate('/home')}>
                 홈으로 이동
               </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Generation failed state
+  if (isGenerationFailed) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <TopAppBar title="이력서 생성 실패" />
+        <div className="flex-1 flex flex-col items-center justify-center px-5">
+          <div className="max-w-[390px] w-full">
+            <div className="bg-white rounded-2xl p-8 text-center space-y-4">
+              <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
+              <h3>이력서 생성에 실패했습니다</h3>
+              <p className="text-sm text-gray-500">
+                {versionData?.errorLog || '알 수 없는 오류가 발생했습니다'}
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button variant="ghost" onClick={() => navigate('/home')}>
+                  홈으로
+                </Button>
+                <Button variant="primary" onClick={handleRetryGeneration}>
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  다시 시도
+                </Button>
+              </div>
             </div>
           </div>
         </div>
