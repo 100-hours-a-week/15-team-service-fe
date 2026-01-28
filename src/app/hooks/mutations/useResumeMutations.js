@@ -7,10 +7,6 @@ import {
   deleteResume,
 } from '@/app/api/endpoints/resumes';
 
-/**
- * Create resume mutation
- * @returns {import('@tanstack/react-query').UseMutationResult}
- */
 export function useCreateResume() {
   const queryClient = useQueryClient();
 
@@ -49,10 +45,6 @@ export function useCreateResume() {
   });
 }
 
-/**
- * Rename resume mutation
- * @returns {import('@tanstack/react-query').UseMutationResult}
- */
 export function useRenameResume() {
   const queryClient = useQueryClient();
 
@@ -80,10 +72,6 @@ export function useRenameResume() {
   });
 }
 
-/**
- * Save resume version mutation
- * @returns {import('@tanstack/react-query').UseMutationResult}
- */
 export function useSaveResumeVersion() {
   const queryClient = useQueryClient();
 
@@ -115,10 +103,6 @@ export function useSaveResumeVersion() {
   });
 }
 
-/**
- * Delete resume mutation
- * @returns {import('@tanstack/react-query').UseMutationResult}
- */
 export function useDeleteResume() {
   const queryClient = useQueryClient();
 

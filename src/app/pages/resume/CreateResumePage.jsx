@@ -12,23 +12,14 @@ import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import { useCreateResume } from '@/app/hooks/mutations/useResumeMutations';
 import { useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
 
-/**
- * @typedef {import('@/app/types').Repository} Repository
- */
-
 export function CreateResumePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  /** @type {Repository[]} */
   const selectedRepos = location.state?.selectedRepos || [];
 
-  // Fetch positions from API
   const { data: positions = [], isLoading: isLoadingPositions } = usePositions();
-
-  // Create resume mutation
   const createResumeMutation = useCreateResume();
 
-  // State management for multi-step form
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     positionId: null,
@@ -37,18 +28,17 @@ export function CreateResumePage() {
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [createdResumeId, setCreatedResumeId] = useState(null);
 
-  // Poll for resume generation status
   const { data: versionData } = useResumeVersion(
     createdResumeId,
-    1, // First version
+    1,
     {
       enabled: !!createdResumeId,
       refetchInterval: (query) => {
         const status = query.state.data?.status;
         if (status === 'QUEUED' || status === 'PROCESSING') {
-          return 3000; // Poll every 3 seconds
+          return 3000;
         }
-        return false; // Stop polling
+        return false;
       },
     }
   );
@@ -62,7 +52,6 @@ export function CreateResumePage() {
   const isGenerationFailed = generationStatus === 'FAILED';
   const isGenerationSucceeded = generationStatus === 'SUCCEEDED';
 
-  // Navigate to home when generation succeeds
   useEffect(() => {
     if (isGenerationSucceeded) {
       toast.success('이력서가 생성되었습니다');
@@ -70,9 +59,6 @@ export function CreateResumePage() {
     }
   }, [isGenerationSucceeded, navigate]);
 
-  /**
-   * Step 1 -> Step 2 navigation
-   */
   const handleNext = useCallback(() => {
     if (!formData.positionId) {
       toast.error('희망 포지션을 선택해주세요');
@@ -81,27 +67,17 @@ export function CreateResumePage() {
     setStep(2);
   }, [formData.positionId]);
 
-  /**
-   * Opens confirmation dialog before starting resume generation
-   */
   const handleOpenConfirmDialog = useCallback(() => {
     setIsConfirmDialogOpen(true);
   }, []);
 
-  /**
-   * Closes confirmation dialog without action
-   */
   const handleCloseConfirmDialog = useCallback(() => {
     setIsConfirmDialogOpen(false);
   }, []);
 
-  /**
-   * Confirms resume generation and calls API
-   */
   const handleConfirmGenerate = useCallback(() => {
     setIsConfirmDialogOpen(false);
 
-    // Build repo URLs from selected repositories
     const repoUrls = selectedRepos.map(
       (repo) => repo.htmlUrl || `https://github.com/${repo.owner}/${repo.name}`
     );
@@ -110,25 +86,19 @@ export function CreateResumePage() {
       {
         repoUrls,
         positionId: formData.positionId,
-        // companyId is optional - backend will handle company name separately if needed
       },
       {
         onSuccess: (data) => {
-          // data is resumeId returned from API
           setCreatedResumeId(data);
         },
       }
     );
   }, [selectedRepos, formData.positionId, createResumeMutation]);
 
-  /**
-   * Reset generation state and allow retry
-   */
   const handleRetryGeneration = useCallback(() => {
     setCreatedResumeId(null);
   }, []);
 
-  // Loading state while creating resume (API request pending or generation in progress)
   if (createResumeMutation.isPending || isGenerating) {
     const statusMessage = !createdResumeId
       ? '요청 중...'
@@ -158,7 +128,6 @@ export function CreateResumePage() {
     );
   }
 
-  // Generation failed state
   if (isGenerationFailed) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -187,10 +156,7 @@ export function CreateResumePage() {
     );
   }
 
-  // Transform positions for SelectGrid (expects string array)
   const positionItems = positions.map((p) => p.name);
-
-  // Find selected position name for display
   const selectedPositionName = positions.find(
     (p) => p.id === formData.positionId
   )?.name;
@@ -199,12 +165,10 @@ export function CreateResumePage() {
     <div className="min-h-screen bg-gray-50 pb-20">
       <TopAppBar title="이력서 생성" showBack />
 
-      {/* Progress Bar */}
       <StepProgress current={step} total={2} />
 
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto">
-          {/* Selected Repos Info */}
           {selectedRepos.length > 0 && (
             <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-primary/20">
               <p className="text-xs text-primary mb-2">

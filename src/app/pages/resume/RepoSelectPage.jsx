@@ -7,19 +7,11 @@ import { Button } from '../../components/common/Button';
 import { REPO_SORT_OPTIONS } from '@/app/constants';
 import { useRepositories } from '@/app/hooks/queries/useRepositoryQueries';
 
-/**
- * Maximum number of repositories that can be selected
- */
 const MAX_REPO_SELECTION = 6;
-
-/**
- * @typedef {import('@/app/types').Repository} Repository
- */
 
 export function RepoSelectPage() {
   const navigate = useNavigate();
 
-  // Fetch repositories from API
   const {
     data: repos = [],
     isLoading,
@@ -27,18 +19,12 @@ export function RepoSelectPage() {
     refetch,
   } = useRepositories();
 
-  // Selection and filtering state
-  /** @type {[Repository[], React.Dispatch<React.SetStateAction<Repository[]>>]} */
   const [selectedRepos, setSelectedRepos] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('recent');
   const [filterPrivate, setFilterPrivate] = useState('all');
   const [showSortMenu, setShowSortMenu] = useState(false);
 
-  /**
-   * Repository selection handler with limit enforcement
-   * @param {Repository} repo
-   */
   const handleRepoClick = useCallback((repo) => {
     setSelectedRepos((prev) => {
       const isSelected = prev.some((r) => r.id === repo.id);
@@ -54,37 +40,22 @@ export function RepoSelectPage() {
     });
   }, []);
 
-  /**
-   * Search input handler
-   * @param {React.ChangeEvent<HTMLInputElement>} e
-   */
   const handleSearchChange = useCallback((e) => {
     setSearchQuery(e.target.value);
   }, []);
 
-  /**
-   * Sort option change handler
-   * @param {string} option
-   */
   const handleSortChange = useCallback((option) => {
     setSortOption(option);
     setShowSortMenu(false);
   }, []);
 
-  /**
-   * Continue button handler - navigates with selected repos
-   */
   const handleContinue = useCallback(() => {
     navigate('/create-resume', { state: { selectedRepos } });
   }, [navigate, selectedRepos]);
 
-  /**
-   * Filtered and sorted repository list
-   */
   const sortedAndFilteredRepos = useMemo(() => {
     let filtered = repos;
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((repo) =>
@@ -92,14 +63,12 @@ export function RepoSelectPage() {
       );
     }
 
-    // Filter by privacy setting
     if (filterPrivate === 'public') {
       filtered = filtered.filter((repo) => !repo.isPrivate);
     } else if (filterPrivate === 'private') {
       filtered = filtered.filter((repo) => repo.isPrivate);
     }
 
-    // Sort by selected option
     const sorted = [...filtered];
     if (sortOption === 'recent') {
       sorted.sort(
@@ -118,7 +87,6 @@ export function RepoSelectPage() {
     return sorted;
   }, [repos, searchQuery, filterPrivate, sortOption]);
 
-  // Loading State
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -141,7 +109,6 @@ export function RepoSelectPage() {
     );
   }
 
-  // Error State
   if (isError) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -158,7 +125,6 @@ export function RepoSelectPage() {
     );
   }
 
-  // Empty State
   if (repos.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -175,14 +141,12 @@ export function RepoSelectPage() {
     );
   }
 
-  // Loaded State
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <TopAppBar title="레포지토리 선택" showBack />
 
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto space-y-4">
-          {/* Search */}
           <div className="relative">
             <Search
               className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -197,7 +161,6 @@ export function RepoSelectPage() {
             />
           </div>
 
-          {/* Filters */}
           <div className="flex items-center gap-3">
             <div className="flex bg-white rounded-xl border border-gray-200 p-1">
               <button
@@ -241,7 +204,6 @@ export function RepoSelectPage() {
                 <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
               </button>
 
-              {/* Dropdown Menu */}
               {showSortMenu && (
                 <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-10">
                   {Object.keys(REPO_SORT_OPTIONS).map((option) => (
@@ -262,7 +224,6 @@ export function RepoSelectPage() {
             </div>
           </div>
 
-          {/* Repository List */}
           <div className="space-y-3">
             {sortedAndFilteredRepos.map((repo) => {
               const isSelected = selectedRepos.some((r) => r.id === repo.id);
@@ -302,7 +263,6 @@ export function RepoSelectPage() {
                       </p>
                     </div>
 
-                    {/* Checkbox */}
                     <div className="flex-shrink-0">
                       {isSelected ? (
                         <div className="w-5 h-5 rounded-md bg-primary flex items-center justify-center">
@@ -346,7 +306,6 @@ export function RepoSelectPage() {
         </div>
       </div>
 
-      {/* Sticky Bottom CTA */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-5 py-4">
         <div className="max-w-[390px] mx-auto">
           {selectedRepos.length > 0 && (

@@ -13,11 +13,6 @@ import { useChatbot } from '@/app/hooks/useChatbot';
 import { useResumeDetail, useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
 import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
 
-/**
- * Parse resume content JSON to YAML-like display format
- * @param {string} contentJson
- * @returns {string}
- */
 function parseResumeContent(contentJson) {
   if (!contentJson || contentJson === '{}') {
     return '';
@@ -61,7 +56,6 @@ export function ResumeViewerPage() {
   const resumeId = parseInt(id, 10);
   const resumeViewerRef = useRef(null);
 
-  // Fetch resume detail
   const {
     data: resumeDetail,
     isLoading: isLoadingDetail,
@@ -69,10 +63,8 @@ export function ResumeViewerPage() {
     refetch: refetchDetail,
   } = useResumeDetail(resumeId);
 
-  // Determine current version number
   const currentVersionNo = resumeDetail?.currentVersionNo || 1;
 
-  // Fetch resume version with polling for processing status
   const {
     data: versionData,
     isLoading: isLoadingVersion,
@@ -81,7 +73,6 @@ export function ResumeViewerPage() {
     enabled: !!resumeDetail,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      // Poll every 3 seconds while QUEUED or PROCESSING
       if (status === 'QUEUED' || status === 'PROCESSING') {
         return 3000;
       }
@@ -89,16 +80,13 @@ export function ResumeViewerPage() {
     },
   });
 
-  // Save version mutation
   const saveVersionMutation = useSaveResumeVersion();
 
-  // State management
   const [yamlContent, setYamlContent] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showChatbot, setShowChatbot] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Update yamlContent when version data changes
   useEffect(() => {
     if (versionData?.content && versionData.status === 'SUCCEEDED') {
       const parsed = parseResumeContent(versionData.content);
@@ -106,7 +94,6 @@ export function ResumeViewerPage() {
     }
   }, [versionData]);
 
-  // Chatbot hook for AI-powered editing
   const {
     messages,
     chatInput,
@@ -122,13 +109,11 @@ export function ResumeViewerPage() {
     },
   });
 
-  // Navigation blocker for unsaved changes
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
   );
 
-  // Save handler
   const handleSave = useCallback(() => {
     if (versionData?.status !== 'SUCCEEDED') {
       toast.error('이력서 생성이 완료된 후 저장할 수 있습니다');
@@ -174,13 +159,11 @@ export function ResumeViewerPage() {
     toast('PDF 다운로드 준비 중입니다');
   }, []);
 
-  // Computed status
   const status = versionData?.status;
   const isProcessing = status === 'QUEUED' || status === 'PROCESSING';
   const isFailed = status === 'FAILED';
   const isSucceeded = status === 'SUCCEEDED';
 
-  // Loading state
   if (isLoadingDetail || isLoadingVersion) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -198,7 +181,6 @@ export function ResumeViewerPage() {
     );
   }
 
-  // Error state
   if (isDetailError) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -219,7 +201,6 @@ export function ResumeViewerPage() {
     );
   }
 
-  // Processing state (AI is generating)
   if (isProcessing) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -246,7 +227,6 @@ export function ResumeViewerPage() {
     );
   }
 
-  // Failed state
   if (isFailed) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -282,7 +262,6 @@ export function ResumeViewerPage() {
     );
   }
 
-  // Success state - show resume viewer
   return (
     <div className="min-h-screen bg-gray-50 pb-20 relative">
       <TopAppBar
@@ -310,7 +289,6 @@ export function ResumeViewerPage() {
 
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto relative">
-          {/* Resume Info */}
           {resumeDetail && (
             <div className="bg-blue-50 rounded-xl p-4 mb-4 border border-primary/20">
               <div className="flex items-center gap-2 flex-wrap">
@@ -326,7 +304,6 @@ export function ResumeViewerPage() {
             </div>
           )}
 
-          {/* Parsed Resume Content */}
           {yamlContent ? (
             <ParsedResumeViewer ref={resumeViewerRef} yamlContent={yamlContent} />
           ) : (
@@ -335,7 +312,6 @@ export function ResumeViewerPage() {
             </div>
           )}
 
-          {/* Chatbot Floating Button */}
           <button
             onClick={() => setShowChatbot(true)}
             className="fixed bottom-24 right-[calc(50%-195px+20px)] w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center z-10"
@@ -346,7 +322,6 @@ export function ResumeViewerPage() {
         </div>
       </div>
 
-      {/* Chatbot Bottom Sheet */}
       <ChatbotBottomSheet
         isOpen={showChatbot}
         onClose={() => setShowChatbot(false)}
@@ -359,7 +334,6 @@ export function ResumeViewerPage() {
         onTogglePause={onTogglePause}
       />
 
-      {/* Preview Sheet */}
       <PreviewSheet
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
@@ -368,7 +342,6 @@ export function ResumeViewerPage() {
         <ParsedResumeViewer yamlContent={yamlContent} />
       </PreviewSheet>
 
-      {/* Unsaved Changes Warning Dialog */}
       <WarningDialog
         isOpen={blocker.state === 'blocked'}
         title="아직 저장하지 않았어요."
