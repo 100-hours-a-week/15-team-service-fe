@@ -20,23 +20,40 @@ function parseResumeContent(contentJson) {
 
   try {
     const content = JSON.parse(contentJson);
+    const projects =
+      (content.projects && Array.isArray(content.projects) && content.projects) ||
+      (content.resume &&
+        Array.isArray(content.resume.projects) &&
+        content.resume.projects) ||
+      null;
 
     // If content has projects array, format it nicely
-    if (content.projects && Array.isArray(content.projects)) {
-      let yaml = '';
+    if (projects) {
+      let yaml = 'projects:\n';
 
-      content.projects.forEach((project, index) => {
-        if (index > 0) yaml += '\n';
-        yaml += `projects:\n`;
+      const formatDescription = (text) => {
+        const lines = String(text || '').split('\n');
+        return lines.map((line) => `      ${line}`).join('\n');
+      };
+
+      projects.forEach((project) => {
+        const techStack = Array.isArray(project.techStack)
+          ? project.techStack
+          : Array.isArray(project.tech_stack)
+            ? project.tech_stack
+            : [];
+
         yaml += `  - name: ${project.name || ''}\n`;
         yaml += `    repoUrl: ${project.repoUrl || ''}\n`;
         yaml += `    description: |\n`;
-        yaml += `      ${project.description || ''}\n`;
-        if (project.techStack && project.techStack.length > 0) {
+        yaml += `${formatDescription(project.description)}\n`;
+        if (techStack.length > 0) {
           yaml += `    tech_stack:\n`;
-          project.techStack.forEach((tech) => {
+          techStack.forEach((tech) => {
             yaml += `      - ${tech}\n`;
           });
+        } else {
+          yaml += `    tech_stack: []\n`;
         }
       });
 

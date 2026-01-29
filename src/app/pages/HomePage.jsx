@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Video, AlertCircle } from 'lucide-react';
+import { FileText, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { BottomNav } from '../components/layout/BottomNav';
 import { DropdownMenu } from '../components/common/DropdownMenu';
@@ -51,7 +51,7 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-5 py-6">
+      <header className="bg-white border-b border-gray-200 px-5 py-6 sticky top-0 z-20">
         <div className="max-w-[390px] mx-auto">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -155,9 +155,6 @@ const ResumeCard = React.memo(({ resume }) => {
     navigate(`/resume/${resume.resumeId}`);
   }, [navigate, resume.resumeId]);
 
-  const handleStartInterview = useCallback(() => {
-    navigate(`/interview/start?resumeId=${resume.resumeId}`);
-  }, [navigate, resume.resumeId]);
 
   const handleResumeNameEdit = useCallback(
     (e) => {
@@ -263,14 +260,6 @@ const ResumeCard = React.memo(({ resume }) => {
           >
             <FileText className="w-4 h-4" strokeWidth={1.5} />
             이력서 보기
-          </Button>
-          <Button
-            variant="primary"
-            className="flex-1"
-            onClick={handleStartInterview}
-          >
-            <Video className="w-4 h-4" strokeWidth={1.5} />
-            모의 면접
           </Button>
         </div>
       </div>

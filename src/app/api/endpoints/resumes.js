@@ -5,7 +5,11 @@ export const fetchResumes = async ({ page = 0, size = 10 } = {}) => {
   const response = await apiClient.get(API_CONFIG.ENDPOINTS.RESUMES, {
     params: { page, size },
   });
-  return response.data.data;
+  const data = response.data.data;
+  return {
+    ...data,
+    content: data?.items || data?.content || [],
+  };
 };
 
 export const createResume = async (request) => {

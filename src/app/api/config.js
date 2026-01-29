@@ -35,6 +35,7 @@ export const API_CONFIG = {
 
     // Positions
     POSITIONS: '/positions',
+    COMPANIES: '/companies',
 
     // Chats
     CHATS: '/chats',
