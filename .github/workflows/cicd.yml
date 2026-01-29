@@ -1,0 +1,296 @@
+name: FrontEnd CI/CD
+
+on:
+  pull_request:
+    paths:
+      - "**/*"
+      - ".github/workflows/**"
+  push:
+    branches: [ "main", "dev" ]
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: "Existing FrontEnd CI run-id to redeploy"
+        required: false
+        type: string
+
+concurrency:
+  group: cd-frontend-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  fe-ci:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.ci_run_id != '') }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [ "24" ]
+
+    steps:
+      # Step 1) Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Step 1.1) Trivy Secret Scan
+      - name: Trivy Secret Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          scanners: "secret"
+          format: "table"
+          exit-code: "1"
+
+      # Step 1.2) CodeQL Init (SAST 준비)
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+
+      # Step 2) Setup Node
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Step 3) Cache (npm)
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node${{ matrix.node-version }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node${{ matrix.node-version }}-npm-
+
+      # Step 4) Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Step 5) npm audit (취약점 검사)
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+      # Step 6) Formatting check
+      - name: Formatting check
+        run: npm run format:check
+
+      # Step 7) Vitest Tests + 산출물 생성
+      - name: Tests
+        run: npm run test:run -- --coverage
+
+      # Step 8) Build + 산출물 생성
+      - name: Build
+        run: npm run build
+
+      # Step 9) CodeQL Analyze (SAST 실행/업로드)
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
+
+      # Step 10) Upload test artifacts
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fe-test-artifacts-node${{ matrix.node-version }}
+          path: |
+            test-results/
+            coverage/
+          retention-days: 1
+          
+          
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+            name: web-dist
+            path: dist/
+            if-no-files-found: error
+            retention-days: 1
+
+  deploy-current-run:
+    name: Deploy (current run)
+    needs: fe-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: >-
+      ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'main' }}
+
+    steps:
+      - name: Checkout (metadata only)
+        uses: actions/checkout@v4
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      - name: Pack dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          tar -C dist -czf dist.tgz .
+
+      - name: Upload dist.tgz to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          source: "dist.tgz"
+          target: "/tmp"
+
+      - name: Deploy via SSH (current run)
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          WEB_ROOT: ${{ vars.WEB_ROOT }}
+          NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+          HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
+          HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          script_stop: true
+          command_timeout: 15m
+          envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL,BRANCH_NAME
+          
+          script: |
+            set -euo pipefail
+            WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"
+            NGINX_RELOAD="${NGINX_RELOAD:-false}"
+            HEALTH_URL="${HEALTH_URL:-http://127.0.0.1/}"
+            HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
+            HEALTH_INTERVAL="${HEALTH_INTERVAL:-3}"
+            RELEASES_DIR="$WEB_ROOT/releases"
+            CURRENT_LINK="$WEB_ROOT/current"
+            TS="$(date +%Y%m%d-%H%M%S)"
+            NEW_DIR="$RELEASES_DIR/$TS"
+            echo "[1/7] prepare dirs"
+            sudo mkdir -p "$RELEASES_DIR"
+            sudo mkdir -p "$NEW_DIR"
+            echo "[2/7] extract dist into new release"
+            sudo tar -C "$NEW_DIR" -xzf /tmp/dist.tgz
+            sudo rm -f /tmp/dist.tgz
+            echo "[3/7] validate dist"
+            sudo test -f "$NEW_DIR/index.html"
+            echo "[4/7] atomic switch current -> new release"
+            sudo ln -sfn "$NEW_DIR" "$CURRENT_LINK"
+            echo "[5/7] (optional) nginx reload"
+            if [[ "$NGINX_RELOAD" == "true" ]]; then
+              sudo nginx -t
+              sudo systemctl reload nginx
+            fi
+            echo "[6/7] health check"
+            elapsed=0
+            until curl -fsS "$HEALTH_URL" > /dev/null; do
+              if [ "$elapsed" -ge "$HEALTH_TIMEOUT" ]; then
+                echo "Health check failed after ${HEALTH_TIMEOUT}s"
+                sudo systemctl status nginx --no-pager || true
+                exit 1
+              fi
+              sleep "$HEALTH_INTERVAL"
+              elapsed=$((elapsed + HEALTH_INTERVAL))
+            done
+            echo "[7/7] deploy done (release=$TS, branch=${BRANCH_NAME:-unknown})"
+
+  deploy-reuse-artifact:
+    name: Deploy (reuse artifact)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ci_run_id != '' }}
+
+    steps:
+      - name: Checkout (metadata only)
+        uses: actions/checkout@v4
+
+      - name: Download dist artifact (from run)
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.ci_run_id }}
+
+      - name: Pack dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          tar -C dist -czf dist.tgz .
+
+      - name: Upload dist.tgz to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          source: "dist.tgz"
+          target: "/tmp"
+
+      - name: Deploy via SSH (reuse artifact)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          script_stop: true
+          command_timeout: 15m
+          envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL
+          WEB_ROOT: ${{ vars.WEB_ROOT }}
+          NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+          HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
+          HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
+          script: |
+            set -euo pipefail
+            WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"
+            NGINX_RELOAD="${NGINX_RELOAD:-false}"
+            HEALTH_URL="${HEALTH_URL:-http://127.0.0.1/}"
+            HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
+            HEALTH_INTERVAL="${HEALTH_INTERVAL:-3}"
+            RELEASES_DIR="$WEB_ROOT/releases"
+            CURRENT_LINK="$WEB_ROOT/current"
+            TS="$(date +%Y%m%d-%H%M%S)"
+            NEW_DIR="$RELEASES_DIR/$TS"
+            echo "[1/7] prepare dirs"
+            sudo mkdir -p "$RELEASES_DIR"
+            sudo mkdir -p "$NEW_DIR"
+            echo "[2/7] extract dist into new release"
+            sudo tar -C "$NEW_DIR" -xzf /tmp/dist.tgz
+            sudo rm -f /tmp/dist.tgz
+            echo "[3/7] validate dist"
+            sudo test -f "$NEW_DIR/index.html"
+            echo "[4/7] atomic switch current -> new release"
+            sudo ln -sfn "$NEW_DIR" "$CURRENT_LINK"
+            echo "[5/7] (optional) nginx reload"
+            if [[ "$NGINX_RELOAD" == "true" ]]; then
+              sudo nginx -t
+              sudo systemctl reload nginx
+            fi
+            echo "[6/7] health check"
+            elapsed=0
+            until curl -fsS "$HEALTH_URL" > /dev/null; do
+              if [ "$elapsed" -ge "$HEALTH_TIMEOUT" ]; then
+                echo "Health check failed after ${HEALTH_TIMEOUT}s"
+                sudo systemctl status nginx --no-pager || true
+                exit 1
+              fi
+              sleep "$HEALTH_INTERVAL"
+              elapsed=$((elapsed + HEALTH_INTERVAL))
+            done
+            echo "[7/7] deploy done (release=$TS, run=${{ inputs.ci_run_id }})"
