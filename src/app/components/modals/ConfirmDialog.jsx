@@ -1,9 +1,7 @@
-import React from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
 import {
   AlertDialog,
   AlertDialogPortal,
-  AlertDialogOverlay,
   AlertDialogHeader,
   AlertDialogFooter,
   AlertDialogTitle,
@@ -15,14 +13,6 @@ import { cn } from '../../lib/utils';
 
 /**
  * Generic confirmation modal with cancel + confirm buttons
- *
- * Implementation Decision - Positioning:
- * - Uses absolute positioning scoped to app container
- * - Portal renders to #app-container (NOT document.body)
- * - Overlay covers only the app container area (absolute inset-0 bg-black/40)
- * - Max-width: max-w-[350px] for comfortable padding within mobile viewport
- * - Gray background outside app container is NOT darkened
- *
  * @typedef {Object} ConfirmDialogProps
  * @property {boolean} isOpen
  * @property {() => void} onClose

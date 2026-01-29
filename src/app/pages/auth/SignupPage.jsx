@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -21,12 +21,18 @@ import {
 } from '@/app/lib/utils';
 import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import { useCompleteOnboarding } from '@/app/hooks/mutations/useAuthMutations';
+import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
 
 export function SignupPage() {
   const navigate = useNavigate();
   const { data: positions = [] } = usePositions();
   const { mutateAsync: completeOnboarding, isPending } =
     useCompleteOnboarding();
+  const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
+
+  const [profileFile, setProfileFile] = useState(null);
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState(null);
+  const profileFileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -78,6 +84,30 @@ export function SignupPage() {
     [errors.phone, errors.phoneCollection, agreements.phoneCollection]
   );
 
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+    };
+  }, [profilePreviewUrl]);
+
+  const handleProfileImageChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+
+      const previewUrl = URL.createObjectURL(file);
+      setProfileFile(file);
+      setProfilePreviewUrl(previewUrl);
+
+      // Reset so same file can be re-selected
+      e.target.value = '';
+    },
+    [profilePreviewUrl]
+  );
+
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
@@ -119,10 +149,17 @@ export function SignupPage() {
         return;
       }
 
+      // Upload profile image if selected
+      let profileImageUrl = null;
+      if (profileFile) {
+        const result = await upload(profileFile);
+        profileImageUrl = result.s3Key;
+      }
+
       // Submit onboarding
       try {
         await completeOnboarding({
-          profileImageUrl: null,
+          profileImageUrl,
           name: trimmedName,
           positionId: formData.positionId,
           phone: normalizedPhone,
@@ -162,6 +199,8 @@ export function SignupPage() {
       formData.phone,
       formData.positionId,
       navigate,
+      profileFile,
+      upload,
     ]
   );
 
@@ -173,11 +212,33 @@ export function SignupPage() {
         <div className="max-w-[390px] mx-auto space-y-6">
           {/* Profile Photo */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-              <Camera className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+            <input
+              ref={profileFileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png"
+              className="hidden"
+              onChange={handleProfileImageChange}
+            />
+            <div
+              className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer overflow-hidden"
+              onClick={() => profileFileInputRef.current?.click()}
+            >
+              {profilePreviewUrl ? (
+                <img
+                  src={profilePreviewUrl}
+                  alt="프로필 사진"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Camera className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+              )}
             </div>
-            <button type="button" className="text-sm text-primary">
-              프로필 사진 업로드 (선택)
+            <button
+              type="button"
+              className="text-sm text-primary"
+              onClick={() => profileFileInputRef.current?.click()}
+            >
+              사진 업로드 (선택)
             </button>
           </div>
 
@@ -298,6 +359,7 @@ export function SignupPage() {
             fullWidth
             disabled={
               isPending ||
+              isUploading ||
               !formData.name ||
               !formData.positionId ||
               !agreements.privacy

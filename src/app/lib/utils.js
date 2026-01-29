@@ -73,6 +73,66 @@ export function formatKoreanTimestamp(isoTimestamp) {
 }
 
 /**
+ * Format ISO timestamp to time-only Korean format
+ * Used for chat message timestamps (no date, only time)
+ * @param {string | null} isoTimestamp - ISO 8601 timestamp
+ * @returns {string} "오전 10:30" or "오후 03:05" format (empty string if invalid)
+ */
+export function formatMessageTime(isoTimestamp) {
+  if (!isoTimestamp) return '';
+
+  try {
+    const date = new Date(isoTimestamp);
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    const period = hours < 12 ? '오전' : '오후';
+    const displayHours = hours % 12 || 12;
+
+    return `${period} ${displayHours}:${minutes}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Format ISO timestamp to Korean date format (for date dividers)
+ * @param {string | null} isoTimestamp - ISO 8601 timestamp
+ * @returns {string} "YYYY년 M월 D일" format (empty string if invalid)
+ */
+export function formatMessageDate(isoTimestamp) {
+  if (!isoTimestamp) return '';
+
+  try {
+    const date = new Date(isoTimestamp);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // No padding
+    const day = date.getDate(); // No padding
+
+    return `${year}년 ${month}월 ${day}일`;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Extract local date string from ISO timestamp (YYYY-M-D)
+ * Used for date comparison to determine when to show date dividers
+ * @param {string | null} isoTimestamp - ISO 8601 timestamp
+ * @returns {string} "YYYY-M-D" format (empty string if invalid)
+ */
+export function getLocalDate(isoTimestamp) {
+  if (!isoTimestamp) return '';
+
+  try {
+    const date = new Date(isoTimestamp);
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
  * 이모티콘 존재 여부를 검증합니다.
  */
 const EMOJI_REGEX = /\p{Emoji_Presentation}/gu;

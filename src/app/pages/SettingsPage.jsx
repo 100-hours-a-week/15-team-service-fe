@@ -29,6 +29,7 @@ import {
   useUpdateUserSettings,
 } from '@/app/hooks/mutations/useUserMutations';
 import { useLogout } from '@/app/hooks/mutations/useAuthMutations';
+import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
 
 /**
  * @typedef {import('@/app/types').UserProfile} UserProfile
@@ -42,6 +43,11 @@ export function SettingsPage() {
     useUpdateUser();
   const { mutate: updateSettings } = useUpdateUserSettings();
   const { mutateAsync: logout } = useLogout();
+  const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
+
+  const [profileFile, setProfileFile] = useState(null);
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState(null);
+  const profileFileInputRef = useRef(null);
 
   const [isEditing, setIsEditing] = useState(false);
   /** @type {[UserProfile, React.Dispatch<React.SetStateAction<UserProfile>>]} */
@@ -107,6 +113,30 @@ export function SettingsPage() {
     };
   }, []);
 
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+    };
+  }, [profilePreviewUrl]);
+
+  const handleProfileImageChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+
+      const previewUrl = URL.createObjectURL(file);
+      setProfileFile(file);
+      setProfilePreviewUrl(previewUrl);
+
+      // Reset so same file can be re-selected
+      e.target.value = '';
+    },
+    [profilePreviewUrl]
+  );
+
   const handleEdit = useCallback(() => {
     if (!profileData) return;
     const positionName =
@@ -119,8 +149,12 @@ export function SettingsPage() {
       phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
       profileImage: profileData.profileImageUrl ?? null,
     });
+    // Reset any previously selected new file
+    setProfileFile(null);
+    if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+    setProfilePreviewUrl(null);
     setIsEditing(true);
-  }, [profileData, positions]);
+  }, [profileData, positions, profilePreviewUrl]);
 
   const handleSave = useCallback(async () => {
     const newErrors = {};
@@ -158,11 +192,18 @@ export function SettingsPage() {
     const phoneValue = normalizedPhone ? normalizedPhone : null;
 
     try {
+      // Upload new profile image if selected
+      let profileImageUrl = editData.profileImage ?? null;
+      if (profileFile) {
+        const result = await upload(profileFile);
+        profileImageUrl = result.s3Key;
+      }
+
       const updatedProfile = await updateUserProfile({
         name: trimmedName,
         positionId: selectedPosition.id,
         phone: phoneValue,
-        profileImageUrl: editData.profileImage ?? null,
+        profileImageUrl,
         privacyAgreed: true,
         phonePolicyAgreed: phoneValue ? true : undefined,
       });
@@ -179,6 +220,11 @@ export function SettingsPage() {
           : '',
         profileImage: updatedProfile.profileImageUrl ?? null,
       });
+
+      // Clear new file state after successful save
+      setProfileFile(null);
+      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+      setProfilePreviewUrl(null);
 
       setIsEditing(false);
       setErrors({ name: undefined, position: undefined, phone: undefined });
@@ -203,7 +249,14 @@ export function SettingsPage() {
         }));
       }
     }
-  }, [editData, positions, updateUserProfile]);
+  }, [
+    editData,
+    positions,
+    updateUserProfile,
+    profileFile,
+    profilePreviewUrl,
+    upload,
+  ]);
 
   const handleCancel = useCallback(() => {
     if (profileData) {
@@ -218,9 +271,13 @@ export function SettingsPage() {
         profileImage: profileData.profileImageUrl ?? null,
       });
     }
+    // Reset profile file state on cancel
+    setProfileFile(null);
+    if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+    setProfilePreviewUrl(null);
     setIsEditing(false);
     setErrors({ name: undefined, position: undefined, phone: undefined });
-  }, [profileData, positions]);
+  }, [profileData, positions, profilePreviewUrl]);
 
   const handlePhoneChange = useCallback(
     (e) => {
@@ -278,10 +335,45 @@ export function SettingsPage() {
 
             {/* Profile Photo */}
             <div className="flex flex-col items-center gap-3 mb-6">
-              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-                <Camera className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+              <input
+                ref={profileFileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png"
+                className="hidden"
+                onChange={handleProfileImageChange}
+              />
+              <div
+                className={`w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${isEditing ? 'cursor-pointer' : ''}`}
+                onClick={() =>
+                  isEditing && profileFileInputRef.current?.click()
+                }
+              >
+                {/* Priority: new preview > existing API image > default icon */}
+                {profilePreviewUrl ? (
+                  <img
+                    src={profilePreviewUrl}
+                    alt="프로필 사진"
+                    className="w-full h-full object-cover"
+                  />
+                ) : editData.profileImage ? (
+                  <img
+                    src={editData.profileImage}
+                    alt="프로필 사진"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Camera className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
+                )}
               </div>
-              <button className="text-sm text-primary">프로필 사진 변경</button>
+              {isEditing && (
+                <button
+                  type="button"
+                  className="text-sm text-primary"
+                  onClick={() => profileFileInputRef.current?.click()}
+                >
+                  프로필 사진 변경
+                </button>
+              )}
             </div>
 
             {isEditing ? (
@@ -347,7 +439,7 @@ export function SettingsPage() {
                     variant="primary"
                     fullWidth
                     onClick={handleSave}
-                    disabled={isSavingProfile}
+                    disabled={isSavingProfile || isUploading}
                   >
                     저장
                   </Button>
