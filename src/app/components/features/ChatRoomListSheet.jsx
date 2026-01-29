@@ -40,7 +40,7 @@ export function ChatRoomListSheet() {
     isLoading,
     isError,
     error,
-  } = useChats(viewMode === 'list');
+  } = useChats(isOpen && viewMode === 'list');
 
   const { data: userProfile } = useUserProfile();
   const currentUserId = userProfile?.id;
