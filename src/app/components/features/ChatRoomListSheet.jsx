@@ -10,8 +10,8 @@ import {
 } from 'lucide-react';
 import { Drawer } from 'vaul';
 import { useChats, useChatMessages } from '@/app/hooks/queries/useChatQueries';
-import { useSendMessage } from '@/app/hooks/mutations/useChatMutations';
 import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
+import { useChatWebSocket } from '@/app/hooks/useChatWebSocket';
 import {
   formatKoreanTimestamp,
   formatMessageTime,
@@ -55,8 +55,10 @@ export function ChatRoomListSheet() {
     isFetchingNextPage,
   } = useChatMessages(viewMode === 'messages' ? selectedRoomId : null);
 
-  const { mutateAsync: sendMessage, isPending: isSending } =
-    useSendMessage(selectedRoomId);
+  const { sendMessage: stompSend, isConnected } = useChatWebSocket(
+    viewMode === 'messages' ? selectedRoomId : null
+  );
+  const [isSending, setIsSending] = useState(false);
 
   const messages = messagesData?.pages?.flatMap((page) => page.chats) || [];
 
@@ -147,7 +149,7 @@ export function ChatRoomListSheet() {
     }
   };
 
-  // Handle send message with optional image attachment
+  // Handle send message with optional image attachment (STOMP WebSocket)
   const handleSend = async () => {
     if ((!inputText.trim() && !attachedImage) || isSending || isUploading)
       return;
@@ -155,25 +157,22 @@ export function ChatRoomListSheet() {
     const messageText = inputText;
     const imageData = attachedImage;
 
-    // Clear input immediately
     setInputText('');
-    if (attachedImage) {
-      setAttachedImage(null);
-    }
+    setAttachedImage(null);
+    setIsSending(true);
 
-    let attachmentId;
+    let uploadId;
     try {
       if (imageData) {
         const result = await upload(imageData.file);
-        attachmentId = result.attachmentId;
+        uploadId = result.uploadId;
       }
 
-      await sendMessage({
+      stompSend({
         message: messageText,
-        ...(attachmentId !== undefined && { attachmentId }),
+        ...(uploadId !== undefined && { attachmentUploadIds: [uploadId] }),
       });
 
-      // 전송 성공 시 preview URL cleanup
       if (imageData?.previewUrl) {
         URL.revokeObjectURL(imageData.previewUrl);
       }
@@ -192,27 +191,30 @@ export function ChatRoomListSheet() {
           message: messageText,
           file: imageData?.file || null,
           previewUrl: imageData?.previewUrl || null,
-          attachmentId,
+          uploadId,
         },
       ]);
+    } finally {
+      setIsSending(false);
     }
   };
 
-  // Retry sending a failed message
+  // Retry sending a failed message (STOMP WebSocket)
   const handleRetry = async (failedMsg) => {
     setFailedMessages((prev) => prev.filter((m) => m.id !== failedMsg.id));
+    setIsSending(true);
 
-    let attachmentId = failedMsg.attachmentId;
+    let uploadId = failedMsg.uploadId;
 
     try {
-      if (failedMsg.file && !failedMsg.attachmentId) {
+      if (failedMsg.file && !failedMsg.uploadId) {
         const result = await upload(failedMsg.file);
-        attachmentId = result.attachmentId;
+        uploadId = result.uploadId;
       }
 
-      await sendMessage({
+      stompSend({
         message: failedMsg.message,
-        ...(attachmentId !== undefined && { attachmentId }),
+        ...(uploadId !== undefined && { attachmentUploadIds: [uploadId] }),
       });
 
       if (failedMsg.previewUrl) {
@@ -226,7 +228,9 @@ export function ChatRoomListSheet() {
         }
       }, 100);
     } catch {
-      setFailedMessages((prev) => [...prev, { ...failedMsg, attachmentId }]);
+      setFailedMessages((prev) => [...prev, { ...failedMsg, uploadId }]);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -536,7 +540,9 @@ export function ChatRoomListSheet() {
                             <button
                               type="button"
                               onClick={() => handleRetry(failedMsg)}
-                              disabled={isSending || isUploading}
+                              disabled={
+                                isSending || isUploading || !isConnected
+                              }
                               className="text-xs text-red-500 hover:underline disabled:opacity-40"
                             >
                               재전송
@@ -628,15 +634,23 @@ export function ChatRoomListSheet() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="메시지를 입력하세요..."
-                    className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder={
+                      isConnected ? '메시지를 입력하세요...' : '연결 중...'
+                    }
+                    disabled={!isConnected}
+                    className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                     rows={1}
                     maxLength={500}
                   />
                   <button
                     type="button"
                     onClick={() => attachFileInputRef.current?.click()}
-                    disabled={!!attachedImage || isSending || isUploading}
+                    disabled={
+                      !!attachedImage ||
+                      isSending ||
+                      isUploading ||
+                      !isConnected
+                    }
                     className="p-2 text-gray-500 hover:text-primary disabled:opacity-40 transition-colors"
                     aria-label="이미지 첨부"
                   >
@@ -648,7 +662,8 @@ export function ChatRoomListSheet() {
                     disabled={
                       (!inputText.trim() && !attachedImage) ||
                       isSending ||
-                      isUploading
+                      isUploading ||
+                      !isConnected
                     }
                     className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                   >

@@ -38,15 +38,3 @@ export const fetchChatMessages = async (
   );
   return response.data.data;
 };
-
-/**
- * Send a message to a chatroom
- * TODO: Implement after POST API spec is provided
- * @param {number} _chatroomId - Chatroom ID
- * @param {object} _payload - Message payload (text, files, etc.)
- * @returns {Promise<object>} Created message object
- */
-export const sendChatMessage = async (_chatroomId, _payload) => {
-  // TODO: Implement after POST /chats/{chatroomId} spec is provided
-  throw new Error('POST /chats/{chatroomId} API spec not yet provided');
-};
