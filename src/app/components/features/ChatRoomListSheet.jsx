@@ -621,23 +621,23 @@ export function ChatRoomListSheet() {
                 {/* Attached image preview */}
                 {attachedImage &&
                   isSafePreviewUrl(attachedImage.previewUrl) && (
-                  <div className="relative w-24 aspect-square mx-2 mb-3">
-                    <div className="w-full h-full overflow-hidden">
-                      <img
-                        src={attachedImage.previewUrl}
-                        alt="첨부 이미지"
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="relative w-24 aspect-square mx-2 mb-3">
+                      <div className="w-full h-full overflow-hidden">
+                        <img
+                          src={attachedImage.previewUrl}
+                          alt="첨부 이미지"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeAttachedImage}
+                        className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={removeAttachedImage}
-                      className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5"
-                    >
-                      <X className="w-3 h-3 text-white" />
-                    </button>
-                  </div>
-                )}
+                  )}
 
                 <div className="flex items-end gap-2">
                   <textarea
