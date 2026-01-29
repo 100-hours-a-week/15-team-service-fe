@@ -26,7 +26,7 @@ export const ChatbotBottomSheet = ({
   isOpen,
   onClose,
   messages,
-  chatInput,
+  chatInput = '',
   onInputChange,
   onSendMessage,
   isUpdating,
@@ -133,7 +133,6 @@ export const ChatbotBottomSheet = ({
                 value={chatInput}
                 onChange={(e) => onInputChange(e.target.value)}
                 onKeyDown={(e) => {
-                  // 한국어 등 IME 조합 중일 때는 Enter 키 무시
                   if (e.nativeEvent.isComposing) return;
 
                   if (e.key === 'Enter' && !e.shiftKey) {

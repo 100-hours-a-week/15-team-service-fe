@@ -73,9 +73,6 @@ export function HomePage() {
             </div>
             <div className="flex items-center gap-2">
               <ChatRoomListSheet />
-              {profileData?.profileImageUrl && (
-                <div className="w-16 h-16 rounded-full bg-gray-200" />
-              )}
             </div>
           </div>
         </div>

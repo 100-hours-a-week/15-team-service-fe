@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { cn } from '@/app/lib/utils';
 
@@ -9,7 +9,7 @@ import { cn } from '@/app/lib/utils';
 /**
  * @typedef {Object} DropdownMenuProps
  * @property {MenuItem[]} items
- * @property {React.ReactNode} [trigger]
+ * @property {import('react').ReactNode} [trigger]
  * @property {string} [className]
  */
 
@@ -21,7 +21,7 @@ export const DropdownMenu = ({ items, trigger, className }) => {
 
   /**
    * @param {MenuItem} item
-   * @param {React.MouseEvent} e
+   * @param {import('react').MouseEvent} e
    */
   const handleItemClick = (item, e) => {
     e.stopPropagation();
