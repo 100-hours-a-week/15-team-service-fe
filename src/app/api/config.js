@@ -9,7 +9,7 @@ export const API_CONFIG = {
     GITHUB_LOGIN_URL: '/auth/github/loginUrl',
     GITHUB_CALLBACK: '/auth/github',
     LOGOUT: '/auth/logout',
-    REFRESH_TOKEN: '/auth/token/refresh',
+    REFRESH_TOKEN: '/auth/token',
     USER_PROFILE: '/users/profile',
     ONBOARDING: '/user/onboarding',
 
