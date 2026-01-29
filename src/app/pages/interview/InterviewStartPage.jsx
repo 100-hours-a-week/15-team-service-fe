@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { StepProgress } from '../../components/common/StepProgress';
@@ -6,17 +6,13 @@ import { SelectGrid } from '../../components/common/SelectGrid';
 import { POSITIONS } from '@/app/constants';
 
 export function InterviewStartPage() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const resumeId = searchParams.get('resumeId');
-
   const showModal = false;
-  const step = 1;
-  const formData = {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
     type: '',
     position: '',
     company: '',
-  };
+  });
 
   const handleUseResumeData = () => {};
   const handleManualInput = () => {};
@@ -66,9 +62,9 @@ export function InterviewStartPage() {
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="mb-2">면접 유형을 선택하세요</h2>
+                <h2 className="mb-2">면접 유형을 선택하세요.</h2>
                 <p className="text-sm text-gray-600">
-                  면접 질문이 유형에 맞게 준비됩니다
+                  면접 질문이 유형에 맞게 준비됩니다.
                 </p>
               </div>
 
@@ -113,9 +109,9 @@ export function InterviewStartPage() {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <h2 className="mb-2">희망 포지션을 선택하세요</h2>
+                <h2 className="mb-2">희망 포지션을 선택하세요.</h2>
                 <p className="text-sm text-gray-600">
-                  면접 질문이 맞춤형으로 준비됩니다
+                  면접 질문이 맞춤형으로 준비됩니다.
                 </p>
               </div>
 
@@ -139,8 +135,8 @@ export function InterviewStartPage() {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="mb-2">희망 기업을 입력하세요</h2>
-                <p className="text-sm text-gray-600">선택사항입니다</p>
+                <h2 className="mb-2">희망 기업을 입력하세요.</h2>
+                <p className="text-sm text-gray-600">선택사항입니다.</p>
               </div>
 
               <input

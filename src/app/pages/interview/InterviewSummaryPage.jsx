@@ -89,7 +89,7 @@ const MOCK_EVALUATION = {
 export function InterviewSummaryPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { duration = 150, interviewType = 'technical' } = location.state || {};
+  const { duration = 150 } = location.state || {};
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
