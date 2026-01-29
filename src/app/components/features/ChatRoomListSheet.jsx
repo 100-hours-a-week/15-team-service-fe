@@ -566,6 +566,7 @@ export function ChatRoomListSheet() {
                               )}
                               {failedMsg.previewUrl && (
                                 <div className="mt-2">
+                                  {/* lgtm[js/xss-through-dom] Safe: previewUrl is a blob URL from URL.createObjectURL() */}
                                   <img
                                     src={failedMsg.previewUrl}
                                     alt="첨부 이미지"
@@ -613,6 +614,7 @@ export function ChatRoomListSheet() {
                 {attachedImage && (
                   <div className="relative w-24 aspect-square mx-2 mb-3">
                     <div className="w-full h-full overflow-hidden">
+                      {/* lgtm[js/xss-through-dom] Safe: previewUrl is a blob URL from URL.createObjectURL() */}
                       <img
                         src={attachedImage.previewUrl}
                         alt="첨부 이미지"
