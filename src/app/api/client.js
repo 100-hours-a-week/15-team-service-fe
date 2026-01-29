@@ -11,6 +11,8 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+let refreshTokenPromise = null;
+
 // Response 인터셉터 - 에러 처리
 apiClient.interceptors.response.use(
   (response) => response,
@@ -21,14 +23,31 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      // 토큰 갱신 시도
-      try {
-        await axios.post(
+      // 이미 진행 중인 refresh가 있으면 대기
+      if (refreshTokenPromise) {
+        try {
+          await refreshTokenPromise;
+          return apiClient(originalRequest);
+        } catch {
+          // Refresh 실패 - 로그인 페이지로 리다이렉트
+          toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
+          window.location.href = '/';
+          return Promise.reject(error);
+        }
+      }
+
+      refreshTokenPromise = axios
+        .post(
           `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH_TOKEN}`,
           {},
           { withCredentials: true }
-        );
+        )
+        .finally(() => {
+          refreshTokenPromise = null; // 완료 후 초기화
+        });
 
+      try {
+        await refreshTokenPromise;
         // 갱신 성공 - 원래 요청 재시도
         return apiClient(originalRequest);
       } catch (refreshError) {
