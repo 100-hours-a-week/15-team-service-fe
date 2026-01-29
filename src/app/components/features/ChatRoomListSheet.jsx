@@ -62,6 +62,15 @@ export function ChatRoomListSheet() {
 
   const messages = messagesData?.pages?.flatMap((page) => page.chats) || [];
 
+  const isSafePreviewUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    try {
+      return new URL(url).protocol === 'blob:';
+    } catch {
+      return false;
+    }
+  };
+
   /**
    * Handle chat room card click
    * Switches to message view for the selected room
@@ -564,9 +573,8 @@ export function ChatRoomListSheet() {
                               {failedMsg.message && (
                                 <p className="text-sm">{failedMsg.message}</p>
                               )}
-                              {failedMsg.previewUrl && (
+                              {isSafePreviewUrl(failedMsg.previewUrl) && (
                                 <div className="mt-2">
-                                  {/* lgtm[js/xss-through-dom] Safe: previewUrl is a blob URL from URL.createObjectURL() */}
                                   <img
                                     src={failedMsg.previewUrl}
                                     alt="첨부 이미지"
@@ -611,10 +619,10 @@ export function ChatRoomListSheet() {
                 />
 
                 {/* Attached image preview */}
-                {attachedImage && (
+                {attachedImage &&
+                  isSafePreviewUrl(attachedImage.previewUrl) && (
                   <div className="relative w-24 aspect-square mx-2 mb-3">
                     <div className="w-full h-full overflow-hidden">
-                      {/* lgtm[js/xss-through-dom] Safe: previewUrl is a blob URL from URL.createObjectURL() */}
                       <img
                         src={attachedImage.previewUrl}
                         alt="첨부 이미지"
