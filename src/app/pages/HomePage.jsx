@@ -106,9 +106,12 @@ export function HomePage() {
               </Button>
             </div>
           ) : resumes.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
-              <p className="text-gray-500 mb-4">생성한 이력서가 없습니다.</p>
-              <Button variant="primary" onClick={() => navigate('/repo-select')}>
+            <div className="flex flex-col items-center bg-white rounded-2xl px-8 py-12 text-center border border-gray-200">
+              <p className="text-gray-500 mb-8">생성한 이력서가 없습니다.</p>
+              <Button
+                variant="primary"
+                onClick={() => navigate('/repo-select')}
+              >
                 이력서 생성
               </Button>
             </div>
@@ -151,7 +154,6 @@ const ResumeCard = React.memo(({ resume }) => {
   const handleViewResume = useCallback(() => {
     navigate(`/resume/${resume.resumeId}`);
   }, [navigate, resume.resumeId]);
-
 
   const handleResumeNameEdit = useCallback(
     (e) => {

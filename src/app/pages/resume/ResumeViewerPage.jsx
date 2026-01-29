@@ -1,18 +1,32 @@
-import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useParams, useBlocker, useNavigate } from 'react-router-dom';
-import { Save, Download, MessageCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  // Save,
+  Download,
+  // MessageCircle,
+  AlertCircle,
+  RefreshCw,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
-import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
+// import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
 import { ParsedResumeViewer } from '../../components/features/ParsedResumeViewer';
 import { PreviewSheet } from '../../components/modals/PreviewSheet';
 import { WarningDialog } from '../../components/modals/WarningDialog';
 import { Button } from '../../components/common/Button';
-import { useChatbot } from '@/app/hooks/useChatbot';
-import { useResumeDetail, useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
-import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
+// import { useChatbot } from '@/app/hooks/useChatbot';
+import {
+  useResumeDetail,
+  useResumeVersion,
+} from '@/app/hooks/queries/useResumeQueries';
+// import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
+import { useGenerateResumePDF } from '@/app/hooks/mutations/useResumeMutations';
 
+/**
+ * Parse resume content JSON from backend and return as-is for ParsedResumeViewer
+ * Backend sends: { techStack: [...], projects: [...] }
+ */
 function parseResumeContent(contentJson) {
   if (!contentJson || contentJson === '{}') {
     return '';
@@ -20,47 +34,6 @@ function parseResumeContent(contentJson) {
 
   try {
     const content = JSON.parse(contentJson);
-    const projects =
-      (content.projects && Array.isArray(content.projects) && content.projects) ||
-      (content.resume &&
-        Array.isArray(content.resume.projects) &&
-        content.resume.projects) ||
-      null;
-
-    // If content has projects array, format it nicely
-    if (projects) {
-      let yaml = 'projects:\n';
-
-      const formatDescription = (text) => {
-        const lines = String(text || '').split('\n');
-        return lines.map((line) => `      ${line}`).join('\n');
-      };
-
-      projects.forEach((project) => {
-        const techStack = Array.isArray(project.techStack)
-          ? project.techStack
-          : Array.isArray(project.tech_stack)
-            ? project.tech_stack
-            : [];
-
-        yaml += `  - name: ${project.name || ''}\n`;
-        yaml += `    repoUrl: ${project.repoUrl || ''}\n`;
-        yaml += `    description: |\n`;
-        yaml += `${formatDescription(project.description)}\n`;
-        if (techStack.length > 0) {
-          yaml += `    tech_stack:\n`;
-          techStack.forEach((tech) => {
-            yaml += `      - ${tech}\n`;
-          });
-        } else {
-          yaml += `    tech_stack: []\n`;
-        }
-      });
-
-      return yaml;
-    }
-
-    // Fallback: stringify the content
     return JSON.stringify(content, null, 2);
   } catch {
     return contentJson;
@@ -97,11 +70,13 @@ export function ResumeViewerPage() {
     },
   });
 
-  const saveVersionMutation = useSaveResumeVersion();
+  // const saveVersionMutation = useSaveResumeVersion();
+  const generatePDFMutation = useGenerateResumePDF();
 
   const [yamlContent, setYamlContent] = useState('');
+  const [activeTab, setActiveTab] = useState('preview');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showChatbot, setShowChatbot] = useState(false);
+  // const [showChatbot, setShowChatbot] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
@@ -111,54 +86,54 @@ export function ResumeViewerPage() {
     }
   }, [versionData]);
 
-  const {
-    messages,
-    chatInput,
-    isUpdating,
-    isPaused,
-    onInputChange,
-    onSendMessage,
-    onTogglePause,
-  } = useChatbot({
-    onUpdate: (content) => {
-      setYamlContent((prev) => prev + content);
-      setHasUnsavedChanges(true);
-    },
-  });
+  // const {
+  //   messages,
+  //   chatInput,
+  //   isUpdating,
+  //   isPaused,
+  //   onInputChange,
+  //   onSendMessage,
+  //   onTogglePause,
+  // } = useChatbot({
+  //   onUpdate: (content) => {
+  //     setYamlContent((prev) => prev + content);
+  //     setHasUnsavedChanges(true);
+  //   },
+  // });
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
   );
 
-  const handleSave = useCallback(() => {
-    if (versionData?.status !== 'SUCCEEDED') {
-      toast.error('이력서 생성이 완료된 후 저장할 수 있습니다');
-      return;
-    }
-
-    saveVersionMutation.mutate(
-      { resumeId, versionNo: currentVersionNo },
-      {
-        onSuccess: () => {
-          setHasUnsavedChanges(false);
-        },
-      }
-    );
-  }, [resumeId, currentVersionNo, versionData?.status, saveVersionMutation]);
+  // const handleSave = useCallback(() => {
+  //   if (versionData?.status !== 'SUCCEEDED') {
+  //     toast.error('이력서 생성이 완료된 후 저장할 수 있습니다');
+  //     return;
+  //   }
+  //
+  //   saveVersionMutation.mutate(
+  //     { resumeId, versionNo: currentVersionNo },
+  //     {
+  //       onSuccess: () => {
+  //         setHasUnsavedChanges(false);
+  //       },
+  //     }
+  //   );
+  // }, [resumeId, currentVersionNo, versionData?.status, saveVersionMutation]);
 
   const handleOpenPreview = useCallback(() => {
     setShowPreview(true);
   }, []);
 
-  const handleSaveAndPreview = useCallback(() => {
-    handleSave();
-    setShowPreview(true);
-  }, [handleSave]);
+  // const handleSaveAndPreview = useCallback(() => {
+  //   handleSave();
+  //   setShowPreview(true);
+  // }, [handleSave]);
 
   const handleSaveAndStay = useCallback(() => {
     setHasUnsavedChanges(false);
-    toast.success('저장되었습니다');
+    toast.success('저장되었습니다.');
     if (blocker.state === 'blocked') {
       blocker.reset();
     }
@@ -171,15 +146,28 @@ export function ResumeViewerPage() {
     }
   }, [blocker]);
 
-  const handleConfirmDownload = useCallback(async () => {
-    setShowPreview(false);
-    toast('PDF 다운로드 준비 중입니다');
-  }, []);
+  const handleConfirmDownload = useCallback(() => {
+    if (!resumeViewerRef.current) {
+      toast.error('이력서를 찾을 수 없습니다.');
+      return;
+    }
+
+    generatePDFMutation.mutate(
+      {
+        element: resumeViewerRef.current,
+        filename: `${resumeDetail?.name || '이력서'}.pdf`,
+      },
+      {
+        onSettled: () => {
+          setShowPreview(false);
+        },
+      }
+    );
+  }, [resumeViewerRef, resumeDetail?.name, generatePDFMutation]);
 
   const status = versionData?.status;
   const isProcessing = status === 'QUEUED' || status === 'PROCESSING';
   const isFailed = status === 'FAILED';
-  const isSucceeded = status === 'SUCCEEDED';
 
   if (isLoadingDetail || isLoadingVersion) {
     return (
@@ -206,7 +194,7 @@ export function ResumeViewerPage() {
           <div className="max-w-[390px] mx-auto">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
-              <p className="text-gray-500">이력서를 불러오지 못했습니다</p>
+              <p className="text-gray-500">이력서를 불러오지 못했습니다.</p>
               <Button variant="primary" onClick={() => refetchDetail()}>
                 재시도
               </Button>
@@ -226,7 +214,7 @@ export function ResumeViewerPage() {
           <div className="max-w-[390px] mx-auto">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
               <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <h3>AI가 이력서를 생성 중입니다</h3>
+              <h3>AI가 이력서를 생성 중입니다.</h3>
               <p className="text-sm text-gray-500">
                 {status === 'QUEUED' ? '대기 중...' : '분석 중...'}
               </p>
@@ -252,7 +240,7 @@ export function ResumeViewerPage() {
           <div className="max-w-[390px] mx-auto">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
-              <h3>이력서 생성에 실패했습니다</h3>
+              <h3>이력서 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">
                 {versionData?.errorLog || '알 수 없는 오류가 발생했습니다'}
               </p>
@@ -286,13 +274,13 @@ export function ResumeViewerPage() {
         showBack
         action={
           <div className="flex items-center gap-0">
-            <button
+            {/* <button
               onClick={handleSaveAndPreview}
               className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="이력서 저장"
             >
               <Save className="w-5 h-5 text-gray-900" strokeWidth={1.5} />
-            </button>
+            </button> */}
             <button
               onClick={handleOpenPreview}
               className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -304,42 +292,70 @@ export function ResumeViewerPage() {
         }
       />
 
-      <div className="px-5 py-6">
+      <div className="px-5 py-2">
         <div className="max-w-[390px] mx-auto relative">
-          {resumeDetail && (
-            <div className="bg-blue-50 rounded-xl p-4 mb-4 border border-primary/20">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs">
-                  {resumeDetail.positionName}
-                </span>
-                {resumeDetail.companyName && (
-                  <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                    {resumeDetail.companyName}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Tab Navigation */}
+          <div className="flex border-b border-gray-200 mb-4">
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`
+                flex-1 min-h-[44px] px-4 py-3 font-medium text-sm transition-colors
+                border-b-2
+                ${
+                  activeTab === 'preview'
+                    ? 'text-primary border-primary'
+                    : 'text-gray-500 border-transparent hover:text-gray-700'
+                }
+              `}
+            >
+              미리보기
+            </button>
+            <button
+              onClick={() => setActiveTab('yaml')}
+              className={`
+                flex-1 min-h-[44px] px-4 py-3 font-medium text-sm transition-colors
+                border-b-2
+                ${
+                  activeTab === 'yaml'
+                    ? 'text-primary border-primary'
+                    : 'text-gray-500 border-transparent hover:text-gray-700'
+                }
+              `}
+            >
+              YAML
+            </button>
+          </div>
 
           {yamlContent ? (
-            <ParsedResumeViewer ref={resumeViewerRef} yamlContent={yamlContent} />
+            activeTab === 'preview' ? (
+              <ParsedResumeViewer
+                ref={resumeViewerRef}
+                yamlContent={yamlContent}
+              />
+            ) : (
+              <div className="bg-gray-900 rounded-2xl p-4 overflow-auto max-w-[390px] mx-auto">
+                <pre className="text-sm text-green-400 font-mono whitespace-pre-wrap">
+                  {yamlContent}
+                </pre>
+              </div>
+            )
           ) : (
             <div className="bg-white rounded-2xl p-8 text-center">
-              <p className="text-gray-500">이력서 내용이 없습니다</p>
+              <p className="text-gray-500">이력서 내용이 없습니다.</p>
             </div>
           )}
 
-          <button
+          {/* <button
             onClick={() => setShowChatbot(true)}
             className="fixed bottom-24 right-[calc(50%-195px+20px)] w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center z-10"
             aria-label="AI 챗봇 열기"
           >
             <MessageCircle className="w-6 h-6" strokeWidth={1.5} />
-          </button>
+          </button> */}
         </div>
       </div>
 
-      <ChatbotBottomSheet
+      {/* <ChatbotBottomSheet
         isOpen={showChatbot}
         onClose={() => setShowChatbot(false)}
         messages={messages}
@@ -349,7 +365,7 @@ export function ResumeViewerPage() {
         isUpdating={isUpdating}
         isPaused={isPaused}
         onTogglePause={onTogglePause}
-      />
+      /> */}
 
       <PreviewSheet
         isOpen={showPreview}

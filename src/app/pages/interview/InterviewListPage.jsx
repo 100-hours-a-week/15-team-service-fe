@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { DropdownMenu } from '../../components/common/DropdownMenu';
+import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,16 +19,9 @@ import {
   POSITIONS,
   INTERVIEW_TYPE_LABELS,
   SORT_LABELS,
-  ITEMS_PER_PAGE,
   FILTER_ALL_LABEL,
-  FILTER_UNSPECIFIED_LABEL,
 } from '@/app/constants';
-import {
-  extractUniqueCompanies,
-  sortInterviews,
-  generatePageNumbers,
-  cn,
-} from '@/app/lib/utils';
+import { cn } from '@/app/lib/utils';
 
 /**
  * @typedef {import('@/app/types').Interview} Interview
@@ -35,8 +30,6 @@ import {
  */
 
 export function InterviewListPage() {
-  const navigate = useNavigate();
-
   const interviews = [
     {
       id: '1',
@@ -370,7 +363,7 @@ const InterviewCard = React.memo(
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    const handleNameChange = useCallback((e) => {
+    const handleNameChange = useCallback((_e) => {
       // 내용명 변경 로직
     }, []);
 
@@ -463,7 +456,6 @@ const InterviewCard = React.memo(
     );
   },
   (prevProps, nextProps) => {
-    // interview.id가 같으면 재렌더링 하지 않음
     return prevProps.interview.id === nextProps.interview.id;
   }
 );

@@ -1,11 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   createResume,
   renameResume,
   saveResumeVersion,
   deleteResume,
 } from '@/app/api/endpoints/resumes';
+// import { resumeKeys } from '../queries/useResumeQueries';
 
 export function useCreateResume() {
   const queryClient = useQueryClient();
@@ -122,6 +125,55 @@ export function useDeleteResume() {
         default:
           toast.error('이력서 삭제에 실패했습니다.');
       }
+    },
+  });
+}
+
+/**
+ * Generate resume PDF from HTML element (client-side)
+ * @param {Object} params
+ * @param {HTMLElement} params.element - HTML element to convert to PDF
+ * @param {string} params.filename - PDF filename
+ */
+const generatePDFFromHTML = async ({ element, filename }) => {
+  if (!element) {
+    throw new Error('Element not found');
+  }
+
+  // HTML을 canvas로 변환
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    logging: false,
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+  const imgWidth = 210;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  // PDF 생성
+  const pdf = new jsPDF({
+    orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  pdf.save(filename);
+};
+
+/**
+ * Generate resume PDF mutation (client-side)
+ * @returns {UseMutationResult} Mutation result
+ */
+export function useGenerateResumePDF() {
+  return useMutation({
+    mutationFn: generatePDFFromHTML,
+    onSuccess: () => {
+      toast.success('PDF 다운로드가 완료되었습니다.');
+    },
+    onError: () => {
+      toast.error('PDF 생성에 실패했습니다.');
     },
   });
 }

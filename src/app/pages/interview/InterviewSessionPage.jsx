@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Mic, MicOff, Video, Send } from 'lucide-react';
+import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { cn } from '../../lib/utils';
 
@@ -28,12 +28,10 @@ export function InterviewSessionPage() {
       timestamp: new Date().toISOString(),
     },
   ];
-  const currentQuestion = 0;
   const elapsedTime = 0;
   const isLoading = false;
   const textInput = '';
 
-  const addMessage = () => {};
   const handleAnswer = () => {};
   const handleEnd = () => {};
   const handleTextChange = () => {};

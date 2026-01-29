@@ -1,9 +1,25 @@
+/**
+ * Resume Query Hooks
+ * React Query hooks for fetching resume data
+ */
+
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchResumes,
   fetchResumeById,
   fetchResumeVersion,
 } from '@/app/api/endpoints/resumes';
+
+/**
+ * Query keys for resume data
+ */
+export const resumeKeys = {
+  all: ['resumes'],
+  lists: () => [...resumeKeys.all, 'list'],
+  list: (filters) => [...resumeKeys.lists(), filters],
+  details: () => [...resumeKeys.all, 'detail'],
+  detail: (id) => [...resumeKeys.details(), id],
+};
 
 export function useResumes({ page = 0, size = 10 } = {}) {
   return useQuery({

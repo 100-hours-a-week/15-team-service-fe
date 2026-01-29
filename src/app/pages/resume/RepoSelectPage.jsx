@@ -12,12 +12,7 @@ const MAX_REPO_SELECTION = 6;
 export function RepoSelectPage() {
   const navigate = useNavigate();
 
-  const {
-    data: repos = [],
-    isLoading,
-    isError,
-    refetch,
-  } = useRepositories();
+  const { data: repos = [], isLoading, isError, refetch } = useRepositories();
 
   const [selectedRepos, setSelectedRepos] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,7 +110,7 @@ export function RepoSelectPage() {
         <TopAppBar title="레포지토리 선택" showBack />
         <div className="flex flex-col items-center justify-center px-5 py-24">
           <div className="max-w-[390px] w-full bg-white rounded-2xl p-8 text-center border border-gray-200 space-y-4">
-            <p className="text-gray-500">레포지토리를 불러오지 못했습니다</p>
+            <p className="text-gray-500">리포지토리를 불러오지 못했습니다.</p>
             <Button variant="primary" onClick={() => refetch()}>
               재시도
             </Button>

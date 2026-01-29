@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useBlocker } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -13,12 +13,18 @@ import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import { useCreateResume } from '@/app/hooks/mutations/useResumeMutations';
 import { useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
 
+const GENERATION_TIMEOUT_MS = 5 * 60 * 1000 + 30 * 1000; // 5분 30초
+
 export function CreateResumePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const selectedRepos = location.state?.selectedRepos || [];
+  const selectedRepos = useMemo(
+    () => location.state?.selectedRepos || [],
+    [location.state?.selectedRepos]
+  );
 
-  const { data: positions = [], isLoading: isLoadingPositions } = usePositions();
+  const { data: positions = [], isLoading: isLoadingPositions } =
+    usePositions();
   // const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
   const createResumeMutation = useCreateResume();
 
@@ -32,8 +38,6 @@ export function CreateResumePage() {
     return sessionStorage.getItem('generatingResumeId') || null;
   });
   const [isClientTimeout, setIsClientTimeout] = useState(false);
-
-  const GENERATION_TIMEOUT_MS = 5 * 60 * 1000 + 30 * 1000; // 5분 30초 (BE 5분보다 약간 길게)
 
   const handleOpenConfirmDialog = useCallback(() => {
     setIsConfirmDialogOpen(true);
@@ -60,11 +64,11 @@ export function CreateResumePage() {
   );
 
   const generationStatus = versionData?.status;
-  const isGenerating = createdResumeId && (
-    !generationStatus ||
-    generationStatus === 'QUEUED' ||
-    generationStatus === 'PROCESSING'
-  );
+  const isGenerating =
+    createdResumeId &&
+    (!generationStatus ||
+      generationStatus === 'QUEUED' ||
+      generationStatus === 'PROCESSING');
   const isGenerationFailed = generationStatus === 'FAILED';
   const isGenerationSucceeded = generationStatus === 'SUCCEEDED';
 
@@ -94,7 +98,6 @@ export function CreateResumePage() {
     }
   }, [isVersionError, createdResumeId]);
 
-  // FE 타임아웃 처리 (BE 타임아웃 백업)
   useEffect(() => {
     if (!createdResumeId || !isGenerating) return;
 
@@ -209,20 +212,20 @@ export function CreateResumePage() {
       : versionData?.errorLog || '알 수 없는 오류가 발생했습니다';
 
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <TopAppBar title="이력서 생성 실패" />
+      <div className="min-h-screen flex flex-col">
+        <TopAppBar
+          title="이력서 생성 실패"
+          showBack
+          onBack={() => navigate('/home')}
+          noTruncate
+        />
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
-            <div className="bg-white rounded-2xl p-8 text-center space-y-4">
+            <div className="rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
-              <h3>이력서 생성에 실패했습니다</h3>
-              <p className="text-sm text-gray-500">
-                {errorMessage}
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button variant="ghost" onClick={() => navigate('/home')}>
-                  홈으로
-                </Button>
+              <h3>이력서 생성에 실패했습니다.</h3>
+              <p className="text-sm text-gray-500">{errorMessage}</p>
+              <div className="flex justify-center">
                 <Button variant="primary" onClick={handleRetryGeneration}>
                   <RefreshCw className="w-4 h-4 mr-1" />
                   다시 시도
@@ -273,9 +276,9 @@ export function CreateResumePage() {
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="mb-2">희망 포지션을 선택하세요</h2>
+                <h2 className="mb-2">희망 포지션을 선택하세요.</h2>
                 <p className="text-sm text-gray-600">
-                  이력서에 맞춤형 내용이 생성됩니다
+                  이력서에 맞춤형 내용이 생성됩니다.
                 </p>
               </div>
 
@@ -294,7 +297,10 @@ export function CreateResumePage() {
                   selected={selectedPositionName || ''}
                   onSelect={(posName) => {
                     const position = positions.find((p) => p.name === posName);
-                    setFormData({ ...formData, positionId: position?.id || null });
+                    setFormData({
+                      ...formData,
+                      positionId: position?.id || null,
+                    });
                   }}
                 />
               )}
