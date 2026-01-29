@@ -90,7 +90,7 @@
     "jsdom": "^27.4.0",
     "prettier": "^3.4.2",
     "tailwindcss": "4.1.12",
-    "vite": "6.3.5",
+    "vite": "6.4.1",
     "vitest": "^4.0.17"
   },
   "peerDependencies": {
@@ -107,7 +107,7 @@
   },
   "pnpm": {
     "overrides": {
-      "vite": "6.3.5"
+      "vite": "6.4.1"
     }
   }
 }
