@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_CONFIG } from './config';
 import { toast } from 'sonner';
+import { getCsrfToken } from '@/app/lib/utils';
 
 const apiClient = axios.create({
   baseURL: API_CONFIG.BASE_URL,
@@ -12,6 +13,28 @@ const apiClient = axios.create({
 });
 
 let refreshTokenPromise = null;
+
+// Request Interceptor(adds CSRF token)
+apiClient.interceptors.request.use(
+  (config) => {
+    const method = config.method?.toLowerCase();
+    const isStateMutatingRequest = ['post', 'put', 'patch', 'delete'].includes(
+      method
+    );
+
+    const isExcludedPath = config.url?.includes('/api/v1/resume/callback');
+
+    if (isStateMutatingRequest && !isExcludedPath) {
+      const csrfToken = getCsrfToken('XSRF-TOKEN');
+      if (csrfToken) {
+        config.headers['X-XSRF-TOKEN'] = csrfToken;
+      }
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Response 인터셉터 - 에러 처리
 apiClient.interceptors.response.use(
