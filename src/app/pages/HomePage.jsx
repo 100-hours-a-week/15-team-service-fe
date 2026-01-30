@@ -246,9 +246,9 @@ const ResumeCard = React.memo(({ resume }) => {
           <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs">
             {resume.positionName}
           </span>
-          <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+          {/* <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
             {resume.companyName || '미지정'}
-          </span>
+          </span> */}
         </div>
 
         <div className="flex gap-2">

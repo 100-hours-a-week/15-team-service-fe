@@ -45,7 +45,12 @@ export function RepoSelectPage() {
   }, []);
 
   const handleContinue = useCallback(() => {
-    navigate('/create-resume', { state: { selectedRepos } });
+    navigate('/create-resume', {
+      state: {
+        selectedRepos,
+        fromRepoSelect: true,
+      },
+    });
   }, [navigate, selectedRepos]);
 
   const sortedAndFilteredRepos = useMemo(() => {

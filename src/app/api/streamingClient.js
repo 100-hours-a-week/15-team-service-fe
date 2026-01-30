@@ -4,6 +4,7 @@
  */
 
 import { API_CONFIG } from './config';
+import { getCsrfToken } from '@/app/lib/utils';
 
 /**
  * Stream API call with chunk-by-chunk processing
@@ -19,11 +20,21 @@ export async function streamAPI(endpoint, data, options = {}) {
   const { onChunk, onComplete, onError, signal } = options;
 
   try {
+    // Build headers with CSRF token
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (!endpoint.includes('/api/v1/resume/callback')) {
+      const csrfToken = getCsrfToken('XSRF-TOKEN');
+      if (csrfToken) {
+        headers['X-XSRF-TOKEN'] = csrfToken;
+      }
+    }
+
     const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(data),
       credentials: 'include', // CRITICAL: Send cookies with request
       signal,
