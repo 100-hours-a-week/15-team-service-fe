@@ -251,7 +251,7 @@ export function CreateResumePage() {
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
             <div className="rounded-2xl p-8 text-center space-y-4">
-              <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
+              <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
               <h3>이력서 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">{errorMessage}</p>
               <div className="flex justify-center">

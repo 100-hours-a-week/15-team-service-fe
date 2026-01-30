@@ -190,11 +190,11 @@ export function ResumeViewerPage() {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
         <TopAppBar title="이력서" showBack />
-        <div className="px-5 py-6">
+        <div className="px-5 py-9">
           <div className="max-w-[390px] mx-auto">
-            <div className="bg-white rounded-2xl p-8 text-center space-y-4">
-              <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
-              <p className="text-gray-500">이력서를 불러오지 못했습니다.</p>
+            <div className="flex flex-col items-center bg-white rounded-2xl p-8 text-center space-y-4">
+              <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
+              <p className="text-gray-500">이력서를 불러오지 못 했습니다.</p>
               <Button variant="primary" onClick={() => refetchDetail()}>
                 재시도
               </Button>
@@ -239,7 +239,7 @@ export function ResumeViewerPage() {
         <div className="px-5 py-6">
           <div className="max-w-[390px] mx-auto">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
-              <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
+              <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
               <h3>이력서 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">
                 {versionData?.errorLog || '알 수 없는 오류가 발생했습니다'}

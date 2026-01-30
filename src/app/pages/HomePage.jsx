@@ -99,7 +99,7 @@ export function HomePage() {
             </div>
           ) : isResumesError ? (
             <div className="flex flex-col items-center bg-white rounded-2xl p-8 text-center border border-gray-200 space-y-4">
-              <AlertCircle className="w-12 h-12 mx-auto text-red-500" />
+              <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
               <p className="text-gray-500">이력서를 불러오지 못 했습니다.</p>
               <Button variant="primary" onClick={() => refetchResumes()}>
                 재시도

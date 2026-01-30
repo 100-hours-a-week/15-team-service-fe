@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useCallback, useMemo } from 'react';
-import { Search, Lock, ChevronDown } from 'lucide-react';
+import { Search, Lock, AlertCircle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { Button } from '../../components/common/Button';
@@ -113,13 +113,12 @@ export function RepoSelectPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <TopAppBar title="레포지토리 선택" showBack />
-        <div className="flex flex-col items-center justify-center px-5 py-24">
-          <div className="max-w-[390px] w-full bg-white rounded-2xl p-8 text-center border border-gray-200 space-y-4">
-            <p className="text-gray-500">리포지토리를 불러오지 못했습니다.</p>
-            <Button variant="primary" onClick={() => refetch()}>
-              재시도
-            </Button>
-          </div>
+        <div className="flex flex-col items-center justify-center max-w-[390px] w-full space-y-4 px-5 py-8">
+          <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
+          <p className="text-gray-500">리포지토리를 불러오지 못 했습니다.</p>
+          <Button variant="primary" onClick={() => refetch()}>
+            재시도
+          </Button>
         </div>
       </div>
     );
