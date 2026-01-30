@@ -232,6 +232,7 @@ jobs:
           path: dist
           repository: ${{ github.repository }}
           run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pack dist
         shell: bash
