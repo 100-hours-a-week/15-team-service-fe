@@ -23,6 +23,16 @@ export function CreateResumePage() {
     [location.state?.selectedRepos]
   );
 
+  useEffect(() => {
+    if (location.state?.fromRepoSelect) {
+      navigate(location.pathname, {
+        replace: true,
+        state: { selectedRepos },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const { data: positions = [], isLoading: isLoadingPositions } =
     usePositions();
   // const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
@@ -35,6 +45,13 @@ export function CreateResumePage() {
   });
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [createdResumeId, setCreatedResumeId] = useState(() => {
+    // RepoSelectPage에서 네비게이션했을 때만 sessionStorage 무시
+    const fromRepoSelect = location.state?.fromRepoSelect;
+    if (fromRepoSelect) {
+      // 새로운 이력서 생성 - sessionStorage 무시
+      return null;
+    }
+    // 브라우저 새로고침 - sessionStorage에서 복구
     return sessionStorage.getItem('generatingResumeId') || null;
   });
   const [isClientTimeout, setIsClientTimeout] = useState(false);
@@ -77,9 +94,9 @@ export function CreateResumePage() {
       sessionStorage.removeItem('generatingResumeId');
       sessionStorage.removeItem('generatingStartedAt');
       toast.success('이력서가 생성되었습니다');
-      navigate('/home');
+      navigate(`/resume/${createdResumeId}`);
     }
-  }, [isGenerationSucceeded, navigate]);
+  }, [isGenerationSucceeded, navigate, createdResumeId]);
 
   useEffect(() => {
     if (isGenerationFailed) {
@@ -128,8 +145,9 @@ export function CreateResumePage() {
     return () => clearTimeout(timer);
   }, [createdResumeId, isGenerating]);
 
-  // 생성 중 라우터 이탈 차단
-  const isBlocked = createResumeMutation.isPending || isGenerating;
+  // 생성 중 라우터 이탈 차단 (단, 생성 완료 시에는 차단 해제)
+  const isBlocked =
+    (createResumeMutation.isPending || isGenerating) && !isGenerationSucceeded;
   useBlocker(() => isBlocked);
 
   // 생성 중 브라우저 새로고침/탭 닫기 경고
@@ -143,6 +161,17 @@ export function CreateResumePage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [createResumeMutation.isPending, isGenerating]);
+
+  // 컴포넌트 unmount 시 sessionStorage 정리 (뒤로가기 등)
+  useEffect(() => {
+    return () => {
+      // 생성 진행 중이 아닐 때만 정리 (새로고침 복구 기능 보존)
+      if (!isGenerating && !createResumeMutation.isPending) {
+        sessionStorage.removeItem('generatingResumeId');
+        sessionStorage.removeItem('generatingStartedAt');
+      }
+    };
+  }, [isGenerating, createResumeMutation.isPending]);
 
   const handleNext = useCallback(() => {
     if (!formData.positionId) {
@@ -188,7 +217,7 @@ export function CreateResumePage() {
         : '분석 중...';
 
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <TopAppBar title="이력서 생성 중" />
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
