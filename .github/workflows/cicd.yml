@@ -80,12 +80,20 @@ jobs:
       - name: Formatting check
         run: npm run format:check
 
-      # Step 7) Vitest Tests + 산출물 생성
+      # Step 6.1) Lint check
+      - name: Lint check
+        run: npm run lint
+
+      # Step 7) Vitest Tests
       - name: Tests
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
         run: npm run test:run -- --coverage
 
-      # Step 8) Build + 산출물 생성
+      # Step 8) Build
       - name: Build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
         run: npm run build
 
       # Step 9) CodeQL Analyze (SAST 실행/업로드)
