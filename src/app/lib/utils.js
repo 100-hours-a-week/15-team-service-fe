@@ -240,6 +240,17 @@ export function getPhoneErrorMessage(input = '') {
   return '';
 }
 
+/**
+ * Get CSRF token from cookie
+ * @param {string} cookieName - Cookie name (default: 'XSRF-TOKEN')
+ * @returns {string | null} CSRF token value or null if not found
+ */
+export function getCsrfToken(cookieName = 'XSRF-TOKEN') {
+  const cookies = document.cookie.split('; ');
+  const csrfCookie = cookies.find((row) => row.startsWith(`${cookieName}=`));
+  return csrfCookie ? csrfCookie.split('=')[1] : null;
+}
+
 export function parseYAMLToResume(yamlContent = '') {
   try {
     const parsed = yaml.load(String(yamlContent));
