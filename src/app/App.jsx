@@ -29,14 +29,23 @@ function RootLayout() {
       >
         <Outlet />
         <Toaster
-          position="top-center"
-          className="app-toaster"
-          style={{
-            '--width': 'min(390px, 100%)',
-          }}
+          position="bottom-center"
+          offset={80}
+          containerAriaLabel="Notifications"
           toastOptions={{
-            className: 'mx-auto',
+            style: {
+              backgroundColor: 'rgba(75, 85, 99, 0.8)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: '#FFFFFF',
+              border: 'none',
+              width: '90%',
+              margin: '0 auto',
+            },
+            className:
+              'my-custom-toast w-[100%] mx-auto left-0 right-0 !px-6 !rounded-full',
           }}
+          className="absolute left-1/2 w-full max-w-[390px]"
         />
       </div>
     </div>
