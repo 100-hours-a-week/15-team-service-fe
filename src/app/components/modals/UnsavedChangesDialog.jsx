@@ -3,56 +3,6 @@ import { AlertDialog, AlertDialogPortal } from '../ui/alert-dialog';
 import { cn } from '../../lib/utils';
 
 /**
- * @deprecated Use WarningDialog instead
- * This component is kept for backward compatibility and will be removed in a future version.
- *
- * Migration Guide:
- * 1. Replace import:
- *    ```javascript
- *    // Old:
- *    import { UnsavedChangesDialog } from '../components/UnsavedChangesDialog';
- *    // New:
- *    import { WarningDialog } from '../components/WarningDialog';
- *    ```
- *
- * 2. Update component usage:
- *    ```jsx
- *    // Old:
- *    <UnsavedChangesDialog
- *      isOpen={blocker.state === 'blocked'}
- *      onSaveAndStay={handleSaveAndStay}
- *      onDiscardAndLeave={handleDiscardAndLeave}
- *    />
- *
- *    // New:
- *    <WarningDialog
- *      isOpen={blocker.state === 'blocked'}
- *      title="아직 저장하지 않았어요."
- *      description="저장하지 않고 나가면 이력서가 사라질 수 있습니다."
- *      primaryButtonText="저장하고 나가기"
- *      secondaryButtonText="저장하지 않고 나가기"
- *      onPrimaryAction={handleSaveAndStay}    // Renamed from onSaveAndStay
- *      onSecondaryAction={handleDiscardAndLeave}  // Renamed from onDiscardAndLeave
- *    />
- *    ```
- *
- * Warning modal for unsaved changes during navigation
- *
- * Implementation Decision - Custom Component Rationale:
- * - Cannot reuse ConfirmDialog because "저장하고 나가기" CANCELS navigation (opposite of confirm)
- * - Button semantics are reversed: primary action = stay on page
- * - Two buttons with opposite behaviors (stay vs. leave)
- *
- * Implementation Decision - Positioning:
- * - Uses fixed positioning (not absolute) to ensure modal appears at viewport center
- * - Portal renders to document.body (not #app-container) for proper z-index stacking
- * - This ensures modal is always visible at screen center regardless of scroll position
- *
- * User Confirmed Behavior:
- * - "저장하고 나가기": Closes modal, stays on page (cancels navigation)
- * - "저장하지 않고 나가기": Discards changes, proceeds with navigation
- * - No separate "취소" button needed
- *
  * @param {Object} props
  * @param {boolean} props.isOpen - Modal open state
  * @param {() => void} props.onSaveAndStay - "저장하고 나가기" callback (cancels navigation)
