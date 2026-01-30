@@ -37,8 +37,20 @@ export const updateUser = async (updates) => {
  * @throws {Error} 401 AUTH_UNAUTHORIZED, 404 USER_SETTINGS_NOT_FOUND
  */
 export const fetchUserSettings = async () => {
-  const response = await apiClient.get(API_CONFIG.ENDPOINTS.USER_SETTINGS);
-  return response.data.data;
+  try {
+    const response = await apiClient.get(API_CONFIG.ENDPOINTS.USER_SETTINGS, {
+      skipErrorToast: true,
+    });
+    return response.data.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return {
+        notificationEnabled: true,
+        interviewResumeDefaultsEnabled: false,
+      };
+    }
+    throw error;
+  }
 };
 
 /**
