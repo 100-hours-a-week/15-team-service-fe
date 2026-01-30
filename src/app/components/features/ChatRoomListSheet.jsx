@@ -389,7 +389,9 @@ export function ChatRoomListSheet() {
                         )}
                       </div>
                       <p className="text-sm text-gray-600 truncate">
-                        {room.lastMessage || '첫 메시지를 보내보세요!'}
+                        {room.lastMessage === '' && room.lastUpdatedAt
+                          ? '(첨부파일)'
+                          : room.lastMessage || '첫 메시지를 보내보세요!'}
                       </p>
                     </button>
                   ))}
