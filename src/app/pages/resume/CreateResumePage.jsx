@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useBlocker } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';

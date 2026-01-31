@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useCallback, useMemo } from 'react';
 import { Search, Lock, AlertCircle, ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { Button } from '../../components/common/Button';
 import { REPO_SORT_OPTIONS } from '@/app/constants';
@@ -27,7 +27,9 @@ export function RepoSelectPage() {
         return prev.filter((r) => r.id !== repo.id);
       } else {
         if (prev.length >= MAX_REPO_SELECTION) {
-          toast.error(`최대 ${MAX_REPO_SELECTION}개까지만 선택할 수 있습니다`);
+          toast.error(`최대 ${MAX_REPO_SELECTION}개까지만 선택할 수 있습니다`, {
+      id: 'repo-selection-limit-error',
+    });
           return prev;
         }
         return [...prev, repo];

@@ -7,7 +7,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
 // import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';

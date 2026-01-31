@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import {
