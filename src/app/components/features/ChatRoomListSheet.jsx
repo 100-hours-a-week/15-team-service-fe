@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   MessageSquare,
   Loader2,
@@ -29,6 +29,7 @@ export function ChatRoomListSheet() {
   const [inputText, setInputText] = useState('');
   const [attachedImage, setAttachedImage] = useState(null);
   const [failedMessages, setFailedMessages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(new Set());
   const attachFileInputRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -60,7 +61,49 @@ export function ChatRoomListSheet() {
   );
   const [isSending, setIsSending] = useState(false);
 
-  const messages = messagesData?.pages?.flatMap((page) => page.chats) || [];
+  const messages = useMemo(
+    () => messagesData?.pages?.flatMap((page) => page.chats) || [],
+    [messagesData]
+  );
+
+  // Track images in current messages for loading detection
+  useEffect(() => {
+    if (viewMode !== 'messages') return;
+
+    const imageIds = new Set();
+
+    // Collect all image IDs from messages
+    messages.forEach((msg) => {
+      msg.files?.forEach((file) => {
+        if (file.fileType === 'IMAGE') {
+          imageIds.add(`msg-${msg.id}-file-${file.id}`);
+        }
+      });
+    });
+
+    // Collect image IDs from failed messages
+    failedMessages.forEach((failedMsg) => {
+      if (failedMsg.previewUrl) {
+        imageIds.add(`failed-${failedMsg.id}`);
+      }
+    });
+
+    // Collect attached image ID
+    if (attachedImage?.previewUrl) {
+      imageIds.add('attached-preview');
+    }
+
+    // Update loading images (only add new ones, keep existing tracking)
+    setLoadingImages((prev) => {
+      const next = new Set(prev);
+      imageIds.forEach((id) => {
+        if (!prev.has(id)) {
+          next.add(id);
+        }
+      });
+      return next;
+    });
+  }, [viewMode, messages, failedMessages, attachedImage]);
 
   const isSafePreviewUrl = (url) => {
     if (!url || typeof url !== 'string') return false;
@@ -84,6 +127,42 @@ export function ChatRoomListSheet() {
   };
 
   /**
+   * Scroll to bottom after all pending images finish loading
+   * Prevents scroll positioning before images have known dimensions
+   */
+  const scrollAfterImagesLoad = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+
+    // Immediate scroll for text-only messages (no images loading)
+    if (loadingImages.size === 0) {
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
+      return;
+    }
+
+    // Wait for all images to load, checking every 50ms
+    const checkInterval = setInterval(() => {
+      if (loadingImages.size === 0) {
+        clearInterval(checkInterval);
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop =
+            scrollContainerRef.current.scrollHeight;
+        }
+      }
+    }, 50);
+
+    // Timeout fallback: Force scroll after 2s even if images still loading
+    // Prevents infinite wait on broken URLs or slow connections
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop =
+          scrollContainerRef.current.scrollHeight;
+      }
+    }, 2000);
+  }, [loadingImages]);
+
+  /**
    * Handle back button click
    * Returns to chat room list view
    */
@@ -101,6 +180,8 @@ export function ChatRoomListSheet() {
     });
     setFailedMessages([]);
     setIsNearBottom(true);
+    // Clear image loading state
+    setLoadingImages(new Set());
   };
 
   // Auto-scroll to bottom on initial load and new messages
@@ -111,10 +192,16 @@ export function ChatRoomListSheet() {
       scrollContainerRef.current &&
       isNearBottom
     ) {
-      scrollContainerRef.current.scrollTop =
-        scrollContainerRef.current.scrollHeight;
+      // Use new image-aware scroll function
+      scrollAfterImagesLoad();
     }
-  }, [viewMode, messages.length, failedMessages.length, isNearBottom]);
+  }, [
+    viewMode,
+    messages.length,
+    failedMessages.length,
+    isNearBottom,
+    scrollAfterImagesLoad,
+  ]);
 
   // Detect scroll position for infinite scroll
   const handleScroll = useCallback(() => {
@@ -186,12 +273,7 @@ export function ChatRoomListSheet() {
         URL.revokeObjectURL(imageData.previewUrl);
       }
 
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop =
-            scrollContainerRef.current.scrollHeight;
-        }
-      }, 100);
+      scrollAfterImagesLoad();
     } catch {
       setFailedMessages((prev) => [
         ...prev,
@@ -230,12 +312,7 @@ export function ChatRoomListSheet() {
         URL.revokeObjectURL(failedMsg.previewUrl);
       }
 
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop =
-            scrollContainerRef.current.scrollHeight;
-        }
-      }, 100);
+      scrollAfterImagesLoad();
     } catch {
       setFailedMessages((prev) => [...prev, { ...failedMsg, uploadId }]);
     } finally {
@@ -512,6 +589,25 @@ export function ChatRoomListSheet() {
                                               src={file.fileUrl}
                                               alt="첨부 이미지"
                                               className="rounded-lg max-w-full"
+                                              loading="eager"
+                                              onLoad={() => {
+                                                setLoadingImages((prev) => {
+                                                  const next = new Set(prev);
+                                                  next.delete(
+                                                    `msg-${msg.id}-file-${file.id}`
+                                                  );
+                                                  return next;
+                                                });
+                                              }}
+                                              onError={() => {
+                                                setLoadingImages((prev) => {
+                                                  const next = new Set(prev);
+                                                  next.delete(
+                                                    `msg-${msg.id}-file-${file.id}`
+                                                  );
+                                                  return next;
+                                                });
+                                              }}
                                             />
                                           ) : (
                                             <a
@@ -581,6 +677,21 @@ export function ChatRoomListSheet() {
                                     src={failedMsg.previewUrl}
                                     alt="첨부 이미지"
                                     className="rounded-lg max-w-full"
+                                    loading="eager"
+                                    onLoad={() => {
+                                      setLoadingImages((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(`failed-${failedMsg.id}`);
+                                        return next;
+                                      });
+                                    }}
+                                    onError={() => {
+                                      setLoadingImages((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(`failed-${failedMsg.id}`);
+                                        return next;
+                                      });
+                                    }}
                                   />
                                 </div>
                               )}
@@ -629,6 +740,21 @@ export function ChatRoomListSheet() {
                           src={attachedImage.previewUrl}
                           alt="첨부 이미지"
                           className="w-full h-full object-cover"
+                          loading="eager"
+                          onLoad={() => {
+                            setLoadingImages((prev) => {
+                              const next = new Set(prev);
+                              next.delete('attached-preview');
+                              return next;
+                            });
+                          }}
+                          onError={() => {
+                            setLoadingImages((prev) => {
+                              const next = new Set(prev);
+                              next.delete('attached-preview');
+                              return next;
+                            });
+                          }}
                         />
                       </div>
                       <button
