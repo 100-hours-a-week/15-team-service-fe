@@ -6,6 +6,7 @@ import { TopAppBar } from '../../components/layout/TopAppBar';
 import { Button } from '../../components/common/Button';
 import { REPO_SORT_OPTIONS } from '@/app/constants';
 import { useRepositories } from '@/app/hooks/queries/useRepositoryQueries';
+import { formatKoreanTimestamp } from '@/app/lib/utils';
 
 const MAX_REPO_SELECTION = 6;
 
@@ -28,8 +29,8 @@ export function RepoSelectPage() {
       } else {
         if (prev.length >= MAX_REPO_SELECTION) {
           toast.error(`최대 ${MAX_REPO_SELECTION}개까지만 선택할 수 있습니다`, {
-      id: 'repo-selection-limit-error',
-    });
+            id: 'repo-selection-limit-error',
+          });
           return prev;
         }
         return [...prev, repo];
@@ -298,7 +299,7 @@ export function RepoSelectPage() {
                   >
                     <span>{repo.owner}</span>
                     <span className="mx-2">·</span>
-                    <span>{repo.updatedAt}</span>
+                    <span>{formatKoreanTimestamp(repo.updatedAt)}</span>
                   </div>
                 </button>
               );

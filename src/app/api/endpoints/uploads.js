@@ -1,4 +1,3 @@
-import apiClient from '../client';
 import { mutatingClient } from '../mutatingClient';
 import { API_CONFIG } from '../config';
 
