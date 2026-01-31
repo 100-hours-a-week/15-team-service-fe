@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG } from './config';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 import { getCsrfToken } from '@/app/lib/utils';
 
 const apiClient = axios.create({

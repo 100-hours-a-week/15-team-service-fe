@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 import { Loader2 } from 'lucide-react';
 
 export function AuthCallbackPage() {

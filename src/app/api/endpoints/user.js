@@ -1,4 +1,5 @@
 import apiClient from '../client';
+import { mutatingClient } from '../mutatingClient';
 import { API_CONFIG } from '../config';
 
 /**
@@ -24,7 +25,7 @@ export const fetchUser = async () => {
  * @throws {Error} 400 (validation), 401, 404
  */
 export const updateUser = async (updates) => {
-  const response = await apiClient.patch(
+  const response = await mutatingClient.patch(
     API_CONFIG.ENDPOINTS.USER_INFO,
     updates
   );
@@ -62,7 +63,7 @@ export const fetchUserSettings = async () => {
  * @throws {Error} 401 AUTH_UNAUTHORIZED, 404 USER_SETTINGS_NOT_FOUND
  */
 export const updateUserSettings = async (settings) => {
-  const response = await apiClient.patch(
+  const response = await mutatingClient.patch(
     API_CONFIG.ENDPOINTS.USER_SETTINGS,
     settings
   );

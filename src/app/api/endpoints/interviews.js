@@ -1,4 +1,5 @@
 import apiClient from '../client';
+import { mutatingClient } from '../mutatingClient';
 import { API_CONFIG } from '../config';
 
 /**
@@ -39,7 +40,7 @@ export const fetchInterviewById = async (id) => {
  * @returns {Promise<Object>} - Session data with first question
  */
 export const startInterview = async (payload) => {
-  const response = await apiClient.post(
+  const response = await mutatingClient.post(
     API_CONFIG.ENDPOINTS.INTERVIEW_SESSION,
     payload
   );
@@ -55,7 +56,7 @@ export const startInterview = async (payload) => {
  * @returns {Promise<Object>} - Next question or completion status
  */
 export const submitInterviewAnswer = async (sessionId, payload) => {
-  const response = await apiClient.post(
+  const response = await mutatingClient.post(
     API_CONFIG.ENDPOINTS.INTERVIEW_SUBMIT_ANSWER(sessionId),
     payload
   );
@@ -68,7 +69,7 @@ export const submitInterviewAnswer = async (sessionId, payload) => {
  * @returns {Promise<Object>} - Completed interview with evaluation
  */
 export const completeInterview = async (sessionId) => {
-  const response = await apiClient.post(
+  const response = await mutatingClient.post(
     API_CONFIG.ENDPOINTS.INTERVIEW_COMPLETE(sessionId)
   );
   return response.data;
@@ -79,5 +80,5 @@ export const completeInterview = async (sessionId) => {
  * @param {string} id - Interview ID
  */
 export const deleteInterview = async (id) => {
-  await apiClient.delete(API_CONFIG.ENDPOINTS.INTERVIEW_BY_ID(id));
+  await mutatingClient.delete(API_CONFIG.ENDPOINTS.INTERVIEW_BY_ID(id));
 };
