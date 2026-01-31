@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 
 export const useChatbot = (options = {}) => {
   const { onUpdate } = options;

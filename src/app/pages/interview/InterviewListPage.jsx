@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/app/lib/toast';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { DropdownMenu } from '../../components/common/DropdownMenu';
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';

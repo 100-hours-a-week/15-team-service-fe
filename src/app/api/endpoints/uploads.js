@@ -1,4 +1,4 @@
-import apiClient from '../client';
+import { mutatingClient } from '../mutatingClient';
 import { API_CONFIG } from '../config';
 
 /**
@@ -30,7 +30,10 @@ export const UPLOAD_POLICIES = {
  * @throws {Error} 400 if invalid payload, 401 if not authenticated
  */
 export const requestUploadUrl = async (payload) => {
-  const response = await apiClient.post(API_CONFIG.ENDPOINTS.UPLOADS, payload);
+  const response = await mutatingClient.post(
+    API_CONFIG.ENDPOINTS.UPLOADS,
+    payload
+  );
   return response.data.data;
 };
 
@@ -68,7 +71,7 @@ export const uploadToS3 = async (presignedUrl, file, contentType) => {
  * @throws {Error} 400 if etag/size mismatch, 401 if not authenticated, 404 if uploadId invalid
  */
 export const confirmUpload = async (uploadId, payload) => {
-  const response = await apiClient.patch(
+  const response = await mutatingClient.patch(
     API_CONFIG.ENDPOINTS.UPLOAD_BY_ID(uploadId),
     payload
   );

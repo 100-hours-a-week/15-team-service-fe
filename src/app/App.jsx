@@ -29,13 +29,21 @@ function RootLayout() {
       >
         <Outlet />
         <Toaster
-          position="top-center"
-          className="app-toaster"
-          style={{
-            '--width': 'min(390px, 100%)',
-          }}
+          position="bottom-center"
           toastOptions={{
-            className: 'mx-auto',
+            style: {
+              backgroundColor: 'rgba(75, 85, 99, 0.8)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: '#FFFFFF',
+              border: 'none',
+              width: '320px',
+              position: 'absolute',
+              bottom: '60px',
+              left: 'calc(50% - 10px)',
+              transform: 'translateX(-50%)',
+            },
+            className: '!rounded-full !px-6',
           }}
         />
       </div>

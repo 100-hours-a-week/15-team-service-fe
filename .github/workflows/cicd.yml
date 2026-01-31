@@ -19,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
   security-events: write
 
@@ -231,6 +232,7 @@ jobs:
           path: dist
           repository: ${{ github.repository }}
           run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pack dist
         shell: bash
@@ -251,6 +253,12 @@ jobs:
 
       - name: Deploy via SSH (reuse artifact)
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          WEB_ROOT: ${{ vars.WEB_ROOT }}
+          NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+          HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
+          HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -259,11 +267,6 @@ jobs:
           script_stop: true
           command_timeout: 15m
           envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL
-          WEB_ROOT: ${{ vars.WEB_ROOT }}
-          NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
-          HEALTH_URL: ${{ vars.HEALTH_URL }}
-          HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
-          HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
           script: |
             set -euo pipefail
             WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"

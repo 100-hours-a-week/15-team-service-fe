@@ -1,4 +1,5 @@
 import apiClient from '../client';
+import { mutatingClient } from '../mutatingClient';
 import { API_CONFIG } from '../config';
 
 /**
@@ -14,7 +15,7 @@ export const getGithubLoginUrl = async () => {
  * Logout user
  */
 export const logout = async () => {
-  await apiClient.post(API_CONFIG.ENDPOINTS.LOGOUT);
+  await mutatingClient.post(API_CONFIG.ENDPOINTS.LOGOUT);
 };
 
 /**
@@ -36,7 +37,7 @@ export const fetchUserProfile = async () => {
  * @returns {Promise<Object>} - Updated user data
  */
 export const updateUserProfile = async (updates) => {
-  const response = await apiClient.patch(
+  const response = await mutatingClient.patch(
     API_CONFIG.ENDPOINTS.USER_PROFILE,
     updates
   );
@@ -56,7 +57,7 @@ export const updateUserProfile = async (updates) => {
  * @throws {Error} - With response.data.code for specific error handling
  */
 export const completeOnboarding = async (payload) => {
-  const response = await apiClient.post(
+  const response = await mutatingClient.post(
     API_CONFIG.ENDPOINTS.ONBOARDING,
     payload
   );
