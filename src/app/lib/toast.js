@@ -24,13 +24,17 @@ export const toast = {
     const id = options?.id ?? generateIdFromMessage(message);
 
     // In development, warn if a dynamic message is used without a manual ID
-    if (process.env.NODE_ENV === 'development' && !options?.id && typeof message !== 'string') {
-       console.warn(
+    if (
+      import.meta.env.MODE === 'development' &&
+      !options?.id &&
+      typeof message !== 'string'
+    ) {
+      console.warn(
         `[Toast] A toast.error was called with dynamic content without providing a unique 'id'. This may cause duplication. Please add a manual id.`,
         message
       );
     }
-    
+
     sonnerToast.error(message, { ...options, id });
   },
 };
