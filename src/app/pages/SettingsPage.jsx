@@ -468,7 +468,7 @@ export function SettingsPage() {
           </div>
 
           {/* Interview Settings */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-200">
+          {/* <div className="bg-white rounded-2xl p-5 border border-gray-200">
             <h3 className="mb-4">알림 및 모의 면접 설정</h3>
 
             <label className="flex items-start justify-between py-3">
@@ -516,7 +516,7 @@ export function SettingsPage() {
                 <div className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
               </div>
             </label>
-          </div>
+          </div> */}
 
           {/* Account */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
