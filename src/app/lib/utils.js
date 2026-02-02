@@ -272,21 +272,51 @@ export async function ensureCsrfToken() {
 
   csrfTokenPromise = (async () => {
     try {
+      // Use environment variable directly to avoid circular dependency with API_CONFIG
+      let baseUrl =
+        import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+      // Remove trailing slash to prevent double-slash in URL
+      baseUrl = baseUrl.replace(/\/+$/, '');
+
       // Call harmless GET endpoint to trigger CSRF token generation
       // Using /positions as it's a lightweight endpoint
-      await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/positions`,
-        {
-          method: 'GET',
-          credentials: 'include',
-        }
-      );
+      const url = `${baseUrl}/positions`;
+      console.log('[CSRF] Fetching token from:', url);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error(
+          `[CSRF] Token fetch failed: ${response.status} ${response.statusText}`
+        );
+        console.error('[CSRF] Response URL:', response.url);
+      }
 
       // Token should now be in cookie
       const token = getCsrfToken('XSRF-TOKEN');
+      if (!token) {
+        console.warn(
+          '[CSRF] Token not found in cookie after fetch. Check backend CORS settings and cookie configuration.'
+        );
+        console.warn('[CSRF] Document cookies:', document.cookie);
+      } else {
+        console.log('[CSRF] Token successfully obtained');
+      }
       return token;
     } catch (error) {
-      console.warn('Failed to fetch CSRF token:', error);
+      console.error('[CSRF] Failed to fetch token:', error);
+      console.error('[CSRF] Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
       return null;
     } finally {
       csrfTokenPromise = null;
