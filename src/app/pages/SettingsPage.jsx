@@ -63,7 +63,7 @@ export function SettingsPage() {
     phone: undefined,
   });
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [localSettings, setLocalSettings] = useState({
+  const [_localSettings, _setLocalSettings] = useState({
     notificationEnabled: true,
     interviewResumeDefaultsEnabled: false,
   });
@@ -98,7 +98,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (!settingsData) return;
-    setLocalSettings({
+    _setLocalSettings({
       notificationEnabled: settingsData.notificationEnabled,
       interviewResumeDefaultsEnabled:
         settingsData.interviewResumeDefaultsEnabled,
@@ -304,9 +304,9 @@ export function SettingsPage() {
     setIsLogoutDialogOpen(false);
   }, []);
 
-  const handleToggleSetting = useCallback(
+  const _handleToggleSetting = useCallback(
     (field, value) => {
-      setLocalSettings((prev) => ({ ...prev, [field]: value }));
+      _setLocalSettings((prev) => ({ ...prev, [field]: value }));
 
       if (settingsDebounceRef.current) {
         clearTimeout(settingsDebounceRef.current);
