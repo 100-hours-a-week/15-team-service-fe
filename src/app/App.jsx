@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -5,6 +6,7 @@ import {
   Outlet,
 } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { ensureCsrfToken } from './lib/utils';
 
 import { OnboardingPage } from './pages/auth/OnboardingPage';
 import { SignupPage } from './pages/auth/SignupPage';
@@ -21,6 +23,11 @@ import { InterviewListPage } from './pages/interview/InterviewListPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 function RootLayout() {
+  // Initialize CSRF token on app mount
+  useEffect(() => {
+    ensureCsrfToken();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div
