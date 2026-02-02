@@ -63,7 +63,7 @@ export function SettingsPage() {
     phone: undefined,
   });
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [localSettings, setLocalSettings] = useState({
+  const [_localSettings, _setLocalSettings] = useState({
     notificationEnabled: true,
     interviewResumeDefaultsEnabled: false,
   });
@@ -98,7 +98,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (!settingsData) return;
-    setLocalSettings({
+    _setLocalSettings({
       notificationEnabled: settingsData.notificationEnabled,
       interviewResumeDefaultsEnabled:
         settingsData.interviewResumeDefaultsEnabled,
@@ -304,9 +304,9 @@ export function SettingsPage() {
     setIsLogoutDialogOpen(false);
   }, []);
 
-  const handleToggleSetting = useCallback(
+  const _handleToggleSetting = useCallback(
     (field, value) => {
-      setLocalSettings((prev) => ({ ...prev, [field]: value }));
+      _setLocalSettings((prev) => ({ ...prev, [field]: value }));
 
       if (settingsDebounceRef.current) {
         clearTimeout(settingsDebounceRef.current);
@@ -468,7 +468,7 @@ export function SettingsPage() {
           </div>
 
           {/* Interview Settings */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-200">
+          {/* <div className="bg-white rounded-2xl p-5 border border-gray-200">
             <h3 className="mb-4">알림 및 모의 면접 설정</h3>
 
             <label className="flex items-start justify-between py-3">
@@ -516,7 +516,7 @@ export function SettingsPage() {
                 <div className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
               </div>
             </label>
-          </div>
+          </div> */}
 
           {/* Account */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">

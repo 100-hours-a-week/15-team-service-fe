@@ -251,6 +251,51 @@ export function getCsrfToken(cookieName = 'XSRF-TOKEN') {
   return csrfCookie ? csrfCookie.split('=')[1] : null;
 }
 
+/**
+ * Ensure CSRF token is present by fetching from backend if needed
+ * Uses GET /positions endpoint to trigger CSRF token generation
+ * Prevents duplicate requests with promise caching
+ * @returns {Promise<string | null>} CSRF token value
+ */
+let csrfTokenPromise = null;
+export async function ensureCsrfToken() {
+  // Return existing token if available
+  const existingToken = getCsrfToken('XSRF-TOKEN');
+  if (existingToken) {
+    return existingToken;
+  }
+
+  // Prevent duplicate requests
+  if (csrfTokenPromise) {
+    return csrfTokenPromise;
+  }
+
+  csrfTokenPromise = (async () => {
+    try {
+      // Call harmless GET endpoint to trigger CSRF token generation
+      // Using /positions as it's a lightweight endpoint
+      await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/positions`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
+
+      // Token should now be in cookie
+      const token = getCsrfToken('XSRF-TOKEN');
+      return token;
+    } catch (error) {
+      console.warn('Failed to fetch CSRF token:', error);
+      return null;
+    } finally {
+      csrfTokenPromise = null;
+    }
+  })();
+
+  return csrfTokenPromise;
+}
+
 export function parseYAMLToResume(yamlContent = '') {
   try {
     const parsed = yaml.load(String(yamlContent));

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { API_CONFIG } from './config';
 import { toast } from '@/app/lib/toast';
-import { getCsrfToken } from '@/app/lib/utils';
+import { getCsrfToken, ensureCsrfToken } from '@/app/lib/utils';
 
 const apiClient = axios.create({
   baseURL: API_CONFIG.BASE_URL,
@@ -78,6 +78,29 @@ apiClient.interceptors.response.use(
         toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
         window.location.href = '/';
         return Promise.reject(refreshError);
+      }
+    }
+
+    // 403 에러 처리 (CSRF 토큰 누락 또는 불일치)
+    if (error.response?.status === 403 && !originalRequest._csrfRetry) {
+      originalRequest._csrfRetry = true;
+
+      try {
+        // CSRF 토큰 재발급
+        await ensureCsrfToken();
+
+        // 새 토큰으로 헤더 업데이트
+        const csrfToken = getCsrfToken('XSRF-TOKEN');
+        if (csrfToken) {
+          originalRequest.headers['X-XSRF-TOKEN'] = csrfToken;
+        }
+
+        // 원래 요청 재시도
+        return apiClient(originalRequest);
+      } catch (csrfError) {
+        // CSRF 토큰 재발급 실패 - 에러 그대로 반환
+        console.warn('CSRF token refresh failed:', csrfError);
+        return Promise.reject(error);
       }
     }
 
