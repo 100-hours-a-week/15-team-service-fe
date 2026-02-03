@@ -282,7 +282,7 @@ export async function ensureCsrfToken() {
       // Call harmless GET endpoint to trigger CSRF token generation
       // Using /positions as it's a lightweight endpoint
       const url = `${baseUrl}/positions`;
-      console.log('[CSRF] Fetching token from:', url);
+      console.warn('[CSRF] Fetching token from:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -307,7 +307,7 @@ export async function ensureCsrfToken() {
         );
         console.warn('[CSRF] Document cookies:', document.cookie);
       } else {
-        console.log('[CSRF] Token successfully obtained');
+        console.warn('[CSRF] Token successfully obtained');
       }
       return token;
     } catch (error) {

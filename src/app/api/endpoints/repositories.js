@@ -4,6 +4,8 @@ import { API_CONFIG } from '../config';
 /**
  * @typedef {Object} RepoSummaryDto
  * @property {string} name
+ * @property {string|null} description
+ * @property {string|null} language
  * @property {string} repoUrl - Full GitHub URL
  * @property {boolean} isPrivate
  * @property {string} updatedAt
@@ -13,6 +15,8 @@ import { API_CONFIG } from '../config';
  * @typedef {Object} Repository
  * @property {number} id - Generated from index
  * @property {string} name
+ * @property {string|null} description
+ * @property {string|null} language
  * @property {string} owner - Extracted from repoUrl
  * @property {boolean} isPrivate
  * @property {string} updatedAt
@@ -38,6 +42,8 @@ export const fetchRepositories = async () => {
     return {
       id: index + 1, // Generate ID from index
       name: repo.name,
+      description: repo.description,
+      language: repo.language,
       owner,
       isPrivate: repo.isPrivate,
       updatedAt: repo.updatedAt,
