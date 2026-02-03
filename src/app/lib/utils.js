@@ -282,22 +282,14 @@ export async function ensureCsrfToken() {
       // Call harmless GET endpoint to trigger CSRF token generation
       // Using /positions as it's a lightweight endpoint
       const url = `${baseUrl}/positions`;
-      console.warn('[CSRF] Fetching token from:', url);
 
-      const response = await fetch(url, {
+      await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-
-      if (!response.ok) {
-        console.error(
-          `[CSRF] Token fetch failed: ${response.status} ${response.statusText}`
-        );
-        console.error('[CSRF] Response URL:', response.url);
-      }
 
       // Token should now be in cookie
       const token = getCsrfToken('XSRF-TOKEN');
@@ -306,8 +298,6 @@ export async function ensureCsrfToken() {
           '[CSRF] Token not found in cookie after fetch. Check backend CORS settings and cookie configuration.'
         );
         console.warn('[CSRF] Document cookies:', document.cookie);
-      } else {
-        console.warn('[CSRF] Token successfully obtained');
       }
       return token;
     } catch (error) {
