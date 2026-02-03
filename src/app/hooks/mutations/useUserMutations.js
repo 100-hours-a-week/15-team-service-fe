@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/app/lib/toast';
-import { updateUser, updateUserSettings } from '@/app/api/endpoints/user';
+import {
+  updateUser,
+  updateUserSettings,
+  withdrawUser,
+} from '@/app/api/endpoints/user';
 
 /**
  * Update user profile mutation
@@ -73,6 +77,34 @@ export function useUpdateUserSettings() {
       }
 
       toast.error('설정 업데이트에 실패했습니다.');
+    },
+  });
+}
+
+/**
+ * Withdraw user mutation
+ * @returns {import('@tanstack/react-query').UseMutationResult}
+ */
+export function useWithdrawUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: withdrawUser,
+    onSuccess: () => {
+      queryClient.clear();
+      toast.success('회원탈퇴가 완료되었습니다.');
+      window.location.href = '/login';
+    },
+    onError: (error) => {
+      const status = error.response?.status;
+
+      if (status === 401) {
+        toast.error('로그인이 필요합니다.');
+        window.location.href = '/login';
+        return;
+      }
+
+      toast.error('회원탈퇴에 실패했습니다.');
     },
   });
 }

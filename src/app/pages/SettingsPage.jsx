@@ -27,6 +27,7 @@ import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import {
   useUpdateUser,
   useUpdateUserSettings,
+  useWithdrawUser,
 } from '@/app/hooks/mutations/useUserMutations';
 import { useLogout } from '@/app/hooks/mutations/useAuthMutations';
 import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
@@ -45,6 +46,7 @@ export function SettingsPage() {
     useUpdateUser();
   const { mutate: updateSettings } = useUpdateUserSettings();
   const { mutateAsync: logout } = useLogout();
+  const { mutateAsync: withdrawUser } = useWithdrawUser();
   const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
 
   const [profileFile, setProfileFile] = useState(null);
@@ -65,6 +67,7 @@ export function SettingsPage() {
     phone: undefined,
   });
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [_localSettings, _setLocalSettings] = useState({
     notificationEnabled: true,
     interviewResumeDefaultsEnabled: false,
@@ -326,6 +329,20 @@ export function SettingsPage() {
     setIsLogoutDialogOpen(false);
   }, []);
 
+  const handleWithdraw = useCallback(() => {
+    setIsWithdrawDialogOpen(true);
+  }, []);
+
+  const handleConfirmWithdraw = useCallback(() => {
+    withdrawUser().finally(() => {
+      setIsWithdrawDialogOpen(false);
+    });
+  }, [withdrawUser]);
+
+  const handleCancelWithdraw = useCallback(() => {
+    setIsWithdrawDialogOpen(false);
+  }, []);
+
   const _handleToggleSetting = useCallback(
     (field, value) => {
       _setLocalSettings((prev) => ({ ...prev, [field]: value }));
@@ -548,6 +565,12 @@ export function SettingsPage() {
             >
               <span>로그아웃</span>
             </button>
+            <button
+              className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-[#EF4444]"
+              onClick={handleWithdraw}
+            >
+              <span>회원탈퇴</span>
+            </button>
           </div>
         </div>
       </div>
@@ -561,6 +584,15 @@ export function SettingsPage() {
         title="로그아웃"
         description="정말 로그아웃하시겠습니까?"
         confirmText="로그아웃"
+        cancelText="취소"
+      />
+      <ConfirmDialog
+        isOpen={isWithdrawDialogOpen}
+        onClose={handleCancelWithdraw}
+        onConfirm={handleConfirmWithdraw}
+        title="회원탈퇴"
+        description="정말 탈퇴하시겠습니까?"
+        confirmText="탈퇴"
         cancelText="취소"
       />
     </div>
