@@ -1,12 +1,20 @@
+import { useState } from 'react';
 import { Github } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { useGetGithubLoginUrl } from '@/app/hooks/mutations/useAuthMutations';
 
 export function OnboardingPage() {
   const { mutate: requestGithubLogin, isPending } = useGetGithubLoginUrl();
+  const [isLoginRequested, setIsLoginRequested] = useState(false);
 
   const handleGithubLogin = () => {
-    requestGithubLogin();
+    if (isLoginRequested || isPending) return;
+    setIsLoginRequested(true);
+    requestGithubLogin(undefined, {
+      onError: () => {
+        setIsLoginRequested(false);
+      },
+    });
   };
 
   return (
@@ -26,7 +34,7 @@ export function OnboardingPage() {
           variant="primary"
           fullWidth
           className="mb-3"
-          disabled={isPending}
+          disabled={isPending || isLoginRequested}
         >
           <Github className="w-5 h-5" strokeWidth={1.5} />
           GitHub로 로그인

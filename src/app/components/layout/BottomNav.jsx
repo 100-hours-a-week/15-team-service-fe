@@ -5,7 +5,7 @@ export function BottomNav() {
   const location = useLocation();
 
   const navItems = [
-    { path: '/home', icon: Home, label: '홈' },
+    { path: '/', icon: Home, label: '홈' },
     { path: '/repo-select', icon: Plus, label: '이력서 생성' },
     // { path: '/interviews', icon: List, label: '면접 목록' },
     { path: '/settings', icon: Settings, label: '설정' },

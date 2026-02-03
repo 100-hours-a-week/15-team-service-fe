@@ -252,6 +252,18 @@ export function getCsrfToken(cookieName = 'XSRF-TOKEN') {
 }
 
 /**
+ * Get cookie value by name
+ * @param {string} cookieName - Cookie name
+ * @returns {string | null} Cookie value or null if not found
+ */
+export function getCookieValue(cookieName) {
+  if (!cookieName) return null;
+  const cookies = document.cookie.split('; ');
+  const cookie = cookies.find((row) => row.startsWith(`${cookieName}=`));
+  return cookie ? cookie.split('=')[1] : null;
+}
+
+/**
  * Ensure CSRF token is present by fetching from backend if needed
  * Uses GET /positions endpoint to trigger CSRF token generation
  * Prevents duplicate requests with promise caching

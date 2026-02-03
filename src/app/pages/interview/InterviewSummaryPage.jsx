@@ -113,7 +113,7 @@ export function InterviewSummaryPage() {
           {/* AI Overall Evaluation */}
           <EvaluationCard data={MOCK_EVALUATION} />
 
-          <Button variant="primary" fullWidth onClick={() => navigate('/home')}>
+          <Button variant="primary" fullWidth onClick={() => navigate('/')}>
             홈으로
           </Button>
         </div>

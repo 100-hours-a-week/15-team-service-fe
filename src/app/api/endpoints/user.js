@@ -8,7 +8,10 @@ import { API_CONFIG } from '../config';
  * @throws {Error} 401 AUTH_UNAUTHORIZED, 404 USER_NOT_FOUND
  */
 export const fetchUser = async () => {
-  const response = await apiClient.get(API_CONFIG.ENDPOINTS.USER_INFO);
+  const response = await apiClient.get(API_CONFIG.ENDPOINTS.USER_INFO, {
+    skipErrorToast: true,
+    skipAuthRedirect: true,
+  });
   return response.data.data;
 };
 
