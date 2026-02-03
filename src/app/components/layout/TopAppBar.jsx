@@ -25,25 +25,23 @@ export function TopAppBar({
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
-      <div className="max-w-[390px] mx-auto flex items-center justify-between h-14 px-5">
-        {showBack ? (
-          <button
-            onClick={handleBack}
-            className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-          >
-            <ArrowLeft className="w-6 h-6 text-gray-900" strokeWidth={1.5} />
-          </button>
-        ) : (
-          <div className="w-24" />
-        )}
+      <div className="max-w-[390px] mx-auto grid grid-cols-[1fr_auto_1fr] items-center h-14 px-5">
+        <div className="flex items-center justify-start">
+          {showBack ? (
+            <button
+              onClick={handleBack}
+              className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <ArrowLeft className="w-6 h-6 text-gray-900" strokeWidth={1.5} />
+            </button>
+          ) : null}
+        </div>
 
-        <h1
-          className={`flex-1 text-center px-2 ${noTruncate ? '' : 'truncate'}`}
-        >
+        <h1 className={`text-center px-2 ${noTruncate ? '' : 'truncate'}`}>
           {title}
         </h1>
 
-        <div className="w-9 flex justify-end">{action}</div>
+        <div className="flex items-center justify-end">{action}</div>
       </div>
     </header>
   );
