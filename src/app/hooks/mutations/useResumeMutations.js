@@ -140,25 +140,115 @@ const generatePDFFromHTML = async ({ element, filename }) => {
     throw new Error('Element not found');
   }
 
-  // HTML을 canvas로 변환
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-  });
+  const applyBadgeOverrides = (rootEl) => {
+    const updates = [];
+    rootEl.querySelectorAll('[data-tech-badge="true"]').forEach((badgeEl) => {
+      updates.push({ el: badgeEl, style: badgeEl.getAttribute('style') });
+      badgeEl.style.height = '24px';
+      badgeEl.style.lineHeight = '24px';
+      badgeEl.style.display = 'inline-flex';
+      badgeEl.style.alignItems = 'center';
+      badgeEl.style.justifyContent = 'center';
+      badgeEl.style.verticalAlign = 'middle';
+      badgeEl.style.paddingLeft = '12px';
+      badgeEl.style.paddingRight = '12px';
+      badgeEl.style.fontFamily =
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif';
+      badgeEl.style.fontSize = '14px';
+    });
+    rootEl
+      .querySelectorAll('[data-tech-badge-text="true"]')
+      .forEach((textEl) => {
+        updates.push({ el: textEl, style: textEl.getAttribute('style') });
+        textEl.style.display = 'block';
+        textEl.style.lineHeight = '1';
+        textEl.style.transform = 'translateY(-7px)';
+      });
 
-  const imgData = canvas.toDataURL('image/png');
-  const imgWidth = 210;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    return () => {
+      updates.forEach(({ el, style }) => {
+        if (style === null) {
+          el.removeAttribute('style');
+        } else {
+          el.setAttribute('style', style);
+        }
+      });
+    };
+  };
+
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  const imgWidth = 210; // A4 가로 (mm)
+  const margin = 15; // 여백 (mm)
+  const contentWidth = imgWidth - margin * 2;
 
   // PDF 생성
   const pdf = new jsPDF({
-    orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+    orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
 
-  pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  // 프로젝트 요소들 찾기
+  const projectItems = element.querySelectorAll('[data-project-item="true"]');
+
+  if (projectItems.length === 0) {
+    // 프로젝트가 없으면 전체 요소 캡처
+    const restoreBadgeStyles = applyBadgeOverrides(element);
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      onclone: (clonedDoc) => {
+        const clonedRoot = clonedDoc.body;
+        applyBadgeOverrides(clonedRoot);
+      },
+    });
+    restoreBadgeStyles();
+    const imgData = canvas.toDataURL('image/png');
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  } else {
+    // 각 프로젝트를 개별 페이지로
+    for (let i = 0; i < projectItems.length; i++) {
+      const projectEl = projectItems[i];
+
+      // 캡처 전 임시로 패딩 추가
+      const originalPadding = projectEl.style.padding;
+      projectEl.style.padding = '16px';
+      const restoreBadgeStyles = applyBadgeOverrides(projectEl);
+
+      const canvas = await html2canvas(projectEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          const clonedRoot = clonedDoc.body;
+          applyBadgeOverrides(clonedRoot);
+        },
+      });
+
+      // 패딩 복원
+      projectEl.style.padding = originalPadding;
+      restoreBadgeStyles();
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      // 이미지만 추가 (제목은 프로젝트 내부에 이미 있음)
+      pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
+    }
+  }
+
   pdf.save(filename);
 };
 

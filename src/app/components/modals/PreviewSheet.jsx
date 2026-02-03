@@ -7,12 +7,19 @@ import { Button } from '../common/Button';
  * @property {() => void} onClose
  * @property {() => void} onDownload
  * @property {import('react').ReactNode} children
+ * @property {import('react').RefObject<HTMLDivElement>} [contentRef]
  */
 
 /**
  * @param {PreviewSheetProps} props
  */
-export function PreviewSheet({ isOpen, onClose, onDownload, children }) {
+export function PreviewSheet({
+  isOpen,
+  onClose,
+  onDownload,
+  children,
+  contentRef,
+}) {
   const handleOpenChange = (open) => {
     if (!open) {
       onClose();
@@ -41,7 +48,9 @@ export function PreviewSheet({ isOpen, onClose, onDownload, children }) {
           </div>
 
           {/* Scrollable content area */}
-          <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div ref={contentRef}>{children}</div>
+          </div>
 
           <div className="border-t border-gray-200 px-5 pt-4 pb-5">
             <div className="flex gap-3 w-full max-w-[390px] mx-auto">

@@ -45,6 +45,7 @@ export function ResumeViewerPage() {
   const navigate = useNavigate();
   const resumeId = parseInt(id, 10);
   const resumeViewerRef = useRef(null);
+  const previewContentRef = useRef(null);
 
   const {
     data: resumeDetail,
@@ -147,14 +148,14 @@ export function ResumeViewerPage() {
   }, [blocker]);
 
   const handleConfirmDownload = useCallback(() => {
-    if (!resumeViewerRef.current) {
+    if (!previewContentRef.current) {
       toast.error('이력서를 찾을 수 없습니다.');
       return;
     }
 
     generatePDFMutation.mutate(
       {
-        element: resumeViewerRef.current,
+        element: previewContentRef.current,
         filename: `${resumeDetail?.name || '이력서'}.pdf`,
       },
       {
@@ -163,7 +164,7 @@ export function ResumeViewerPage() {
         },
       }
     );
-  }, [resumeViewerRef, resumeDetail?.name, generatePDFMutation]);
+  }, [previewContentRef, resumeDetail?.name, generatePDFMutation]);
 
   const status = versionData?.status;
   const isProcessing = status === 'QUEUED' || status === 'PROCESSING';
@@ -371,6 +372,7 @@ export function ResumeViewerPage() {
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         onDownload={handleConfirmDownload}
+        contentRef={previewContentRef}
       >
         <ParsedResumeViewer yamlContent={yamlContent} />
       </PreviewSheet>
