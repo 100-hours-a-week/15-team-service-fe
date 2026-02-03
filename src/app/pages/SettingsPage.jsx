@@ -10,6 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../components/ui/dialog';
 import { ConfirmDialog } from '../components/modals/ConfirmDialog';
 import {
   formatPhoneNumber,
@@ -65,7 +72,10 @@ export function SettingsPage() {
     name: undefined,
     position: undefined,
     phone: undefined,
+    phonePolicy: undefined,
   });
+  const [isPhonePolicyModalOpen, setIsPhonePolicyModalOpen] = useState(false);
+  const [isPhonePolicyAgreed, setIsPhonePolicyAgreed] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [_localSettings, _setLocalSettings] = useState({
@@ -82,6 +92,211 @@ export function SettingsPage() {
   const displayPhone = profileData?.phone
     ? formatPhoneNumber(profileData.phone)
     : '미등록';
+
+  const shouldShowPhonePolicyAgreement =
+    !!editData.phone && !profileData?.phonePolicyAgreed;
+
+  const phoneTermsContent = `## 📄 휴대전화번호 수집·이용 동의(필수)
+
+**[수집·이용 목적]**
+
+회사는 다음 목적을 위하여 이용자의 휴대전화번호를 수집·이용합니다.
+
+1. 본인 인증 및 계정 보호
+2. 비밀번호 찾기 및 계정 복구
+3. 서비스 관련 주요 안내(정책 변경, 보안 알림 등)
+4. 부정 이용 방지 및 보안 강화
+5. 이용자 식별 및 주요 기능 제공 (이력서 인적사항 정보 추가)
+
+**[수집 항목]**
+
+- 휴대전화번호(선택)
+
+**[보유·이용 기간]**
+
+- 회원 탈퇴 시 즉시 파기
+- 관계 법령에 따라 필요한 경우 법정 보관 기간 준수
+
+**[수신 동의 안내]**
+
+- 서비스 운영 관련 필수 안내는 동의 철회와 무관하게 발송될 수 있습니다.
+- 마케팅 문자 수신은 별도 선택 동의를 받으며 언제든지 철회 가능합니다.
+
+**[동의 거부 시 불이익]**
+
+휴대전화번호 제공을 거부할 경우 본인 인증이 불가하여 비밀번호 찾기 등의 서비스 이용이 제한될 수 있으나, 이력서 생성 등의 주요 기능은 전화번호 없이 생성 가능합니다.`;
+
+  const renderInlineMarkdown = useCallback((text) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={`md-bold-${index}`}>{part.slice(2, -2)}</strong>;
+      }
+      return <span key={`md-text-${index}`}>{part}</span>;
+    });
+  }, []);
+
+  const renderMarkdown = useCallback(
+    (content) => {
+      const lines = content.split('\n');
+      const blocks = [];
+      let index = 0;
+
+      while (index < lines.length) {
+        const line = lines[index];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          index += 1;
+          continue;
+        }
+
+        if (trimmed === '---') {
+          blocks.push(<hr key={`md-hr-${index}`} className="my-4" />);
+          index += 1;
+          continue;
+        }
+
+        if (trimmed.startsWith('## ')) {
+          blocks.push(
+            <h2 key={`md-h2-${index}`} className="mt-5 text-base font-semibold">
+              {renderInlineMarkdown(trimmed.replace('## ', ''))}
+            </h2>
+          );
+          index += 1;
+          continue;
+        }
+
+        if (trimmed.startsWith('### ')) {
+          blocks.push(
+            <h3 key={`md-h3-${index}`} className="mt-4 text-sm font-semibold">
+              {renderInlineMarkdown(trimmed.replace('### ', ''))}
+            </h3>
+          );
+          index += 1;
+          continue;
+        }
+
+        if (trimmed.startsWith('- ')) {
+          const items = [];
+          while (index < lines.length && lines[index].trim().startsWith('- ')) {
+            items.push(lines[index].trim().replace('- ', ''));
+            index += 1;
+          }
+          blocks.push(
+            <ul
+              key={`md-ul-${index}`}
+              className="mt-2 list-disc space-y-1 pl-5"
+            >
+              {items.map((item, itemIndex) => (
+                <li key={`md-ul-item-${index}-${itemIndex}`}>
+                  {renderInlineMarkdown(item)}
+                </li>
+              ))}
+            </ul>
+          );
+          continue;
+        }
+
+        if (/^\d+\.\s/.test(trimmed)) {
+          const items = [];
+          while (index < lines.length) {
+            const currentLine = lines[index].trim();
+            if (!currentLine) {
+              index += 1;
+              continue;
+            }
+            if (!/^\d+\.\s/.test(currentLine)) {
+              break;
+            }
+
+            const item = {
+              title: currentLine.replace(/^\d+\.\s/, ''),
+              subItems: [],
+              extra: [],
+            };
+            index += 1;
+
+            while (index < lines.length) {
+              const nextLine = lines[index].trim();
+              if (!nextLine) {
+                index += 1;
+                continue;
+              }
+              if (/^\d+\.\s/.test(nextLine)) {
+                break;
+              }
+              if (nextLine.startsWith('- ')) {
+                item.subItems.push(nextLine.replace('- ', ''));
+                index += 1;
+                continue;
+              }
+              if (
+                nextLine.startsWith('## ') ||
+                nextLine.startsWith('### ') ||
+                nextLine === '---'
+              ) {
+                break;
+              }
+              item.extra.push(nextLine);
+              index += 1;
+            }
+
+            items.push(item);
+
+            if (index >= lines.length) {
+              break;
+            }
+            if (!/^\d+\.\s/.test(lines[index].trim())) {
+              break;
+            }
+          }
+
+          blocks.push(
+            <ol
+              key={`md-ol-${index}`}
+              className="mt-2 list-decimal space-y-1 pl-5"
+            >
+              {items.map((item, itemIndex) => (
+                <li key={`md-ol-item-${index}-${itemIndex}`} className="mt-2">
+                  <div>{renderInlineMarkdown(item.title)}</div>
+                  {item.extra.length > 0 &&
+                    item.extra.map((line, lineIndex) => (
+                      <p
+                        key={`md-ol-extra-${index}-${itemIndex}-${lineIndex}`}
+                        className="mt-2"
+                      >
+                        {renderInlineMarkdown(line)}
+                      </p>
+                    ))}
+                  {item.subItems.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {item.subItems.map((subItem, subIndex) => (
+                        <li key={`md-ol-sub-${index}-${itemIndex}-${subIndex}`}>
+                          {renderInlineMarkdown(subItem)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ol>
+          );
+          continue;
+        }
+
+        blocks.push(
+          <p key={`md-p-${index}`} className="mt-3">
+            {renderInlineMarkdown(trimmed)}
+          </p>
+        );
+        index += 1;
+      }
+
+      return blocks;
+    },
+    [renderInlineMarkdown]
+  );
 
   useEffect(() => {
     if (!profileData || hasProfileSynced.current) return;
@@ -169,6 +384,8 @@ export function SettingsPage() {
     setProfileFile(null);
     if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
     setProfilePreviewUrl(null);
+    setIsPhonePolicyAgreed(false);
+    setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
     setIsEditing(true);
   }, [profileData, positions, profilePreviewUrl]);
 
@@ -193,6 +410,10 @@ export function SettingsPage() {
     // Validate phone format
     if (editData.phone && !validatePhoneNumber(editData.phone)) {
       newErrors.phone = getPhoneErrorMessage(editData.phone);
+    }
+
+    if (shouldShowPhonePolicyAgreement && !isPhonePolicyAgreed) {
+      newErrors.phonePolicy = '전화번호 수집·이용에 동의해주세요';
     }
 
     // If any errors, show them inline and stop
@@ -230,7 +451,9 @@ export function SettingsPage() {
         phone: phoneValue,
         profileImageUrl,
         privacyAgreed: true,
-        phonePolicyAgreed: phoneValue ? true : undefined,
+        phonePolicyAgreed: phoneValue
+          ? profileData?.phonePolicyAgreed || isPhonePolicyAgreed
+          : undefined,
       });
 
       const updatedPositionName =
@@ -252,7 +475,12 @@ export function SettingsPage() {
       setProfilePreviewUrl(null);
 
       setIsEditing(false);
-      setErrors({ name: undefined, position: undefined, phone: undefined });
+      setErrors({
+        name: undefined,
+        position: undefined,
+        phone: undefined,
+        phonePolicy: undefined,
+      });
     } catch (error) {
       // Handle field-specific backend errors
       const errorCode = error.response?.data?.code;
@@ -281,6 +509,9 @@ export function SettingsPage() {
     profileFile,
     profilePreviewUrl,
     upload,
+    isPhonePolicyAgreed,
+    profileData?.phonePolicyAgreed,
+    shouldShowPhonePolicyAgreement,
   ]);
 
   const handleCancel = useCallback(() => {
@@ -301,7 +532,13 @@ export function SettingsPage() {
     if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
     setProfilePreviewUrl(null);
     setIsEditing(false);
-    setErrors({ name: undefined, position: undefined, phone: undefined });
+    setErrors({
+      name: undefined,
+      position: undefined,
+      phone: undefined,
+      phonePolicy: undefined,
+    });
+    setIsPhonePolicyAgreed(false);
   }, [profileData, positions, profilePreviewUrl]);
 
   const handlePhoneChange = useCallback(
@@ -311,8 +548,14 @@ export function SettingsPage() {
       if (errors.phone) {
         setErrors((prev) => ({ ...prev, phone: undefined }));
       }
+      if (!formatted && errors.phonePolicy) {
+        setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
+      }
+      if (!formatted) {
+        setIsPhonePolicyAgreed(false);
+      }
     },
-    [errors.phone]
+    [errors.phone, errors.phonePolicy]
   );
 
   const handleLogout = useCallback(() => {
@@ -470,6 +713,51 @@ export function SettingsPage() {
                   error={errors.phone}
                 />
 
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    shouldShowPhonePolicyAgreement
+                      ? 'max-h-40 opacity-100'
+                      : 'max-h-0 opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isPhonePolicyAgreed}
+                        onChange={(e) => {
+                          setIsPhonePolicyAgreed(e.target.checked);
+                          if (errors.phonePolicy) {
+                            setErrors((prev) => ({
+                              ...prev,
+                              phonePolicy: undefined,
+                            }));
+                          }
+                        }}
+                        className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm">
+                          전화번호 수집·이용에 동의합니다.{' '}
+                          <span className="text-primary">*</span>
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsPhonePolicyModalOpen(true)}
+                          className="mt-1 text-xs text-primary underline underline-offset-2"
+                        >
+                          자세히 보기
+                        </button>
+                      </div>
+                    </div>
+                    {errors.phonePolicy && (
+                      <p className="mt-2 text-sm text-danger">
+                        {errors.phonePolicy}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex gap-2 pt-2">
                   <Button variant="secondary" fullWidth onClick={handleCancel}>
                     취소
@@ -595,6 +883,34 @@ export function SettingsPage() {
         confirmText="탈퇴"
         cancelText="취소"
       />
+
+      <Dialog
+        open={isPhonePolicyModalOpen}
+        onOpenChange={setIsPhonePolicyModalOpen}
+      >
+        <DialogContent
+          hideClose
+          container={document.getElementById('app-container')}
+          overlayClassName="absolute inset-0"
+          className="w-[calc(100%-8px)] max-w-[382px] sm:max-w-[382px]"
+        >
+          <DialogHeader>
+            <DialogTitle>휴대전화번호 수집·이용 동의</DialogTitle>
+          </DialogHeader>
+          <div className="mt-3 max-h-[60vh] min-h-[200px] overflow-y-auto pl-1 text-sm text-gray-700">
+            {renderMarkdown(phoneTermsContent)}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsPhonePolicyModalOpen(false)}
+            >
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
