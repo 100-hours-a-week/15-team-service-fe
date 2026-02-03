@@ -105,6 +105,11 @@ export function ChatRoomListSheet() {
     }
   };
 
+  const getSafeImageSrc = (url) => {
+    if (!isSafePreviewUrl(url)) return '';
+    return encodeURI(url);
+  };
+
   const validateImageFile = (file) => {
     if (!file) return { ok: false, reason: 'invalid' };
 
@@ -783,7 +788,7 @@ export function ChatRoomListSheet() {
                               {isSafePreviewUrl(failedMsg.previewUrl) && (
                                 <div className="mt-2">
                                   <img
-                                    src={failedMsg.previewUrl}
+                                    src={getSafeImageSrc(failedMsg.previewUrl)}
                                     alt="첨부 이미지"
                                     className="rounded-lg max-w-full"
                                     loading="eager"
@@ -831,7 +836,7 @@ export function ChatRoomListSheet() {
                   isSafePreviewUrl(attachedImage.previewUrl) && (
                     <div className="relative w-24 aspect-square mx-2 mb-3">
                       <img
-                        src={attachedImage.previewUrl}
+                        src={getSafeImageSrc(attachedImage.previewUrl)}
                         alt="첨부 이미지"
                         className="w-full h-full object-cover"
                         loading="eager"
