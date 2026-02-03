@@ -14,6 +14,17 @@ export function useUserProfile() {
   });
 }
 
+export function useAuthStatus() {
+  return useQuery({
+    queryKey: ['user', 'auth-status'],
+    queryFn: fetchUser,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
 /**
  * Fetch user settings
  * @returns {import('@tanstack/react-query').UseQueryResult}
