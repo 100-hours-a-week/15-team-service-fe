@@ -1,4 +1,11 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  useLayoutEffect,
+} from 'react';
 import {
   MessageSquare,
   Loader2,
@@ -29,10 +36,12 @@ export function ChatRoomListSheet() {
   const [inputText, setInputText] = useState('');
   const [attachedImage, setAttachedImage] = useState(null);
   const [failedMessages, setFailedMessages] = useState([]);
-  const [loadingImages, setLoadingImages] = useState(new Set());
   const attachFileInputRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const contentRef = useRef(null); // Wrapper for ResizeObserver
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const isNearBottomRef = useRef(true);
+  const didInitialScrollRef = useRef(false);
 
   const { upload, isUploading } = useUploadFile('CHAT_ATTACHMENT');
 
@@ -61,49 +70,24 @@ export function ChatRoomListSheet() {
   );
   const [isSending, setIsSending] = useState(false);
 
-  const messages = useMemo(
-    () => messagesData?.pages?.flatMap((page) => page.chats) || [],
-    [messagesData]
-  );
-
-  // Track images in current messages for loading detection
-  useEffect(() => {
-    if (viewMode !== 'messages') return;
-
-    const imageIds = new Set();
-
-    // Collect all image IDs from messages
-    messages.forEach((msg) => {
-      msg.files?.forEach((file) => {
-        if (file.fileType === 'IMAGE') {
-          imageIds.add(`msg-${msg.id}-file-${file.id}`);
-        }
-      });
-    });
-
-    // Collect image IDs from failed messages
-    failedMessages.forEach((failedMsg) => {
-      if (failedMsg.previewUrl) {
-        imageIds.add(`failed-${failedMsg.id}`);
+  const messages = useMemo(() => {
+    const rawMessages =
+      messagesData?.pages?.flatMap((page) => page.chats) || [];
+    return rawMessages.slice().sort((a, b) => {
+      const aTime = a?.sendAt ? new Date(a.sendAt).getTime() : 0;
+      const bTime = b?.sendAt ? new Date(b.sendAt).getTime() : 0;
+      if (aTime === bTime) {
+        return (a?.id ?? 0) - (b?.id ?? 0);
       }
+      return aTime - bTime;
     });
+  }, [messagesData]);
 
-    // Collect attached image ID
-    if (attachedImage?.previewUrl) {
-      imageIds.add('attached-preview');
-    }
-
-    // Update loading images (only add new ones, keep existing tracking)
-    setLoadingImages((prev) => {
-      const next = new Set(prev);
-      imageIds.forEach((id) => {
-        if (!prev.has(id)) {
-          next.add(id);
-        }
-      });
-      return next;
-    });
-  }, [viewMode, messages, failedMessages, attachedImage]);
+  const scrollToBottom = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+    scrollContainerRef.current.scrollTop =
+      scrollContainerRef.current.scrollHeight;
+  }, []);
 
   const isSafePreviewUrl = (url) => {
     if (!url || typeof url !== 'string') return false;
@@ -126,41 +110,53 @@ export function ChatRoomListSheet() {
     setViewMode('messages');
   };
 
-  /**
-   * Scroll to bottom after all pending images finish loading
-   * Prevents scroll positioning before images have known dimensions
-   */
-  const scrollAfterImagesLoad = useCallback(() => {
-    if (!scrollContainerRef.current) return;
+  // Sync isNearBottom state with ref for stable access in callbacks
+  useEffect(() => {
+    isNearBottomRef.current = isNearBottom;
+  }, [isNearBottom]);
 
-    // Immediate scroll for text-only messages (no images loading)
-    if (loadingImages.size === 0) {
-      scrollContainerRef.current.scrollTop =
-        scrollContainerRef.current.scrollHeight;
-      return;
+  useEffect(() => {
+    if (viewMode === 'messages') {
+      didInitialScrollRef.current = false;
+      setIsNearBottom(true);
     }
+  }, [viewMode, selectedRoomId]);
 
-    // Wait for all images to load, checking every 50ms
-    const checkInterval = setInterval(() => {
-      if (loadingImages.size === 0) {
-        clearInterval(checkInterval);
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop =
-            scrollContainerRef.current.scrollHeight;
-        }
-      }
-    }, 50);
+  /**
+   * ResizeObserver-based bottom-stick: Auto-scroll to bottom when content height changes
+   * (e.g., images loading, new messages) if user is near bottom
+   * This replaces the polling-based loadingImages approach
+   */
+  useEffect(() => {
+    if (
+      viewMode !== 'messages' ||
+      !scrollContainerRef.current ||
+      !contentRef.current
+    )
+      return;
 
-    // Timeout fallback: Force scroll after 2s even if images still loading
-    // Prevents infinite wait on broken URLs or slow connections
-    setTimeout(() => {
-      clearInterval(checkInterval);
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop =
-          scrollContainerRef.current.scrollHeight;
+    const observer = new ResizeObserver(() => {
+      if (!scrollContainerRef.current) return;
+
+      if (!didInitialScrollRef.current && messages.length > 0) {
+        scrollToBottom();
+        didInitialScrollRef.current = true;
+        setIsNearBottom(true);
+        return;
       }
-    }, 2000);
-  }, [loadingImages]);
+
+      // Only auto-scroll if user is near bottom (respects reading state)
+      if (isNearBottomRef.current) {
+        scrollToBottom();
+      }
+    });
+
+    observer.observe(contentRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [viewMode, selectedRoomId, scrollToBottom, messages.length]); // Re-observe when switching rooms
 
   /**
    * Handle back button click
@@ -171,6 +167,7 @@ export function ChatRoomListSheet() {
     setSelectedRoomId(null);
     setSelectedRoomName('');
     setInputText('');
+    didInitialScrollRef.current = false;
     if (attachedImage) {
       URL.revokeObjectURL(attachedImage.previewUrl);
       setAttachedImage(null);
@@ -180,28 +177,32 @@ export function ChatRoomListSheet() {
     });
     setFailedMessages([]);
     setIsNearBottom(true);
-    // Clear image loading state
-    setLoadingImages(new Set());
   };
 
-  // Auto-scroll to bottom on initial load and new messages
-  useEffect(() => {
+  // Initial scroll on room entry (force once even before ResizeObserver settles)
+  useLayoutEffect(() => {
     if (
-      viewMode === 'messages' &&
-      (messages.length > 0 || failedMessages.length > 0) &&
-      scrollContainerRef.current &&
-      isNearBottom
-    ) {
-      // Use new image-aware scroll function
-      scrollAfterImagesLoad();
-    }
-  }, [
-    viewMode,
-    messages.length,
-    failedMessages.length,
-    isNearBottom,
-    scrollAfterImagesLoad,
-  ]);
+      viewMode !== 'messages' ||
+      didInitialScrollRef.current ||
+      messages.length === 0
+    )
+      return;
+
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        scrollToBottom();
+        didInitialScrollRef.current = true;
+        setIsNearBottom(true);
+      });
+    });
+
+    return () => {
+      if (raf1) cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [viewMode, selectedRoomId, messages.length, scrollToBottom]);
 
   // Detect scroll position for infinite scroll
   const handleScroll = useCallback(() => {
@@ -210,8 +211,9 @@ export function ChatRoomListSheet() {
     const { scrollTop, scrollHeight, clientHeight } =
       scrollContainerRef.current;
 
-    // Check if near top (load more)
+    // Check if near top (load more) - block until initial bottom scroll completes
     if (
+      didInitialScrollRef.current &&
       scrollTop < 100 &&
       scrollHeight > clientHeight &&
       hasNextPage &&
@@ -273,7 +275,7 @@ export function ChatRoomListSheet() {
         URL.revokeObjectURL(imageData.previewUrl);
       }
 
-      scrollAfterImagesLoad();
+      // ResizeObserver will auto-scroll when message appears
     } catch {
       setFailedMessages((prev) => [
         ...prev,
@@ -312,7 +314,7 @@ export function ChatRoomListSheet() {
         URL.revokeObjectURL(failedMsg.previewUrl);
       }
 
-      scrollAfterImagesLoad();
+      // ResizeObserver will auto-scroll when message appears
     } catch {
       setFailedMessages((prev) => [...prev, { ...failedMsg, uploadId }]);
     } finally {
@@ -391,8 +393,8 @@ export function ChatRoomListSheet() {
         return [];
       });
 
+      didInitialScrollRef.current = false;
       setIsNearBottom(true);
-      setLoadingImages(new Set());
     }
   }, [isOpen]);
 
@@ -548,8 +550,8 @@ export function ChatRoomListSheet() {
                       </div>
                     )}
 
-                    {/* Message List */}
-                    <div className="space-y-3">
+                    {/* Message List (wrapped for ResizeObserver) */}
+                    <div ref={contentRef} className="space-y-3">
                       {messages.map((msg, index) => {
                         const isCurrentUser = msg.sender === currentUserId;
                         const timeString = formatMessageTime(msg.sendAt);
@@ -618,24 +620,6 @@ export function ChatRoomListSheet() {
                                               alt="첨부 이미지"
                                               className="rounded-lg max-w-full"
                                               loading="eager"
-                                              onLoad={() => {
-                                                setLoadingImages((prev) => {
-                                                  const next = new Set(prev);
-                                                  next.delete(
-                                                    `msg-${msg.id}-file-${file.id}`
-                                                  );
-                                                  return next;
-                                                });
-                                              }}
-                                              onError={() => {
-                                                setLoadingImages((prev) => {
-                                                  const next = new Set(prev);
-                                                  next.delete(
-                                                    `msg-${msg.id}-file-${file.id}`
-                                                  );
-                                                  return next;
-                                                });
-                                              }}
                                             />
                                           ) : (
                                             <a
@@ -706,20 +690,6 @@ export function ChatRoomListSheet() {
                                     alt="첨부 이미지"
                                     className="rounded-lg max-w-full"
                                     loading="eager"
-                                    onLoad={() => {
-                                      setLoadingImages((prev) => {
-                                        const next = new Set(prev);
-                                        next.delete(`failed-${failedMsg.id}`);
-                                        return next;
-                                      });
-                                    }}
-                                    onError={() => {
-                                      setLoadingImages((prev) => {
-                                        const next = new Set(prev);
-                                        next.delete(`failed-${failedMsg.id}`);
-                                        return next;
-                                      });
-                                    }}
                                   />
                                 </div>
                               )}
@@ -763,28 +733,12 @@ export function ChatRoomListSheet() {
                 {attachedImage &&
                   isSafePreviewUrl(attachedImage.previewUrl) && (
                     <div className="relative w-24 aspect-square mx-2 mb-3">
-                      <div className="w-full h-full overflow-hidden">
-                        <img
-                          src={attachedImage.previewUrl}
-                          alt="첨부 이미지"
-                          className="w-full h-full object-cover"
-                          loading="eager"
-                          onLoad={() => {
-                            setLoadingImages((prev) => {
-                              const next = new Set(prev);
-                              next.delete('attached-preview');
-                              return next;
-                            });
-                          }}
-                          onError={() => {
-                            setLoadingImages((prev) => {
-                              const next = new Set(prev);
-                              next.delete('attached-preview');
-                              return next;
-                            });
-                          }}
-                        />
-                      </div>
+                      <img
+                        src={attachedImage.previewUrl}
+                        alt="첨부 이미지"
+                        className="w-full h-full object-cover"
+                        loading="eager"
+                      />
                       <button
                         type="button"
                         onClick={removeAttachedImage}
