@@ -29,7 +29,8 @@ export const ParsedResumeViewer = forwardRef(({ yamlContent }, ref) => {
     );
   }
 
-  const projects = resume.resume?.projects || [];
+  // 두 가지 구조 모두 지원: { resume: { projects } } 또는 { projects }
+  const projects = resume.resume?.projects || resume.projects || [];
 
   if (projects.length === 0) {
     return (
@@ -50,6 +51,7 @@ export const ParsedResumeViewer = forwardRef(({ yamlContent }, ref) => {
         {projects.map((project, index) => (
           <div
             key={index}
+            data-project-item="true"
             className="pb-6 border-b border-gray-200 last:border-b-0 last:pb-0"
           >
             {/* Project Name */}

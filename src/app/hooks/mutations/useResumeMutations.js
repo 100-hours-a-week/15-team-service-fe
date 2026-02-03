@@ -140,25 +140,61 @@ const generatePDFFromHTML = async ({ element, filename }) => {
     throw new Error('Element not found');
   }
 
-  // HTML을 canvas로 변환
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-  });
-
-  const imgData = canvas.toDataURL('image/png');
-  const imgWidth = 210;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const imgWidth = 210; // A4 가로 (mm)
+  const margin = 15; // 여백 (mm)
+  const contentWidth = imgWidth - margin * 2;
 
   // PDF 생성
   const pdf = new jsPDF({
-    orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+    orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
 
-  pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  // 프로젝트 요소들 찾기
+  const projectItems = element.querySelectorAll('[data-project-item="true"]');
+
+  if (projectItems.length === 0) {
+    // 프로젝트가 없으면 전체 요소 캡처
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  } else {
+    // 각 프로젝트를 개별 페이지로
+    for (let i = 0; i < projectItems.length; i++) {
+      const projectEl = projectItems[i];
+
+      // 캡처 전 임시로 패딩 추가
+      const originalPadding = projectEl.style.padding;
+      projectEl.style.padding = '16px';
+
+      const canvas = await html2canvas(projectEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      // 패딩 복원
+      projectEl.style.padding = originalPadding;
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      // 이미지만 추가 (제목은 프로젝트 내부에 이미 있음)
+      pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, imgHeight);
+    }
+  }
+
   pdf.save(filename);
 };
 
