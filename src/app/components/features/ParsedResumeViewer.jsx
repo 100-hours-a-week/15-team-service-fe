@@ -70,7 +70,7 @@ export const ParsedResumeViewer = forwardRef(({ yamlContent }, ref) => {
             )}
 
             {/* Description */}
-            <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+            <p className="text-sm text-gray-700 mb-3 leading-relaxed whitespace-pre-line">
               {project.description}
             </p>
 

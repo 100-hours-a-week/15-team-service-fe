@@ -55,6 +55,7 @@ export function CreateResumePage() {
     return sessionStorage.getItem('generatingResumeId') || null;
   });
   const [isClientTimeout, setIsClientTimeout] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleOpenConfirmDialog = useCallback(() => {
     setIsConfirmDialogOpen(true);
@@ -70,8 +71,8 @@ export function CreateResumePage() {
     {
       enabled: !!createdResumeId,
       refetchInterval: (query) => {
-        const status = query.state.data?.status;
-        if (status === 'QUEUED' || status === 'PROCESSING') {
+        const status = query.state.data?.status?.toUpperCase();
+        if (!status || status === 'QUEUED' || status === 'PROCESSING') {
           return 3000;
         }
         return false;
@@ -81,20 +82,29 @@ export function CreateResumePage() {
   );
 
   const generationStatus = versionData?.status;
+  const normalizedStatus = generationStatus?.toUpperCase();
   const isGenerating =
     createdResumeId &&
-    (!generationStatus ||
-      generationStatus === 'QUEUED' ||
-      generationStatus === 'PROCESSING');
-  const isGenerationFailed = generationStatus === 'FAILED';
-  const isGenerationSucceeded = generationStatus === 'SUCCEEDED';
+    (!normalizedStatus ||
+      normalizedStatus === 'QUEUED' ||
+      normalizedStatus === 'PROCESSING');
+  const isGenerationFailed = normalizedStatus === 'FAILED';
+  const isGenerationSucceeded =
+    !!normalizedStatus &&
+    !['QUEUED', 'PROCESSING', 'FAILED'].includes(normalizedStatus);
 
   useEffect(() => {
     if (isGenerationSucceeded) {
+      setIsRedirecting(true);
       sessionStorage.removeItem('generatingResumeId');
       sessionStorage.removeItem('generatingStartedAt');
       toast.success('이력서가 생성되었습니다');
-      navigate('/home');
+      navigate('/home', { replace: true });
+      setTimeout(() => {
+        if (window.location.pathname === '/create-resume') {
+          window.location.href = '/home';
+        }
+      }, 0);
     }
   }, [isGenerationSucceeded, navigate]);
 
@@ -108,9 +118,6 @@ export function CreateResumePage() {
   // API 에러 시 (이력서가 없거나 조회 실패) sessionStorage 정리
   useEffect(() => {
     if (isVersionError && createdResumeId) {
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
-      setCreatedResumeId(null);
       toast.error('이력서 상태를 확인할 수 없습니다');
     }
   }, [isVersionError, createdResumeId]);
@@ -214,10 +221,10 @@ export function CreateResumePage() {
     setIsClientTimeout(false);
   }, []);
 
-  if (createResumeMutation.isPending || isGenerating) {
+  if (isRedirecting || createResumeMutation.isPending || isGenerating) {
     const statusMessage = !createdResumeId
       ? '요청 중...'
-      : generationStatus === 'QUEUED'
+      : normalizedStatus === 'QUEUED'
         ? '대기 중...'
         : '분석 중...';
 
