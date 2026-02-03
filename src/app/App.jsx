@@ -48,7 +48,7 @@ function RootLayout() {
               width: '320px',
               position: 'absolute',
               bottom: '60px',
-              left: 'calc(50%)',
+              left: 'calc(47%)',
               transform: 'translateX(-50%)',
             },
             className: '!rounded-full !px-6',

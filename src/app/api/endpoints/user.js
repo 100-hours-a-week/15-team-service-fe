@@ -72,3 +72,12 @@ export const updateUserSettings = async (settings) => {
   );
   return response.data.data;
 };
+
+/**
+ * Withdraw user
+ * @returns {Promise<void>}
+ * @throws {Error} 401 AUTH_UNAUTHORIZED
+ */
+export const withdrawUser = async () => {
+  await mutatingClient.delete(API_CONFIG.ENDPOINTS.USER_INFO);
+};
