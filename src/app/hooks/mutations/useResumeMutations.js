@@ -140,6 +140,48 @@ const generatePDFFromHTML = async ({ element, filename }) => {
     throw new Error('Element not found');
   }
 
+  const applyBadgeOverrides = (rootEl) => {
+    const updates = [];
+    rootEl.querySelectorAll('[data-tech-badge="true"]').forEach((badgeEl) => {
+      updates.push({ el: badgeEl, style: badgeEl.getAttribute('style') });
+      badgeEl.style.height = '24px';
+      badgeEl.style.lineHeight = '24px';
+      badgeEl.style.display = 'inline-flex';
+      badgeEl.style.alignItems = 'center';
+      badgeEl.style.justifyContent = 'center';
+      badgeEl.style.verticalAlign = 'middle';
+      badgeEl.style.paddingLeft = '12px';
+      badgeEl.style.paddingRight = '12px';
+      badgeEl.style.fontFamily =
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif';
+      badgeEl.style.fontSize = '14px';
+    });
+    rootEl
+      .querySelectorAll('[data-tech-badge-text="true"]')
+      .forEach((textEl) => {
+        updates.push({ el: textEl, style: textEl.getAttribute('style') });
+        textEl.style.display = 'block';
+        textEl.style.lineHeight = '1';
+        textEl.style.transform = 'translateY(-7px)';
+      });
+
+    return () => {
+      updates.forEach(({ el, style }) => {
+        if (style === null) {
+          el.removeAttribute('style');
+        } else {
+          el.setAttribute('style', style);
+        }
+      });
+    };
+  };
+
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
   const imgWidth = 210; // A4 가로 (mm)
   const margin = 15; // 여백 (mm)
   const contentWidth = imgWidth - margin * 2;
@@ -156,11 +198,17 @@ const generatePDFFromHTML = async ({ element, filename }) => {
 
   if (projectItems.length === 0) {
     // 프로젝트가 없으면 전체 요소 캡처
+    const restoreBadgeStyles = applyBadgeOverrides(element);
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
       logging: false,
+      onclone: (clonedDoc) => {
+        const clonedRoot = clonedDoc.body;
+        applyBadgeOverrides(clonedRoot);
+      },
     });
+    restoreBadgeStyles();
     const imgData = canvas.toDataURL('image/png');
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
@@ -172,16 +220,22 @@ const generatePDFFromHTML = async ({ element, filename }) => {
       // 캡처 전 임시로 패딩 추가
       const originalPadding = projectEl.style.padding;
       projectEl.style.padding = '16px';
+      const restoreBadgeStyles = applyBadgeOverrides(projectEl);
 
       const canvas = await html2canvas(projectEl, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          const clonedRoot = clonedDoc.body;
+          applyBadgeOverrides(clonedRoot);
+        },
       });
 
       // 패딩 복원
       projectEl.style.padding = originalPadding;
+      restoreBadgeStyles();
 
       const imgData = canvas.toDataURL('image/png');
       const imgHeight = (canvas.height * contentWidth) / canvas.width;

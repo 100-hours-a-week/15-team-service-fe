@@ -13,7 +13,13 @@ import { Button } from '../common/Button';
 /**
  * @param {PreviewSheetProps} props
  */
-export function PreviewSheet({ isOpen, onClose, onDownload, children, contentRef }) {
+export function PreviewSheet({
+  isOpen,
+  onClose,
+  onDownload,
+  children,
+  contentRef,
+}) {
   const handleOpenChange = (open) => {
     if (!open) {
       onClose();

@@ -80,9 +80,12 @@ export const ParsedResumeViewer = forwardRef(({ yamlContent }, ref) => {
                 {project.techStack.map((tech, techIndex) => (
                   <span
                     key={techIndex}
-                    className="px-3 py-1 bg-blue-50 text-primary rounded-lg text-sm"
+                    data-tech-badge="true"
+                    className="inline-flex items-center justify-center h-6 px-3 bg-blue-50 text-primary rounded-lg text-sm"
                   >
-                    {tech}
+                    <span data-tech-badge-text="true" className="block">
+                      {tech}
+                    </span>
                   </span>
                 ))}
               </div>
