@@ -368,6 +368,34 @@ export function ChatRoomListSheet() {
     return currentDate !== prevDate;
   };
 
+  // Reset to list view when sheet is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setViewMode('list');
+      setSelectedRoomId(null);
+      setSelectedRoomName('');
+      setInputText('');
+
+      // Cleanup using functional updates to avoid dependency issues
+      setAttachedImage((prev) => {
+        if (prev?.previewUrl) {
+          URL.revokeObjectURL(prev.previewUrl);
+        }
+        return null;
+      });
+
+      setFailedMessages((prev) => {
+        prev.forEach((msg) => {
+          if (msg.previewUrl) URL.revokeObjectURL(msg.previewUrl);
+        });
+        return [];
+      });
+
+      setIsNearBottom(true);
+      setLoadingImages(new Set());
+    }
+  }, [isOpen]);
+
   return (
     <Drawer.Root open={isOpen} onOpenChange={setIsOpen} dismissible={true}>
       <Drawer.Trigger asChild>
