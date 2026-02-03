@@ -26,6 +26,7 @@ import {
   getLocalDate,
 } from '@/app/lib/utils';
 import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
+import { toast } from '@/app/lib/toast';
 
 export function ChatRoomListSheet() {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,6 +37,7 @@ export function ChatRoomListSheet() {
   const [inputText, setInputText] = useState('');
   const [attachedImage, setAttachedImage] = useState(null);
   const [failedMessages, setFailedMessages] = useState([]);
+  const [expandedMessageIds, setExpandedMessageIds] = useState(() => new Set());
   const attachFileInputRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const contentRef = useRef(null); // Wrapper for ResizeObserver
@@ -44,6 +46,11 @@ export function ChatRoomListSheet() {
   const didInitialScrollRef = useRef(false);
 
   const { upload, isUploading } = useUploadFile('CHAT_ATTACHMENT');
+  const MAX_MESSAGE_LENGTH = 500;
+  const MAX_INPUT_LENGTH = 10000;
+  const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+  const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
+  const ALLOWED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg'];
 
   const {
     data: chatRooms = [],
@@ -97,6 +104,37 @@ export function ChatRoomListSheet() {
       return false;
     }
   };
+
+  const validateImageFile = (file) => {
+    if (!file) return { ok: false, reason: 'invalid' };
+
+    const fileName = file.name || '';
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    const isValidExtension = ALLOWED_IMAGE_EXTENSIONS.includes(extension);
+    const isValidType = ALLOWED_IMAGE_TYPES.includes(file.type);
+
+    if (!isValidExtension || !isValidType) {
+      return { ok: false, reason: 'type' };
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      return { ok: false, reason: 'size' };
+    }
+
+    return { ok: true };
+  };
+
+  const toggleExpanded = useCallback((messageId) => {
+    setExpandedMessageIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  }, []);
 
   /**
    * Handle chat room card click
@@ -231,6 +269,17 @@ export function ChatRoomListSheet() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validation = validateImageFile(file);
+    if (!validation.ok) {
+      if (validation.reason === 'type') {
+        toast.error('지원하지 않는 이미지 형식입니다.');
+      } else if (validation.reason === 'size') {
+        toast.error('이미지 용량이 너무 큽니다. 최대 5MB까지 가능합니다.');
+      }
+      e.target.value = '';
+      return;
+    }
+
     if (attachedImage) URL.revokeObjectURL(attachedImage.previewUrl);
 
     const previewUrl = URL.createObjectURL(file);
@@ -251,9 +300,17 @@ export function ChatRoomListSheet() {
   const handleSend = async () => {
     if ((!inputText.trim() && !attachedImage) || isSending || isUploading)
       return;
+    if (inputText.length > MAX_INPUT_LENGTH) {
+      toast.error('메시지 글자 수 제한을 초과했습니다.');
+      return;
+    }
 
     const messageText = inputText;
     const imageData = attachedImage;
+    if (imageData?.file) {
+      const validation = validateImageFile(imageData.file);
+      if (!validation.ok) return;
+    }
 
     setInputText('');
     setAttachedImage(null);
@@ -566,6 +623,15 @@ export function ChatRoomListSheet() {
                           index,
                           messages
                         );
+                        const isExpanded = expandedMessageIds.has(msg.id);
+                        const messageText = msg.message || '';
+                        const isLongMessage =
+                          messageText.length > MAX_MESSAGE_LENGTH;
+                        const displayMessage = isLongMessage
+                          ? isExpanded
+                            ? messageText
+                            : `${messageText.slice(0, MAX_MESSAGE_LENGTH)}...`
+                          : messageText;
 
                         return (
                           <div key={msg.id}>
@@ -597,7 +663,7 @@ export function ChatRoomListSheet() {
                               )}
 
                               {/* Message Bubble */}
-                              <div className="max-w-[70%]">
+                              <div className="max-w-[70%] min-w-0">
                                 <div
                                   className={`rounded-2xl px-4 py-2 ${
                                     isCurrentUser
@@ -605,8 +671,31 @@ export function ChatRoomListSheet() {
                                       : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                                   }`}
                                 >
-                                  {msg.message && (
-                                    <p className="text-sm">{msg.message}</p>
+                                  {messageText && (
+                                    <>
+                                      <p
+                                        className="text-sm break-words whitespace-pre-wrap"
+                                        style={{
+                                          overflowWrap: 'anywhere',
+                                          wordBreak: 'break-word',
+                                        }}
+                                      >
+                                        {displayMessage}
+                                      </p>
+                                      {isLongMessage && (
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleExpanded(msg.id)}
+                                          className={`mt-1 text-xs underline ${
+                                            isCurrentUser
+                                              ? 'text-white/80'
+                                              : 'text-gray-500'
+                                          }`}
+                                        >
+                                          {isExpanded ? '접기' : '더보기'}
+                                        </button>
+                                      )}
+                                    </>
                                   )}
 
                                   {/* File Attachments */}
@@ -681,7 +770,15 @@ export function ChatRoomListSheet() {
                           <div className="max-w-[70%]">
                             <div className="rounded-2xl px-4 py-2 bg-gray-300 text-white rounded-br-sm">
                               {failedMsg.message && (
-                                <p className="text-sm">{failedMsg.message}</p>
+                                <p
+                                  className="text-sm break-words whitespace-pre-wrap"
+                                  style={{
+                                    overflowWrap: 'anywhere',
+                                    wordBreak: 'break-word',
+                                  }}
+                                >
+                                  {failedMsg.message}
+                                </p>
                               )}
                               {isSafePreviewUrl(failedMsg.previewUrl) && (
                                 <div className="mt-2">
@@ -752,7 +849,14 @@ export function ChatRoomListSheet() {
                 <div className="flex items-end gap-2">
                   <textarea
                     value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      if (nextValue.length > MAX_INPUT_LENGTH) {
+                        toast.error('메시지 글자 수 제한을 초과했습니다.');
+                        return;
+                      }
+                      setInputText(nextValue);
+                    }}
                     onKeyDown={handleKeyDown}
                     placeholder={
                       isConnected ? '메시지를 입력하세요...' : '연결 중...'
@@ -760,7 +864,7 @@ export function ChatRoomListSheet() {
                     disabled={!isConnected}
                     className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                     rows={1}
-                    maxLength={500}
+                    maxLength={MAX_INPUT_LENGTH}
                   />
                   <button
                     type="button"
