@@ -21,7 +21,7 @@ import {
 } from '@/app/lib/utils';
 import {
   useUserProfile,
-  useUserSettings,
+  // useUserSettings,
 } from '@/app/hooks/queries/useUserQuery';
 import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import {
@@ -39,7 +39,7 @@ import { toast } from '@/app/lib/toast';
 
 export function SettingsPage() {
   const { data: profileData } = useUserProfile();
-  const { data: settingsData } = useUserSettings();
+  // const { data: settingsData } = useUserSettings();
   const { data: positions = [] } = usePositions();
   const { mutateAsync: updateUserProfile, isPending: isSavingProfile } =
     useUpdateUser();
@@ -98,14 +98,14 @@ export function SettingsPage() {
     hasProfileSynced.current = true;
   }, [profileData, positions]);
 
-  useEffect(() => {
-    if (!settingsData) return;
-    _setLocalSettings({
-      notificationEnabled: settingsData.notificationEnabled,
-      interviewResumeDefaultsEnabled:
-        settingsData.interviewResumeDefaultsEnabled,
-    });
-  }, [settingsData]);
+  // useEffect(() => {
+  //   if (!settingsData) return;
+  //   _setLocalSettings({
+  //     notificationEnabled: settingsData.notificationEnabled,
+  //     interviewResumeDefaultsEnabled:
+  //       settingsData.interviewResumeDefaultsEnabled,
+  //   });
+  // }, [settingsData]);
 
   useEffect(() => {
     return () => {
