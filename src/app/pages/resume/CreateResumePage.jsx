@@ -94,9 +94,9 @@ export function CreateResumePage() {
       sessionStorage.removeItem('generatingResumeId');
       sessionStorage.removeItem('generatingStartedAt');
       toast.success('이력서가 생성되었습니다');
-      navigate(`/resume/${createdResumeId}`);
+      navigate('/home');
     }
-  }, [isGenerationSucceeded, navigate, createdResumeId]);
+  }, [isGenerationSucceeded, navigate]);
 
   useEffect(() => {
     if (isGenerationFailed) {
