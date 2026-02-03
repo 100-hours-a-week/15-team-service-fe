@@ -96,3 +96,10 @@ export const REPO_SORT_OPTIONS = {
   recent: '최근 업데이트 순',
   name: '이름 순',
 };
+
+// Upload Constants
+// ========================================
+
+export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
+export const ALLOWED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg'];

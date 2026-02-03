@@ -30,6 +30,8 @@ import {
 } from '@/app/hooks/mutations/useUserMutations';
 import { useLogout } from '@/app/hooks/mutations/useAuthMutations';
 import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
+import { validateImageFile } from '@/app/lib/validators';
+import { toast } from '@/app/lib/toast';
 
 /**
  * @typedef {import('@/app/types').UserProfile} UserProfile
@@ -125,6 +127,17 @@ export function SettingsPage() {
       const file = e.target.files?.[0];
       if (!file) return;
 
+      const validation = validateImageFile(file);
+      if (!validation.ok) {
+        if (validation.reason === 'type') {
+          toast.error('지원하지 않는 이미지 형식입니다.');
+        } else if (validation.reason === 'size') {
+          toast.error('이미지 용량이 너무 큽니다. 최대 5MB까지 가능합니다.');
+        }
+        e.target.value = '';
+        return;
+      }
+
       if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
 
       const previewUrl = URL.createObjectURL(file);
@@ -195,6 +208,15 @@ export function SettingsPage() {
       // Upload new profile image if selected
       let profileImageUrl = editData.profileImage ?? null;
       if (profileFile) {
+        const validation = validateImageFile(profileFile);
+        if (!validation.ok) {
+          if (validation.reason === 'type') {
+            toast.error('지원하지 않는 이미지 형식입니다.');
+          } else if (validation.reason === 'size') {
+            toast.error('이미지 용량이 너무 큽니다. 최대 5MB까지 가능합니다.');
+          }
+          return;
+        }
         const result = await upload(profileFile);
         profileImageUrl = result.s3Key;
       }

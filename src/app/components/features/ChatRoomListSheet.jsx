@@ -26,6 +26,7 @@ import {
   getLocalDate,
 } from '@/app/lib/utils';
 import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
+import { validateImageFile } from '@/app/lib/validators';
 import { toast } from '@/app/lib/toast';
 
 export function ChatRoomListSheet() {
@@ -48,9 +49,6 @@ export function ChatRoomListSheet() {
   const { upload, isUploading } = useUploadFile('CHAT_ATTACHMENT');
   const MAX_MESSAGE_LENGTH = 500;
   const MAX_INPUT_LENGTH = 10000;
-  const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
-  const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
-  const ALLOWED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg'];
 
   const {
     data: chatRooms = [],
@@ -108,25 +106,6 @@ export function ChatRoomListSheet() {
   const getSafeImageSrc = (url) => {
     if (!isSafePreviewUrl(url)) return '';
     return encodeURI(url);
-  };
-
-  const validateImageFile = (file) => {
-    if (!file) return { ok: false, reason: 'invalid' };
-
-    const fileName = file.name || '';
-    const extension = fileName.split('.').pop()?.toLowerCase() || '';
-    const isValidExtension = ALLOWED_IMAGE_EXTENSIONS.includes(extension);
-    const isValidType = ALLOWED_IMAGE_TYPES.includes(file.type);
-
-    if (!isValidExtension || !isValidType) {
-      return { ok: false, reason: 'type' };
-    }
-
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      return { ok: false, reason: 'size' };
-    }
-
-    return { ok: true };
   };
 
   const toggleExpanded = useCallback((messageId) => {

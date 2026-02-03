@@ -60,7 +60,7 @@ export function InterviewSessionPage() {
       <div className="min-h-screen bg-white flex items-center justify-center px-5">
         <div className="text-center">
           <p className="mb-4">마이크 권한이 필요합니다</p>
-          <Button onClick={() => navigate('/home')}>홈으로</Button>
+          <Button onClick={() => navigate('/')}>홈으로</Button>
         </div>
       </div>
     );
