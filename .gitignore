@@ -67,3 +67,11 @@ $RECYCLE.BIN/
 *.tmp
 *.temp
 .cache/
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/e2e/.auth/
+e2e/.env.test
