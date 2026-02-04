@@ -3,7 +3,8 @@ import { useParams, useBlocker, useNavigate } from 'react-router-dom';
 import yaml from 'js-yaml';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf';
+import pdfWorkerSource from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?raw';
 import {
   // Save,
   Download,
@@ -26,11 +27,6 @@ import {
 } from '@/app/hooks/queries/useResumeQueries';
 // import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
 // import { useGenerateResumePDF } from '@/app/hooks/mutations/useResumeMutations';
-
-GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
 
 /**
  * Parse resume content from backend JSON and convert to YAML for viewing/parsing.
@@ -122,6 +118,8 @@ export function ResumeViewerPage() {
   const pdfDocRef = useRef(null);
   const [pdfCanvasEl, setPdfCanvasEl] = useState(null);
   const pdfNotifyRef = useRef(false);
+  const [isPdfWorkerReady, setIsPdfWorkerReady] = useState(false);
+  const pdfWorkerBlobUrlRef = useRef(null);
 
   useEffect(() => {
     if (versionData?.content && versionData.status === 'SUCCEEDED') {
@@ -132,7 +130,7 @@ export function ResumeViewerPage() {
   }, [versionData]);
 
   useEffect(() => {
-    if (!pdfData || !showPDFViewer) return;
+    if (!pdfData || !showPDFViewer || !isPdfWorkerReady) return;
 
     let cancelled = false;
     setIsPdfRendering(true);
@@ -163,7 +161,24 @@ export function ResumeViewerPage() {
       cancelled = true;
       loadingTask.destroy();
     };
-  }, [pdfData, showPDFViewer]);
+  }, [pdfData, showPDFViewer, isPdfWorkerReady]);
+
+  useEffect(() => {
+    const blob = new Blob([pdfWorkerSource], {
+      type: 'application/javascript',
+    });
+    const blobUrl = URL.createObjectURL(blob);
+    pdfWorkerBlobUrlRef.current = blobUrl;
+    GlobalWorkerOptions.workerSrc = blobUrl;
+    setIsPdfWorkerReady(true);
+
+    return () => {
+      if (pdfWorkerBlobUrlRef.current) {
+        URL.revokeObjectURL(pdfWorkerBlobUrlRef.current);
+        pdfWorkerBlobUrlRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const pdf = pdfDocRef.current;
