@@ -53,6 +53,7 @@ function RootLayout() {
             },
             className: '!rounded-full !px-6',
           }}
+          offset={80}
         />
       </div>
     </div>

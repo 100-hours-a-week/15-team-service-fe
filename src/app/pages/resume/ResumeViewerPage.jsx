@@ -87,6 +87,17 @@ export function ResumeViewerPage() {
     }
   }, [versionData]);
 
+  // 프로젝트 요약 생성 완료 메시지 표시
+  useEffect(() => {
+    const message = sessionStorage.getItem('resumeCreatedMessage');
+    if (message) {
+      sessionStorage.removeItem('resumeCreatedMessage');
+      setTimeout(() => {
+        toast.success(message);
+      }, 300);
+    }
+  }, []);
+
   // const {
   //   messages,
   //   chatInput,
@@ -241,7 +252,7 @@ export function ResumeViewerPage() {
           <div className="max-w-[390px] mx-auto">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
-              <h3>이력서 생성에 실패했습니다.</h3>
+              <h3>프로젝트 요약 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">
                 {versionData?.errorLog || '알 수 없는 오류가 발생했습니다'}
               </p>
