@@ -4,7 +4,6 @@ import yaml from 'js-yaml';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import {
   // Save,
   Download,
@@ -28,7 +27,10 @@ import {
 // import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
 // import { useGenerateResumePDF } from '@/app/hooks/mutations/useResumeMutations';
 
-GlobalWorkerOptions.workerSrc = pdfWorker;
+GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 /**
  * Parse resume content from backend JSON and convert to YAML for viewing/parsing.
@@ -112,12 +114,14 @@ export function ResumeViewerPage() {
   // const [showChatbot, setShowChatbot] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfData, setPdfData] = useState(null);
   const [isPdfRendering, setIsPdfRendering] = useState(false);
   const [pdfRenderError, setPdfRenderError] = useState('');
   const [pdfPage, setPdfPage] = useState(1);
   const [pdfNumPages, setPdfNumPages] = useState(0);
   const pdfDocRef = useRef(null);
-  const pdfCanvasRef = useRef(null);
+  const [pdfCanvasEl, setPdfCanvasEl] = useState(null);
+  const pdfNotifyRef = useRef(false);
 
   useEffect(() => {
     if (versionData?.content && versionData.status === 'SUCCEEDED') {
@@ -128,7 +132,7 @@ export function ResumeViewerPage() {
   }, [versionData]);
 
   useEffect(() => {
-    if (!pdfUrl || !showPDFViewer) return;
+    if (!pdfData || !showPDFViewer) return;
 
     let cancelled = false;
     setIsPdfRendering(true);
@@ -136,8 +140,9 @@ export function ResumeViewerPage() {
     setPdfPage(1);
     setPdfNumPages(0);
     pdfDocRef.current = null;
+    pdfNotifyRef.current = false;
 
-    const loadingTask = getDocument(pdfUrl);
+    const loadingTask = getDocument({ data: pdfData });
 
     loadingTask.promise
       .then((pdf) => {
@@ -150,6 +155,7 @@ export function ResumeViewerPage() {
           console.error('PDF 로드 오류:', error);
           setPdfRenderError('PDF 미리보기를 불러오지 못했습니다.');
           setIsPdfRendering(false);
+          toast.dismiss('pdf-loading');
         }
       });
 
@@ -157,11 +163,11 @@ export function ResumeViewerPage() {
       cancelled = true;
       loadingTask.destroy();
     };
-  }, [pdfUrl, showPDFViewer]);
+  }, [pdfData, showPDFViewer]);
 
   useEffect(() => {
     const pdf = pdfDocRef.current;
-    const canvas = pdfCanvasRef.current;
+    const canvas = pdfCanvasEl;
     if (!pdf || !canvas || !pdfNumPages) return;
 
     let cancelled = false;
@@ -190,6 +196,11 @@ export function ResumeViewerPage() {
       .then(() => {
         if (!cancelled) {
           setIsPdfRendering(false);
+          if (!pdfNotifyRef.current) {
+            pdfNotifyRef.current = true;
+            toast.dismiss('pdf-loading');
+            toast.success('PDF가 생성되었습니다.');
+          }
         }
       })
       .catch((error) => {
@@ -197,13 +208,14 @@ export function ResumeViewerPage() {
           console.error('PDF 렌더링 오류:', error);
           setPdfRenderError('PDF 미리보기를 불러오지 못했습니다.');
           setIsPdfRendering(false);
+          toast.dismiss('pdf-loading');
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [pdfPage, pdfNumPages]);
+  }, [pdfPage, pdfNumPages, pdfCanvasEl]);
 
   // 프로젝트 요약 생성 완료 메시지 표시
   useEffect(() => {
@@ -290,9 +302,12 @@ export function ResumeViewerPage() {
       URL.revokeObjectURL(pdfUrl);
       setPdfUrl(null);
     }
+    setPdfData(null);
     pdfDocRef.current = null;
     setPdfNumPages(0);
     setPdfPage(1);
+    setPdfRenderError('');
+    setIsPdfRendering(false);
     setShowPDFViewer(false);
   }, [pdfUrl]);
 
@@ -564,16 +579,19 @@ export function ResumeViewerPage() {
         img.src = imgData;
       });
 
-      const pdfBlob = pdf.output('blob');
+      const pdfArrayBuffer = pdf.output('arraybuffer');
+      const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
       const url = URL.createObjectURL(pdfBlob);
+      setPdfData(new Uint8Array(pdfArrayBuffer));
       setPdfUrl(url);
+      setPdfRenderError('');
+      setIsPdfRendering(true);
       setShowPDFViewer(true);
 
-      toast.dismiss('pdf-loading');
-      toast.success('PDF가 생성되었습니다.');
+      // toast is dismissed after first page render
     } catch (error) {
       console.error('PDF 생성 오류:', error);
       toast.dismiss('pdf-loading');
@@ -816,7 +834,7 @@ export function ResumeViewerPage() {
                     </div>
                   )}
                   <canvas
-                    ref={pdfCanvasRef}
+                    ref={setPdfCanvasEl}
                     className="w-full rounded-lg border border-gray-200 bg-white"
                   />
                 </div>
