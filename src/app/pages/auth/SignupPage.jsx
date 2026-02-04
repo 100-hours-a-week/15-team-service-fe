@@ -308,7 +308,8 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
               if (
                 nextLine.startsWith('## ') ||
                 nextLine.startsWith('### ') ||
-                nextLine === '---'
+                nextLine === '---' ||
+                nextLine.startsWith('**[')
               ) {
                 break;
               }
@@ -746,7 +747,7 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
           <DialogHeader>
             <DialogTitle>개인정보 수집·이용 동의 (필수)</DialogTitle>
           </DialogHeader>
-          <div className="mt-3 max-h-[60vh] min-h-[200px] overflow-y-auto pl-1 text-sm text-gray-700">
+          <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
             {renderMarkdown(privacyTermsContent)}
           </div>
           <DialogFooter className="mt-4">
@@ -771,7 +772,7 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
           <DialogHeader>
             <DialogTitle>휴대전화번호 수집·이용 동의 (필수)</DialogTitle>
           </DialogHeader>
-          <div className="mt-3 max-h-[60vh] min-h-[200px] overflow-y-auto pl-1 text-sm text-gray-700">
+          <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
             {renderMarkdown(phoneTermsContent)}
           </div>
           <DialogFooter className="mt-4">

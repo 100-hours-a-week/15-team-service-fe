@@ -96,9 +96,7 @@ export function SettingsPage() {
   const shouldShowPhonePolicyAgreement =
     !!editData.phone && !profileData?.phonePolicyAgreed;
 
-  const phoneTermsContent = `## 📄 휴대전화번호 수집·이용 동의(필수)
-
-**[수집·이용 목적]**
+  const phoneTermsContent = `**[수집·이용 목적]**
 
 회사는 다음 목적을 위하여 이용자의 휴대전화번호를 수집·이용합니다.
 
@@ -234,7 +232,8 @@ export function SettingsPage() {
               if (
                 nextLine.startsWith('## ') ||
                 nextLine.startsWith('### ') ||
-                nextLine === '---'
+                nextLine === '---' ||
+                nextLine.startsWith('**[')
               ) {
                 break;
               }
@@ -895,9 +894,9 @@ export function SettingsPage() {
           className="w-[calc(100%-8px)] max-w-[382px] sm:max-w-[382px]"
         >
           <DialogHeader>
-            <DialogTitle>휴대전화번호 수집·이용 동의</DialogTitle>
+            <DialogTitle>휴대전화번호 수집·이용 동의 (필수)</DialogTitle>
           </DialogHeader>
-          <div className="mt-3 max-h-[60vh] min-h-[200px] overflow-y-auto pl-1 text-sm text-gray-700">
+          <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
             {renderMarkdown(phoneTermsContent)}
           </div>
           <DialogFooter className="mt-4">
