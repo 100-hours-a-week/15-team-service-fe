@@ -217,25 +217,23 @@ export function stripPhoneFormat(input = '') {
 /**
  * Validate phone number format
  * @param {string} input - Phone number string
- * @returns {boolean} True if valid Korean mobile number
+ * @returns {boolean} True if valid Korean mobile number (11 digits only)
  */
 export function validatePhoneNumber(input = '') {
   const digits = String(input).replace(/\D/g, '');
-  return (
-    digits.startsWith('01') && (digits.length === 10 || digits.length === 11)
-  );
+  return digits.startsWith('01') && digits.length === 11;
 }
 
 /**
  * Get error message for invalid phone number
  * @param {string} input - Phone number string
- * @returns {string} Error message (empty if valid)
+ * @returns {string} Error message (empty if valid, 11 digits only)
  */
 export function getPhoneErrorMessage(input = '') {
   const digits = String(input).replace(/\D/g, '');
   if (!digits) return '전화번호를 입력해주세요.';
   if (!digits.startsWith('01')) return '휴대폰 번호 형식이 올바르지 않습니다.';
-  if (digits.length < 10) return '전화번호가 너무 짧습니다.';
+  if (digits.length < 11) return '전화번호가 너무 짧습니다.';
   if (digits.length > 11) return '전화번호가 너무 깁니다.';
   return '';
 }

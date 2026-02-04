@@ -403,6 +403,20 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
     [errors]
   );
 
+  /**
+   * Handle phone number input change with real-time validation
+   *
+   * @implementation_decision
+   * Uses getPhoneErrorMessage utility for comprehensive validation:
+   * - 010 prefix check
+   * - Length validation (11 digits only)
+   * - Immediate feedback to prevent API errors
+   *
+   * @why
+   * Previous implementation only checked 010 prefix, allowing invalid
+   * lengths to reach the API, causing 400 Bad Request errors.
+   * Real-time validation provides better UX and prevents API errors.
+   */
   const handlePhoneChange = useCallback(
     (e) => {
       const input = e.target.value;
@@ -411,27 +425,29 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
 
       setFormData((prev) => ({ ...prev, phone: formatted }));
 
-      // Validate: phone must start with 010 if provided
-      if (digits.length > 0 && !digits.startsWith('010')) {
-        setErrors((prev) => ({
-          ...prev,
-          phone: '전화번호는 010으로 시작해야 합니다.',
-        }));
-      } else {
-        if (errors.phone) {
+      // Real-time validation: check 010 start + length
+      if (digits.length > 0) {
+        const errorMessage = getPhoneErrorMessage(formatted);
+        if (errorMessage) {
+          setErrors((prev) => ({ ...prev, phone: errorMessage }));
+        } else {
           setErrors((prev) => ({ ...prev, phone: undefined }));
         }
+      } else {
+        setErrors((prev) => ({ ...prev, phone: undefined }));
       }
 
+      // Clear phone collection agreement error when typing
       if (errors.phoneCollection) {
         setErrors((prev) => ({ ...prev, phoneCollection: undefined }));
       }
 
+      // Clear phone collection agreement when phone is cleared
       if (!formatted && agreements.phoneCollection) {
         setAgreements((prev) => ({ ...prev, phoneCollection: false }));
       }
     },
-    [errors.phone, errors.phoneCollection, agreements.phoneCollection]
+    [errors.phoneCollection, agreements.phoneCollection]
   );
 
   // Cleanup preview URL on unmount
