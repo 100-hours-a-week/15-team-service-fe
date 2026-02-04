@@ -12,7 +12,7 @@ import { parseYAMLToResume } from '@/app/lib/utils';
  * @property {string[]} techStack - Technologies used
  *
  * @typedef {Object} ParsedResumeViewerProps
- * @property {string} yamlContent - JSON string containing resume data
+ * @property {string} yamlContent - YAML (or JSON) string containing resume data
  */
 
 /**
