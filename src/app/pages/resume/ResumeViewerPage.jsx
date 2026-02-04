@@ -342,7 +342,7 @@ export function ResumeViewerPage() {
   const buildResumeHtml = useCallback(
     (resumeData) => {
       let htmlContent =
-        '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', \'Noto Sans KR\', \'Malgun Gothic\', sans-serif; color: #111;">';
+        "<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #111;\">";
 
       if (resumeData?.name) {
         htmlContent += `<h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0;">${resumeData.name}</h1>`;
@@ -531,7 +531,14 @@ export function ResumeViewerPage() {
               );
 
               const pageImgData = tempCanvas.toDataURL('image/png');
-              pdf.addImage(pageImgData, 'PNG', 0, yPosition, pdfWidth, pageHeight);
+              pdf.addImage(
+                pageImgData,
+                'PNG',
+                0,
+                yPosition,
+                pdfWidth,
+                pageHeight
+              );
 
               remainingHeight -= pageHeight;
               sourceY += sourceHeight;
@@ -570,11 +577,11 @@ export function ResumeViewerPage() {
     } catch (error) {
       console.error('PDF 생성 오류:', error);
       toast.dismiss('pdf-loading');
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       toast.error(`PDF 생성 중 오류가 발생했습니다: ${errorMessage}`);
     }
   }, [buildResumeHtml, htmlToImage, yamlContent, pdfUrl]);
-
 
   const status = versionData?.status;
   const isProcessing = status === 'QUEUED' || status === 'PROCESSING';
@@ -838,9 +845,15 @@ export function ResumeViewerPage() {
                       Math.min(pdfNumPages || prev, prev + 1)
                     )
                   }
-                  disabled={pdfNumPages === 0 || pdfPage >= pdfNumPages || isPdfRendering}
+                  disabled={
+                    pdfNumPages === 0 ||
+                    pdfPage >= pdfNumPages ||
+                    isPdfRendering
+                  }
                   className={`px-3 py-2 rounded-lg text-sm border ${
-                    pdfNumPages === 0 || pdfPage >= pdfNumPages || isPdfRendering
+                    pdfNumPages === 0 ||
+                    pdfPage >= pdfNumPages ||
+                    isPdfRendering
                       ? 'border-gray-200 text-gray-400'
                       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
