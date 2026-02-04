@@ -339,6 +339,25 @@ export function SettingsPage() {
     };
   }, [profilePreviewUrl]);
 
+  // Debounced name validation: Check character count after 1 second of no typing
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const timeoutId = setTimeout(() => {
+      if (editData.name && editData.name.length > 10) {
+        setErrors((prev) => ({
+          ...prev,
+          name: '이름은 최대 10자까지 입력할 수 있습니다.',
+        }));
+      } else if (editData.name && editData.name.length > 0) {
+        // Clear error if valid
+        setErrors((prev) => ({ ...prev, name: undefined }));
+      }
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [editData.name, isEditing]);
+
   const handleProfileImageChange = useCallback(
     (e) => {
       const file = e.target.files?.[0];
@@ -542,15 +561,28 @@ export function SettingsPage() {
 
   const handlePhoneChange = useCallback(
     (e) => {
-      const formatted = formatPhoneNumber(e.target.value);
+      const input = e.target.value;
+      const formatted = formatPhoneNumber(input);
+      const digits = input.replace(/\D/g, '');
+
       setEditData((prev) => ({ ...prev, phone: formatted }));
-      if (errors.phone) {
-        setErrors((prev) => ({ ...prev, phone: undefined }));
+
+      // Validate: phone must start with 010 if provided
+      if (digits.length > 0 && !digits.startsWith('010')) {
+        setErrors((prev) => ({
+          ...prev,
+          phone: '전화번호는 010으로 시작해야 합니다.',
+        }));
+      } else {
+        if (errors.phone) {
+          setErrors((prev) => ({ ...prev, phone: undefined }));
+        }
       }
-      if (!formatted && errors.phonePolicy) {
-        setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
-      }
+
       if (!formatted) {
+        if (errors.phonePolicy) {
+          setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
+        }
         setIsPhonePolicyAgreed(false);
       }
     },
@@ -664,7 +696,10 @@ export function SettingsPage() {
                   name="name"
                   value={editData.name}
                   onChange={(e) => {
-                    setEditData({ ...editData, name: e.target.value });
+                    const newName = e.target.value;
+                    setEditData({ ...editData, name: newName });
+
+                    // Clear error when user types (debounced validation will check later)
                     if (errors.name) {
                       setErrors((prev) => ({ ...prev, name: undefined }));
                     }
@@ -765,7 +800,12 @@ export function SettingsPage() {
                     variant="primary"
                     fullWidth
                     onClick={handleSave}
-                    disabled={isSavingProfile || isUploading}
+                    disabled={
+                      isSavingProfile ||
+                      isUploading ||
+                      !!errors.name ||
+                      !!errors.phone
+                    }
                   >
                     저장
                   </Button>
