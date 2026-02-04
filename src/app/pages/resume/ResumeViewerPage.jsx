@@ -112,6 +112,7 @@ export function ResumeViewerPage() {
   // const [showChatbot, setShowChatbot] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfData, setPdfData] = useState(null);
   const [isPdfRendering, setIsPdfRendering] = useState(false);
   const [pdfRenderError, setPdfRenderError] = useState('');
   const [pdfPage, setPdfPage] = useState(1);
@@ -128,7 +129,7 @@ export function ResumeViewerPage() {
   }, [versionData]);
 
   useEffect(() => {
-    if (!pdfUrl || !showPDFViewer) return;
+    if (!pdfData || !showPDFViewer) return;
 
     let cancelled = false;
     setIsPdfRendering(true);
@@ -137,7 +138,7 @@ export function ResumeViewerPage() {
     setPdfNumPages(0);
     pdfDocRef.current = null;
 
-    const loadingTask = getDocument(pdfUrl);
+    const loadingTask = getDocument({ data: pdfData });
 
     loadingTask.promise
       .then((pdf) => {
@@ -157,7 +158,7 @@ export function ResumeViewerPage() {
       cancelled = true;
       loadingTask.destroy();
     };
-  }, [pdfUrl, showPDFViewer]);
+  }, [pdfData, showPDFViewer]);
 
   useEffect(() => {
     const pdf = pdfDocRef.current;
@@ -290,6 +291,7 @@ export function ResumeViewerPage() {
       URL.revokeObjectURL(pdfUrl);
       setPdfUrl(null);
     }
+    setPdfData(null);
     pdfDocRef.current = null;
     setPdfNumPages(0);
     setPdfPage(1);
@@ -564,11 +566,13 @@ export function ResumeViewerPage() {
         img.src = imgData;
       });
 
-      const pdfBlob = pdf.output('blob');
+      const pdfArrayBuffer = pdf.output('arraybuffer');
+      const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
       const url = URL.createObjectURL(pdfBlob);
+      setPdfData(new Uint8Array(pdfArrayBuffer));
       setPdfUrl(url);
       setShowPDFViewer(true);
 
