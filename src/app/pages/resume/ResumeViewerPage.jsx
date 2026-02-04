@@ -233,7 +233,7 @@ export function ResumeViewerPage() {
               <p className="text-xs text-gray-400">
                 잠시만 기다려주세요. 페이지를 벗어나도 진행됩니다.
               </p>
-              <Button variant="ghost" onClick={() => navigate('/home')}>
+              <Button variant="ghost" onClick={() => navigate('/')}>
                 홈으로 이동
               </Button>
             </div>
@@ -257,7 +257,7 @@ export function ResumeViewerPage() {
                 {versionData?.errorLog || '알 수 없는 오류가 발생했습니다'}
               </p>
               <div className="flex gap-2 justify-center">
-                <Button variant="ghost" onClick={() => navigate('/home')}>
+                <Button variant="ghost" onClick={() => navigate('/')}>
                   홈으로
                 </Button>
                 <Button

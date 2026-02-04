@@ -44,6 +44,9 @@ apiClient.interceptors.response.use(
 
     // 401 에러 처리 (인증 실패 - 쿠키 만료 or 없음)
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (originalRequest.skipAuthRefresh) {
+        return Promise.reject(error);
+      }
       originalRequest._retry = true;
 
       // 이미 진행 중인 refresh가 있으면 대기
@@ -53,17 +56,30 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest);
         } catch {
           // Refresh 실패 - 로그인 페이지로 리다이렉트
-          toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
-          window.location.href = '/';
+          if (!originalRequest.skipAuthRedirect) {
+            toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+          }
           return Promise.reject(error);
         }
+      }
+
+      let csrfToken = getCsrfToken('XSRF-TOKEN');
+      if (!csrfToken) {
+        await ensureCsrfToken();
+        csrfToken = getCsrfToken('XSRF-TOKEN');
       }
 
       refreshTokenPromise = axios
         .post(
           `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH_TOKEN}`,
           {},
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {},
+          }
         )
         .finally(() => {
           refreshTokenPromise = null; // 완료 후 초기화
@@ -75,8 +91,12 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         // 갱신 실패 - 로그인 페이지로 리다이렉트
-        toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
-        window.location.href = '/';
+        if (!originalRequest.skipAuthRedirect) {
+          toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        }
         return Promise.reject(refreshError);
       }
     }

@@ -39,13 +39,21 @@ export function useCompleteOnboarding() {
 
       if (status === 401) {
         toast.error('로그인이 필요합니다.');
-        window.location.href = '/';
+        window.location.href = '/login';
         return;
       }
 
       if (status === 409 && errorCode === 'USER_ALREADY_ONBOARDED') {
         toast.info('이미 가입된 사용자입니다.');
-        window.location.href = '/home';
+        window.location.href = '/';
+        return;
+      }
+
+      if (status === 403 && errorCode === 'OAUTH_ACCOUNT_WITHDRAWN') {
+        toast.error('탈퇴한 계정입니다. 30일 후 재가입 가능합니다.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 3000);
         return;
       }
 
@@ -67,11 +75,11 @@ export function useLogout() {
     onSuccess: () => {
       queryClient.clear();
       toast.success('로그아웃되었습니다.');
-      window.location.href = '/';
+      window.location.href = '/login';
     },
     onError: () => {
       queryClient.clear();
-      window.location.href = '/';
+      window.location.href = '/login';
     },
   });
 }

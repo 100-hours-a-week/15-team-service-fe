@@ -264,7 +264,7 @@ export function CreateResumePage() {
         <TopAppBar
           title="프로젝트 요약 생성 실패"
           showBack
-          onBack={() => navigate('/home')}
+          onBack={() => navigate('/')}
           noTruncate
         />
         <div className="flex-1 flex flex-col items-center justify-center px-5">

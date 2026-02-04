@@ -252,6 +252,18 @@ export function getCsrfToken(cookieName = 'XSRF-TOKEN') {
 }
 
 /**
+ * Get cookie value by name
+ * @param {string} cookieName - Cookie name
+ * @returns {string | null} Cookie value or null if not found
+ */
+export function getCookieValue(cookieName) {
+  if (!cookieName) return null;
+  const cookies = document.cookie.split('; ');
+  const cookie = cookies.find((row) => row.startsWith(`${cookieName}=`));
+  return cookie ? cookie.split('=')[1] : null;
+}
+
+/**
  * Ensure CSRF token is present by fetching from backend if needed
  * Uses GET /positions endpoint to trigger CSRF token generation
  * Prevents duplicate requests with promise caching
@@ -282,22 +294,14 @@ export async function ensureCsrfToken() {
       // Call harmless GET endpoint to trigger CSRF token generation
       // Using /positions as it's a lightweight endpoint
       const url = `${baseUrl}/positions`;
-      console.warn('[CSRF] Fetching token from:', url);
 
-      const response = await fetch(url, {
+      await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-
-      if (!response.ok) {
-        console.error(
-          `[CSRF] Token fetch failed: ${response.status} ${response.statusText}`
-        );
-        console.error('[CSRF] Response URL:', response.url);
-      }
 
       // Token should now be in cookie
       const token = getCsrfToken('XSRF-TOKEN');
@@ -306,8 +310,6 @@ export async function ensureCsrfToken() {
           '[CSRF] Token not found in cookie after fetch. Check backend CORS settings and cookie configuration.'
         );
         console.warn('[CSRF] Document cookies:', document.cookie);
-      } else {
-        console.warn('[CSRF] Token successfully obtained');
       }
       return token;
     } catch (error) {

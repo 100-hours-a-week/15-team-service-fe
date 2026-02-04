@@ -10,28 +10,33 @@ export function AuthCallbackPage() {
   useEffect(() => {
     const status = searchParams.get('status');
     const onboardingCompleted = searchParams.get('onboardingCompleted');
+    const reason = searchParams.get('reason');
 
     const processCallback = async () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       if (status === 'success') {
         if (onboardingCompleted === 'true') {
-          navigate('/home', { replace: true });
+          navigate('/', { replace: true });
         } else if (onboardingCompleted === 'false') {
           navigate('/signup', { replace: true });
         } else {
           toast.error('로그인 상태를 확인할 수 없습니다.');
           await new Promise((resolve) => setTimeout(resolve, 1500));
-          navigate('/', { replace: true });
+          navigate('/login', { replace: true });
         }
       } else if (status === 'fail') {
-        toast.error('GitHub 로그인에 실패했습니다');
+        if (reason === 'OAUTH_ACCOUNT_WITHDRAWN') {
+          toast.error('계정을 찾을 수 없습니다.');
+        } else {
+          toast.error('GitHub 로그인에 실패했습니다');
+        }
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        navigate('/', { replace: true });
+        navigate('/login', { replace: true });
       } else {
         toast.error('잘못된 접근입니다');
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        navigate('/', { replace: true });
+        navigate('/login', { replace: true });
       }
     };
 
