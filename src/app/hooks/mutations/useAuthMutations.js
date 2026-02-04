@@ -50,7 +50,7 @@ export function useCompleteOnboarding() {
       }
 
       if (status === 403 && errorCode === 'OAUTH_ACCOUNT_WITHDRAWN') {
-        toast.error('탈퇴한 계정입니다. 30일 후 재가입 가능합니다.');
+        toast.error('탈퇴한 계정입니다. 1일 후 재가입 가능합니다.');
         setTimeout(() => {
           window.location.href = '/login';
         }, 3000);
