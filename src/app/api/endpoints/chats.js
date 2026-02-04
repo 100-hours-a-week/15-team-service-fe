@@ -15,10 +15,12 @@ export const fetchChats = async () => {
 /**
  * Fetch chat messages for a specific chatroom (cursor-based pagination)
  * @param {number} chatroomId - Chatroom ID
- * @param {string | null} cursor - Cursor value (timestamp|messageId format)
- * @param {number} size - Page size (default: 20)
+ * @param {string | null} cursor - Cursor value ("createdAt|id" format)
+ * @param {number} size - Page size (default: 20, max: 49, >=50 will be clamped to 15)
  * @returns {Promise<{chats: Array, before: string | null, next: string | null}>}
  * @throws {Error} 401 if not authenticated, 400 if invalid cursor/size
+ * @note Backend only accepts 'next' parameter
+ * @note Response is sorted oldest → newest (reversed by backend)
  */
 export const fetchChatMessages = async (
   chatroomId,
@@ -27,7 +29,7 @@ export const fetchChatMessages = async (
 ) => {
   const params = { size };
   if (cursor) {
-    params.after = cursor;
+    params.next = cursor;
   }
 
   const response = await apiClient.get(

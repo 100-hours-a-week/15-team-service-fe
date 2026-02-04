@@ -66,11 +66,20 @@ apiClient.interceptors.response.use(
         }
       }
 
+      let csrfToken = getCsrfToken('XSRF-TOKEN');
+      if (!csrfToken) {
+        await ensureCsrfToken();
+        csrfToken = getCsrfToken('XSRF-TOKEN');
+      }
+
       refreshTokenPromise = axios
         .post(
           `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH_TOKEN}`,
           {},
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {},
+          }
         )
         .finally(() => {
           refreshTokenPromise = null; // 완료 후 초기화
