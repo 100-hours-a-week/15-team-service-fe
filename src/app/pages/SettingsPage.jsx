@@ -96,9 +96,7 @@ export function SettingsPage() {
   const shouldShowPhonePolicyAgreement =
     !!editData.phone && !profileData?.phonePolicyAgreed;
 
-  const phoneTermsContent = `## 📄 휴대전화번호 수집·이용 동의(필수)
-
-**[수집·이용 목적]**
+  const phoneTermsContent = `**[수집·이용 목적]**
 
 회사는 다음 목적을 위하여 이용자의 휴대전화번호를 수집·이용합니다.
 
@@ -234,7 +232,8 @@ export function SettingsPage() {
               if (
                 nextLine.startsWith('## ') ||
                 nextLine.startsWith('### ') ||
-                nextLine === '---'
+                nextLine === '---' ||
+                nextLine.startsWith('**[')
               ) {
                 break;
               }
@@ -339,6 +338,25 @@ export function SettingsPage() {
       if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
     };
   }, [profilePreviewUrl]);
+
+  // Debounced name validation: Check character count after 1 second of no typing
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const timeoutId = setTimeout(() => {
+      if (editData.name && editData.name.length > 10) {
+        setErrors((prev) => ({
+          ...prev,
+          name: '이름은 최대 10자까지 입력할 수 있습니다.',
+        }));
+      } else if (editData.name && editData.name.length > 0) {
+        // Clear error if valid
+        setErrors((prev) => ({ ...prev, name: undefined }));
+      }
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [editData.name, isEditing]);
 
   const handleProfileImageChange = useCallback(
     (e) => {
@@ -543,15 +561,28 @@ export function SettingsPage() {
 
   const handlePhoneChange = useCallback(
     (e) => {
-      const formatted = formatPhoneNumber(e.target.value);
+      const input = e.target.value;
+      const formatted = formatPhoneNumber(input);
+      const digits = input.replace(/\D/g, '');
+
       setEditData((prev) => ({ ...prev, phone: formatted }));
-      if (errors.phone) {
-        setErrors((prev) => ({ ...prev, phone: undefined }));
+
+      // Validate: phone must start with 010 if provided
+      if (digits.length > 0 && !digits.startsWith('010')) {
+        setErrors((prev) => ({
+          ...prev,
+          phone: '전화번호는 010으로 시작해야 합니다.',
+        }));
+      } else {
+        if (errors.phone) {
+          setErrors((prev) => ({ ...prev, phone: undefined }));
+        }
       }
-      if (!formatted && errors.phonePolicy) {
-        setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
-      }
+
       if (!formatted) {
+        if (errors.phonePolicy) {
+          setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
+        }
         setIsPhonePolicyAgreed(false);
       }
     },
@@ -665,7 +696,10 @@ export function SettingsPage() {
                   name="name"
                   value={editData.name}
                   onChange={(e) => {
-                    setEditData({ ...editData, name: e.target.value });
+                    const newName = e.target.value;
+                    setEditData({ ...editData, name: newName });
+
+                    // Clear error when user types (debounced validation will check later)
                     if (errors.name) {
                       setErrors((prev) => ({ ...prev, name: undefined }));
                     }
@@ -766,7 +800,12 @@ export function SettingsPage() {
                     variant="primary"
                     fullWidth
                     onClick={handleSave}
-                    disabled={isSavingProfile || isUploading}
+                    disabled={
+                      isSavingProfile ||
+                      isUploading ||
+                      !!errors.name ||
+                      !!errors.phone
+                    }
                   >
                     저장
                   </Button>
@@ -895,9 +934,9 @@ export function SettingsPage() {
           className="w-[calc(100%-8px)] max-w-[382px] sm:max-w-[382px]"
         >
           <DialogHeader>
-            <DialogTitle>휴대전화번호 수집·이용 동의</DialogTitle>
+            <DialogTitle>휴대전화번호 수집·이용 동의 (필수)</DialogTitle>
           </DialogHeader>
-          <div className="mt-3 max-h-[60vh] min-h-[200px] overflow-y-auto pl-1 text-sm text-gray-700">
+          <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
             {renderMarkdown(phoneTermsContent)}
           </div>
           <DialogFooter className="mt-4">

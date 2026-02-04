@@ -78,7 +78,13 @@ export function ChatRoomListSheet() {
   const messages = useMemo(() => {
     const rawMessages =
       messagesData?.pages?.flatMap((page) => page.chats) || [];
-    return rawMessages.slice().sort((a, b) => {
+
+    // Deduplicate by message ID (defensive against backend pagination overlaps)
+    const uniqueMessages = Array.from(
+      new Map(rawMessages.map((msg) => [msg.id, msg])).values()
+    );
+
+    return uniqueMessages.sort((a, b) => {
       const aTime = a?.sendAt ? new Date(a.sendAt).getTime() : 0;
       const bTime = b?.sendAt ? new Date(b.sendAt).getTime() : 0;
       if (aTime === bTime) {

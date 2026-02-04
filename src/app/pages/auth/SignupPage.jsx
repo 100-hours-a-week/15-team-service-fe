@@ -308,7 +308,8 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
               if (
                 nextLine.startsWith('## ') ||
                 nextLine.startsWith('### ') ||
-                nextLine === '---'
+                nextLine === '---' ||
+                nextLine.startsWith('**[')
               ) {
                 break;
               }
@@ -372,10 +373,29 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
     [renderInlineMarkdown]
   );
 
+  // Debounced name validation: Check character count after 1 second of no typing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formData.name && formData.name.length > 10) {
+        setErrors((prev) => ({
+          ...prev,
+          name: '이름은 최대 10자까지 입력할 수 있습니다.',
+        }));
+      } else if (formData.name && formData.name.length > 0) {
+        // Clear error if valid
+        setErrors((prev) => ({ ...prev, name: undefined }));
+      }
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.name]);
+
   const handleChange = useCallback(
     (e) => {
       const { name, value } = e.target;
       setFormData((prev) => ({ ...prev, [name]: value }));
+
+      // Clear errors when user types (debounced validation will check later)
       if (errors[name]) {
         setErrors((prev) => ({ ...prev, [name]: undefined }));
       }
@@ -385,15 +405,26 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
 
   const handlePhoneChange = useCallback(
     (e) => {
-      const formatted = formatPhoneNumber(e.target.value);
+      const input = e.target.value;
+      const formatted = formatPhoneNumber(input);
+      const digits = input.replace(/\D/g, '');
+
       setFormData((prev) => ({ ...prev, phone: formatted }));
 
-      if (errors.phone || errors.phoneCollection) {
+      // Validate: phone must start with 010 if provided
+      if (digits.length > 0 && !digits.startsWith('010')) {
         setErrors((prev) => ({
           ...prev,
-          phone: undefined,
-          phoneCollection: undefined,
+          phone: '전화번호는 010으로 시작해야 합니다.',
         }));
+      } else {
+        if (errors.phone) {
+          setErrors((prev) => ({ ...prev, phone: undefined }));
+        }
+      }
+
+      if (errors.phoneCollection) {
+        setErrors((prev) => ({ ...prev, phoneCollection: undefined }));
       }
 
       if (!formatted && agreements.phoneCollection) {
@@ -728,7 +759,8 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
               isUploading ||
               !formData.name ||
               !formData.positionId ||
-              !agreements.privacy
+              !agreements.privacy ||
+              !!errors.phone
             }
           >
             가입 완료
@@ -746,7 +778,7 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
           <DialogHeader>
             <DialogTitle>개인정보 수집·이용 동의 (필수)</DialogTitle>
           </DialogHeader>
-          <div className="mt-3 max-h-[60vh] min-h-[200px] overflow-y-auto pl-1 text-sm text-gray-700">
+          <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
             {renderMarkdown(privacyTermsContent)}
           </div>
           <DialogFooter className="mt-4">
@@ -771,7 +803,7 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
           <DialogHeader>
             <DialogTitle>휴대전화번호 수집·이용 동의 (필수)</DialogTitle>
           </DialogHeader>
-          <div className="mt-3 max-h-[60vh] min-h-[200px] overflow-y-auto pl-1 text-sm text-gray-700">
+          <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
             {renderMarkdown(phoneTermsContent)}
           </div>
           <DialogFooter className="mt-4">
