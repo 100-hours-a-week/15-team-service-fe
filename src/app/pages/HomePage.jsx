@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from '@/app/lib/toast';
 import { FileText, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { BottomNav } from '../components/layout/BottomNav';
@@ -29,8 +30,23 @@ import {
 
 export function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: profileData } = useUserProfile();
   const { data: positions = [] } = usePositions();
+
+  // 프로젝트 요약 생성 완료 메시지 표시
+  useEffect(() => {
+    const message = location.state?.toastMessage;
+    if (message) {
+      // 토스트를 먼저 표시한 후 state 초기화
+      const timer = setTimeout(() => {
+        toast.success(message);
+        // state 초기화 (새로고침 시 중복 표시 방지)
+        navigate(location.pathname, { replace: true, state: {} });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, navigate, location.pathname]);
 
   // Fetch resumes from API
   const {
@@ -71,7 +87,7 @@ export function HomePage() {
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <h3>내 이력서</h3>
+            <h3>내 프로젝트 요약</h3>
             <Button
               variant="ghost"
               onClick={() => navigate('/repo-select')}
@@ -107,12 +123,14 @@ export function HomePage() {
             </div>
           ) : resumes.length === 0 ? (
             <div className="flex flex-col items-center bg-white rounded-2xl px-8 py-12 text-center border border-gray-200">
-              <p className="text-gray-500 mb-8">생성한 이력서가 없습니다.</p>
+              <p className="text-gray-500 mb-8">
+                생성한 프로젝트 요약이 없습니다.
+              </p>
               <Button
                 variant="primary"
                 onClick={() => navigate('/repo-select')}
               >
-                이력서 생성
+                프로젝트 요약 생성
               </Button>
             </div>
           ) : (
@@ -258,7 +276,7 @@ const ResumeCard = React.memo(({ resume }) => {
             onClick={handleViewResume}
           >
             <FileText className="w-4 h-4" strokeWidth={1.5} />
-            이력서 보기
+            프로젝트 요약 보기
           </Button>
         </div>
       </div>

@@ -94,19 +94,19 @@ export function CreateResumePage() {
     !['QUEUED', 'PROCESSING', 'FAILED'].includes(normalizedStatus);
 
   useEffect(() => {
-    if (isGenerationSucceeded) {
+    if (isGenerationSucceeded && !isRedirecting) {
       setIsRedirecting(true);
       sessionStorage.removeItem('generatingResumeId');
       sessionStorage.removeItem('generatingStartedAt');
-      toast.success('이력서가 생성되었습니다');
-      navigate('/home', { replace: true });
+      sessionStorage.setItem(
+        'resumeCreatedMessage',
+        '프로젝트 요약이 생성되었습니다'
+      );
       setTimeout(() => {
-        if (window.location.pathname === '/create-resume') {
-          window.location.href = '/home';
-        }
-      }, 0);
+        window.location.href = `/resume/${createdResumeId}`;
+      }, 500);
     }
-  }, [isGenerationSucceeded, navigate]);
+  }, [isGenerationSucceeded, isRedirecting, createdResumeId]);
 
   useEffect(() => {
     if (isGenerationFailed) {
@@ -118,7 +118,7 @@ export function CreateResumePage() {
   // API 에러 시 (이력서가 없거나 조회 실패) sessionStorage 정리
   useEffect(() => {
     if (isVersionError && createdResumeId) {
-      toast.error('이력서 상태를 확인할 수 없습니다');
+      toast.error('프로젝트 요약 상태를 확인할 수 없습니다');
     }
   }, [isVersionError, createdResumeId]);
 
@@ -137,7 +137,7 @@ export function CreateResumePage() {
       sessionStorage.removeItem('generatingStartedAt');
       setCreatedResumeId(null);
       setIsClientTimeout(true);
-      toast.error('이력서 생성 시간이 초과되었습니다');
+      toast.error('프로젝트 요약 생성 시간이 초과되었습니다');
       return;
     }
 
@@ -146,7 +146,7 @@ export function CreateResumePage() {
       sessionStorage.removeItem('generatingStartedAt');
       setCreatedResumeId(null);
       setIsClientTimeout(true);
-      toast.error('이력서 생성 시간이 초과되었습니다');
+      toast.error('프로젝트 요약 생성 시간이 초과되었습니다');
     }, remaining);
 
     return () => clearTimeout(timer);
@@ -154,8 +154,10 @@ export function CreateResumePage() {
 
   // 생성 중 라우터 이탈 차단 (단, 생성 완료 시에는 차단 해제)
   const isBlocked =
-    (createResumeMutation.isPending || isGenerating) && !isGenerationSucceeded;
-  useBlocker(() => isBlocked);
+    (createResumeMutation.isPending || isGenerating) &&
+    !isGenerationSucceeded &&
+    !isRedirecting;
+  useBlocker(isBlocked);
 
   // 생성 중 브라우저 새로고침/탭 닫기 경고
   useEffect(() => {
@@ -221,24 +223,29 @@ export function CreateResumePage() {
     setIsClientTimeout(false);
   }, []);
 
-  if (isRedirecting || createResumeMutation.isPending || isGenerating) {
+  if (createResumeMutation.isPending || isGenerating || isRedirecting) {
     const statusMessage = !createdResumeId
       ? '요청 중...'
-      : normalizedStatus === 'QUEUED'
-        ? '대기 중...'
-        : '분석 중...';
+      : isRedirecting
+        ? '완료!'
+        : normalizedStatus === 'QUEUED'
+          ? '대기 중...'
+          : '분석 중...';
 
     return (
       <div className="min-h-screen flex flex-col">
-        <TopAppBar title="이력서 생성 중" />
+        <TopAppBar title="프로젝트 요약 생성 중" />
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
               <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <h3>AI가 이력서를 생성 중입니다</h3>
+              <h3>AI가 프로젝트 요약을 생성 중입니다</h3>
               <p className="text-sm text-gray-500">{statusMessage}</p>
               <p className="text-xs text-gray-400">
                 생성이 완료될 때까지 잠시만 기다려주세요.
+              </p>
+              <p className="text-xs text-gray-400">
+                최대 5분이 소요될 수 있습니다.
               </p>
             </div>
           </div>
@@ -249,13 +256,13 @@ export function CreateResumePage() {
 
   if (isGenerationFailed || isClientTimeout) {
     const errorMessage = isClientTimeout
-      ? '이력서 생성 시간이 초과되었습니다'
+      ? '프로젝트 요약 생성 시간이 초과되었습니다'
       : versionData?.errorLog || '알 수 없는 오류가 발생했습니다';
 
     return (
       <div className="min-h-screen flex flex-col">
         <TopAppBar
-          title="이력서 생성 실패"
+          title="프로젝트 요약 생성 실패"
           showBack
           onBack={() => navigate('/home')}
           noTruncate
@@ -264,7 +271,7 @@ export function CreateResumePage() {
           <div className="max-w-[390px] w-full">
             <div className="rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
-              <h3>이력서 생성에 실패했습니다.</h3>
+              <h3>프로젝트 요약 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">{errorMessage}</p>
               <div className="flex justify-center">
                 <Button variant="primary" onClick={handleRetryGeneration}>
@@ -289,7 +296,7 @@ export function CreateResumePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <TopAppBar title="이력서 생성" showBack />
+      <TopAppBar title="프로젝트 요약 생성" showBack />
 
       <StepProgress current={step} total={1} />
 
@@ -302,12 +309,8 @@ export function CreateResumePage() {
               </p>
               <div className="space-y-2">
                 {selectedRepos.map((repo) => (
-                  <div
-                    key={repo.id}
-                    className="flex items-center justify-between"
-                  >
+                  <div key={repo.id}>
                     <h4 className="text-primary font-medium">{repo.name}</h4>
-                    <span className="text-xs text-primary/60">#{repo.id}</span>
                   </div>
                 ))}
               </div>
@@ -319,7 +322,7 @@ export function CreateResumePage() {
               <div>
                 <h2 className="mb-2">희망 포지션을 선택하세요.</h2>
                 <p className="text-sm text-gray-600">
-                  이력서에 맞춤형 내용이 생성됩니다.
+                  프로젝트 요약에 맞춤형 내용이 생성됩니다.
                 </p>
               </div>
 
@@ -352,7 +355,7 @@ export function CreateResumePage() {
                 onClick={handleNext}
                 disabled={!formData.positionId}
               >
-                AI로 이력서 생성
+                AI로 프로젝트 요약 생성
               </Button>
             </div>
           )}
@@ -417,8 +420,8 @@ export function CreateResumePage() {
         isOpen={isConfirmDialogOpen}
         onClose={handleCloseConfirmDialog}
         onConfirm={handleConfirmGenerate}
-        title="이력서를 생성하시겠어요?"
-        description="선택한 리포지토리를 분석하여 AI가 이력서를 생성합니다."
+        title="프로젝트 요약을 생성하시겠어요?"
+        description="선택한 리포지토리를 분석하여 AI가 프로젝트 요약을 생성합니다."
         confirmText="생성하기"
         cancelText="취소"
       />

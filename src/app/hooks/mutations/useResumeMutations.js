@@ -42,7 +42,7 @@ export function useCreateResume() {
           toast.error('레포지토리를 선택해주세요.');
           break;
         default:
-          toast.error('이력서 생성에 실패했습니다.');
+          toast.error('프로젝트 요약 생성에 실패했습니다.');
       }
     },
   });

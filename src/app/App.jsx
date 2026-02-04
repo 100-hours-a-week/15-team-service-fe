@@ -45,13 +45,10 @@ function RootLayout() {
               color: '#FFFFFF',
               border: 'none',
               width: '320px',
-              position: 'absolute',
-              bottom: '60px',
-              left: 'calc(50% - 10px)',
-              transform: 'translateX(-50%)',
             },
             className: '!rounded-full !px-6',
           }}
+          offset={80}
         />
       </div>
     </div>
