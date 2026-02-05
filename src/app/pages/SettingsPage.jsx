@@ -87,7 +87,7 @@ export function SettingsPage() {
   const displayName = profileData?.name ?? '';
   const displayPosition = profileData
     ? positions.find((position) => position.id === profileData.positionId)
-        ?.name || ''
+      ?.name || ''
     : '';
   const displayPhone = profileData?.phone
     ? formatPhoneNumber(profileData.phone)
@@ -307,7 +307,7 @@ export function SettingsPage() {
 
     setEditData({
       name: profileData.name,
-      position: positionName,
+      position: profileData.positionId ? String(profileData.positionId) : '',
       phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
       profileImage: profileData.profileImageUrl ?? null,
     });
@@ -414,7 +414,7 @@ export function SettingsPage() {
 
     setEditData({
       name: profileData.name,
-      position: positionName,
+      position: profileData.positionId ? String(profileData.positionId) : '',
       phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
       profileImage: profileData.profileImageUrl ?? null,
     });
@@ -438,7 +438,7 @@ export function SettingsPage() {
 
     // Validate position
     const selectedPosition = positions.find(
-      (position) => position.name === editData.position
+      (position) => String(position.id) === String(editData.position)
     );
 
     if (!selectedPosition) {
@@ -494,13 +494,13 @@ export function SettingsPage() {
           : undefined,
       });
 
-      const updatedPositionName =
-        positions.find((position) => position.id === updatedProfile.positionId)
-          ?.name || editData.position;
+      const updatedPositionId = updatedProfile.positionId
+        ? String(updatedProfile.positionId)
+        : editData.position;
 
       setEditData({
         name: updatedProfile.name,
-        position: updatedPositionName,
+        position: updatedPositionId,
         phone: updatedProfile.phone
           ? formatPhoneNumber(updatedProfile.phone)
           : '',
@@ -560,7 +560,7 @@ export function SettingsPage() {
 
       setEditData({
         name: profileData.name,
-        position: positionName,
+        position: profileData.positionId ? String(profileData.positionId) : '',
         phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
         profileImage: profileData.profileImageUrl ?? null,
       });
@@ -769,7 +769,7 @@ export function SettingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {positions.map((position) => (
-                        <SelectItem key={position.id} value={position.name}>
+                        <SelectItem key={position.id} value={String(position.id)}>
                           {position.name}
                         </SelectItem>
                       ))}
@@ -792,11 +792,10 @@ export function SettingsPage() {
                 />
 
                 <div
-                  className={`overflow-hidden transition-all duration-300 ${
-                    shouldShowPhonePolicyAgreement
-                      ? 'max-h-40 opacity-100'
-                      : 'max-h-0 opacity-0 pointer-events-none'
-                  }`}
+                  className={`overflow-hidden transition-all duration-300 ${shouldShowPhonePolicyAgreement
+                    ? 'max-h-40 opacity-100'
+                    : 'max-h-0 opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
                     <div className="flex items-start gap-3">
