@@ -14,17 +14,20 @@ export async function loginWithGitHub(page: Page, baseURL: string) {
   if (!username || !password) {
     throw new Error(
       'E2E_GITHUB_USERNAME과 E2E_GITHUB_PASSWORD 환경 변수가 필요합니다.\n' +
-        'e2e/.env.test 파일에 설정하거나 환경 변수로 전달하세요.'
+      'e2e/.env.test 파일에 설정하거나 환경 변수로 전달하세요.'
     );
   }
 
   // 1. 앱의 온보딩 페이지로 이동
   await page.goto(baseURL);
-  await page.waitForLoadState('networkidle');
+  // networkidle 대신 DOMContentLoaded 정도로 충분하며, 
+  // 이후 바로 버튼의 존재를 확인하므로 굳이 networkidle을 기다릴 필요 없음
+  await page.waitForLoadState('domcontentloaded');
 
-  // 2. GitHub 로그인 버튼 클릭
+  // 2. GitHub 로그인 버튼 대기 및 클릭
   // 앱에서 GitHub OAuth 플로우 시작
   const githubLoginButton = page.getByRole('button', { name: /github/i });
+  await githubLoginButton.waitFor({ state: 'visible', timeout: 15000 });
   await githubLoginButton.click();
 
   // 3. GitHub 로그인 페이지로 리다이렉트 대기
@@ -53,7 +56,7 @@ export async function loginWithGitHub(page: Page, baseURL: string) {
   );
 
   // 8. 로그인 완료 확인 (홈 페이지 또는 회원가입 페이지)
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 
   console.log('✅ GitHub 로그인 성공');
 }
@@ -64,7 +67,7 @@ export async function loginWithGitHub(page: Page, baseURL: string) {
 export async function logout(page: Page) {
   // 설정 페이지로 이동
   await page.goto('/settings');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // 로그아웃 버튼 클릭
   const logoutButton = page.getByRole('button', { name: /로그아웃/i });
