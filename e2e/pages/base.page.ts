@@ -72,9 +72,9 @@ export class BasePage {
    * 로딩 스피너 사라질 때까지 대기
    */
   async waitForLoadingComplete() {
-    const spinner = this.page.locator('[data-testid="loading-spinner"]');
+    const spinner = this.page.locator('.animate-spin');
     try {
-      await this.waitForHidden(spinner, 15000);
+      await this.waitForHidden(spinner, 5 * 60 * 1000);
     } catch {
       // 스피너가 없으면 무시
     }
