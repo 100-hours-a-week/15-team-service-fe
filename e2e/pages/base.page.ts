@@ -91,7 +91,7 @@ export class BasePage {
   /**
    * 하단 네비게이션 클릭
    */
-  async clickBottomNav(name: '홈' | '이력서' | '면접' | '설정') {
+  async clickBottomNav(name: '홈' | '생성' | '면접' | '설정') {
     const nav = this.page.getByRole('navigation');
     await nav.getByRole('link', { name }).click();
     await this.waitForPageLoad();

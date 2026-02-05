@@ -61,7 +61,7 @@ test.describe('Smoke Tests @smoke', () => {
 
     // 네비게이션 항목 확인
     await expect(nav.getByRole('link', { name: /홈/i })).toBeVisible();
-    await expect(nav.getByRole('link', { name: /이력서/i })).toBeVisible();
+    await expect(nav.getByRole('link', { name: /생성/i })).toBeVisible();
     // await expect(nav.getByRole('link', { name: /면접/i })).toBeVisible();
     await expect(nav.getByRole('link', { name: /설정/i })).toBeVisible();
   });
@@ -70,7 +70,7 @@ test.describe('Smoke Tests @smoke', () => {
     await basePage.goto('/home');
 
     // 이력서 탭 클릭
-    await basePage.clickBottomNav('이력서');
+    await basePage.clickBottomNav('생성');
     await expect(page).toHaveURL(/\/repo-select/);
     await basePage.goto('/home');
     // 이력서 생성 페이지에서는 네비게이션 바라 사라지므로 home으로 복귀
