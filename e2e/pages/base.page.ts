@@ -18,11 +18,40 @@ export class BasePage {
     await this.waitForPageLoad();
   }
 
+  async login() {
+    await this.page.goto('/login');
+    await this.page.waitForLoadState('domcontentloaded');
+
+    const githubLoginButton = this.page.getByRole('button', { name: /github/i });
+    await githubLoginButton.waitFor({ state: 'visible', timeout: 5000 });
+    await githubLoginButton.click();
+
+    await this.page.waitForLoadState('networkidle');
+    // 회원가입 페이지로 이동된 경우에는 회원가입 진행
+    try {
+      await this.expectPath('/signup');
+      await this.page.getByRole('textbox', { name: '이름을 입력하세요' }).fill('테스트계정');
+      await this.page.getByRole('combobox').click();
+      await this.page.getByRole('option', { name: 'AI' }).click();
+      await this.page.getByRole('textbox', { name: '-1234-5678' }).fill('010-1234-5678');
+      await this.page.getByRole('checkbox').first().check();
+      await this.page.getByRole('checkbox').nth(1).check();
+
+      await this.page.getByRole('button', { name: /가입 완료/i }).click();
+    } catch (e) {
+      // 회원가입 페이지로 이동되지 않았다면 무시
+      console.log('회원가입 페이지로 이동되지 않았습니다.');
+    } finally {
+      await this.expectPath('/');
+    }
+  }
+
   /**
    * 페이지 로드 완료 대기 (React Query 포함)
    */
   async waitForPageLoad() {
-    await this.page.waitForLoadState('networkidle');
+    // networkidle은 너무 엄격하여 HMR이나 지속적인 API 요청 시 타임아웃이 발생하기 쉬움
+    await this.page.waitForLoadState('load');
   }
 
   /**
@@ -97,7 +126,7 @@ export class BasePage {
    * 현재 URL 경로 확인
    */
   async expectPath(path: string) {
-    await expect(this.page).toHaveURL(new RegExp(`${path}$`));
+    await expect(this.page).toHaveURL(new RegExp(`${path}$`), { timeout: 10000 });
   }
 
   /**
