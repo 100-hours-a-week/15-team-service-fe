@@ -386,6 +386,26 @@ export function SettingsPage() {
     [profilePreviewUrl]
   );
 
+  /**
+   * Removes the profile image (both new preview and existing server image)
+   * Only works in edit mode
+   */
+  const removeProfileImage = useCallback(() => {
+    // Revoke new preview URL if exists
+    if (profilePreviewUrl) {
+      URL.revokeObjectURL(profilePreviewUrl);
+    }
+    // Clear new file state
+    setProfileFile(null);
+    setProfilePreviewUrl(null);
+
+    // Clear existing server image from editData
+    setEditData((prev) => ({
+      ...prev,
+      profileImage: null,
+    }));
+  }, [profilePreviewUrl]);
+
   const handleEdit = useCallback(() => {
     if (!profileData) return;
     const positionName =
@@ -700,6 +720,15 @@ export function SettingsPage() {
                   onClick={() => profileFileInputRef.current?.click()}
                 >
                   프로필 사진 변경
+                </button>
+              )}
+              {isEditing && (profilePreviewUrl || editData.profileImage) && (
+                <button
+                  type="button"
+                  className="text-sm text-gray-500"
+                  onClick={removeProfileImage}
+                >
+                  이미지 삭제
                 </button>
               )}
             </div>

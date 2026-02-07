@@ -494,6 +494,17 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
     [profilePreviewUrl]
   );
 
+  /**
+   * Removes the selected profile image and cleans up the preview URL
+   */
+  const removeProfileImage = useCallback(() => {
+    if (profilePreviewUrl) {
+      URL.revokeObjectURL(profilePreviewUrl);
+    }
+    setProfileFile(null);
+    setProfilePreviewUrl(null);
+  }, [profilePreviewUrl]);
+
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
@@ -635,6 +646,15 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
             >
               사진 업로드 (선택)
             </button>
+            {profilePreviewUrl && (
+              <button
+                type="button"
+                className="text-sm text-gray-500"
+                onClick={removeProfileImage}
+              >
+                이미지 삭제
+              </button>
+            )}
           </div>
 
           {/* Form Fields */}
