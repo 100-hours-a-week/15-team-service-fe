@@ -3,15 +3,37 @@ import { mutatingClient } from '../mutatingClient';
 import { streamAPI } from '../streamingClient';
 import { API_CONFIG } from '../config';
 
-export const fetchResumes = async ({ page = 0, size = 10 } = {}) => {
+/**
+ * Fetch resumes with cursor-based pagination
+ * @param {Object} params
+ * @param {string | null} params.next - Cursor for next page ("updatedAt|id" format)
+ * @param {number} params.size - Page size (default: 10, max: 49)
+ * @param {string} params.keyword - Resume name search (1-30 chars, optional)
+ * @param {string} params.sortedBy - Sort order: UPDATED_DESC (default) | UPDATED_ASC
+ * @returns {Promise<{data: Array, before: null, next: string | null}>}
+ */
+export const fetchResumes = async ({
+  next = null,
+  size = 10,
+  keyword = undefined,
+  sortedBy = 'UPDATED_DESC',
+} = {}) => {
+  const params = { size, sortedBy };
+
+  // Only add optional params if they have values
+  if (next) {
+    params.next = next;
+  }
+  if (keyword && keyword.trim()) {
+    params.keyword = keyword.trim();
+  }
+
   const response = await apiClient.get(API_CONFIG.ENDPOINTS.RESUMES, {
-    params: { page, size },
+    params,
   });
-  const data = response.data.data;
-  return {
-    ...data,
-    content: data?.items || data?.content || [],
-  };
+
+  // Response structure: { code, message, data: { data: [], before: null, next: string | null } }
+  return response.data.data;
 };
 
 export const createResume = async (request) => {

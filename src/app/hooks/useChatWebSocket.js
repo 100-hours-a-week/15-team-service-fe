@@ -42,7 +42,7 @@ export function useChatWebSocket(chatroomId) {
                     const lastPage = pages[pages.length - 1];
                     pages[pages.length - 1] = {
                       ...lastPage,
-                      chats: [...lastPage.chats, newMsg],
+                      data: [...lastPage.data, newMsg],
                     };
                     return { ...oldData, pages };
                   }

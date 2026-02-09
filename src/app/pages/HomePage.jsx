@@ -1,13 +1,26 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
-import { FileText, AlertCircle } from 'lucide-react';
+import { FileText, AlertCircle, Search, X } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { BottomNav } from '../components/layout/BottomNav';
 import { DropdownMenu } from '../components/common/DropdownMenu';
 import { ConfirmDialog } from '../components/modals/ConfirmDialog';
 import { EditTextDialog } from '../components/modals/EditTextDialog';
 import { ChatRoomListSheet } from '../components/features/ChatRoomListSheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
 import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import { useResumes } from '@/app/hooks/queries/useResumeQueries';
@@ -18,7 +31,7 @@ import {
 
 /**
  * @typedef {Object} ResumeSummary
- * @property {number} resumeId
+ * @property {number} id - Resume ID (changed from resumeId)
  * @property {string} name
  * @property {number} positionId
  * @property {string} positionName
@@ -34,6 +47,17 @@ export function HomePage() {
   const { data: profileData } = useUserProfile();
   const { data: positions = [] } = usePositions();
 
+  // Search and sort state
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState('');
+  const [sortBy, setSortBy] = useState('UPDATED_DESC');
+
+  // Debounce ref for search input (300ms)
+  const searchDebounceRef = useRef(null);
+
+  // Intersection observer ref for infinite scroll
+  const observerTarget = useRef(null);
+
   // 프로젝트 요약 생성 완료 메시지 표시
   useEffect(() => {
     const message = location.state?.toastMessage;
@@ -48,21 +72,88 @@ export function HomePage() {
     }
   }, [location.state, navigate, location.pathname]);
 
-  // Fetch resumes from API
+  // Debounce search input (300ms)
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedKeyword(searchKeyword);
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchKeyword]);
+
+  // Fetch resumes with infinite scroll
   const {
     data: resumesData,
     isLoading: isLoadingResumes,
     isError: isResumesError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     refetch: refetchResumes,
-  } = useResumes();
+  } = useResumes({
+    size: 10,
+    keyword: debouncedKeyword,
+    sortedBy: sortBy,
+  });
 
-  const resumes = resumesData?.content || [];
+  // Flatten pages into single array
+  const resumes = useMemo(() => {
+    if (!resumesData?.pages) return [];
+    return resumesData.pages.flatMap((page) => page.data || []);
+  }, [resumesData]);
 
   const displayName = profileData?.name ?? '사용자';
   const displayPosition = profileData
     ? positions.find((position) => position.id === profileData.positionId)
         ?.name || ''
     : '';
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const target = observerTarget.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    observer.observe(target);
+
+    return () => {
+      if (target) {
+        observer.unobserve(target);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Search input handler
+  const handleSearchChange = useCallback((e) => {
+    setSearchKeyword(e.target.value);
+  }, []);
+
+  // Sort dropdown handler
+  const handleSortChange = useCallback((value) => {
+    setSortBy(value);
+  }, []);
+
+  // Clear search
+  const handleClearSearch = useCallback(() => {
+    setSearchKeyword('');
+    setDebouncedKeyword('');
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -97,6 +188,43 @@ export function HomePage() {
             </Button>
           </div>
 
+          {/* Search and Sort Controls */}
+          <div className="flex items-center gap-2 mb-4">
+            {/* Search Input (left side, flex-1) */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={handleSearchChange}
+                placeholder="프로젝트 요약 검색"
+                maxLength={30}
+                className="w-full min-h-[44px] pl-10 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              {searchKeyword && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="검색어 지우기"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Sort Dropdown (right side, fixed width) */}
+            <Select value={sortBy} onValueChange={handleSortChange}>
+              <SelectTrigger className="w-[150px] min-h-[44px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UPDATED_DESC">최근 업데이트 순</SelectItem>
+                <SelectItem value="UPDATED_ASC">오래된 순</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {isLoadingResumes ? (
             <div className="space-y-3">
               {[1, 2].map((i) => (
@@ -123,22 +251,51 @@ export function HomePage() {
             </div>
           ) : resumes.length === 0 ? (
             <div className="flex flex-col items-center bg-white rounded-2xl px-8 py-12 text-center border border-gray-200">
-              <p className="text-gray-500 mb-8">
-                생성한 프로젝트 요약이 없습니다.
-              </p>
-              <Button
-                variant="primary"
-                onClick={() => navigate('/repo-select')}
-              >
-                프로젝트 요약 생성
-              </Button>
+              {debouncedKeyword ? (
+                <>
+                  <p className="text-gray-500 mb-4">
+                    &lsquo;{debouncedKeyword}&rsquo;에 대한 검색 결과가
+                    없습니다.
+                  </p>
+                  <Button variant="secondary" onClick={handleClearSearch}>
+                    검색 초기화
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500 mb-8">
+                    생성한 프로젝트 요약이 없습니다.
+                  </p>
+                  <Button
+                    variant="primary"
+                    onClick={() => navigate('/repo-select')}
+                  >
+                    프로젝트 요약 생성
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
-            <div className="space-y-3">
-              {resumes.map((resume) => (
-                <ResumeCard key={resume.resumeId} resume={resume} />
-              ))}
-            </div>
+            <>
+              {/* Resume Cards */}
+              <div className="space-y-3">
+                {resumes.map((resume) => (
+                  <ResumeCard key={resume.id} resume={resume} />
+                ))}
+              </div>
+
+              {/* Infinite Scroll Trigger + Loading Indicator */}
+              {hasNextPage && (
+                <div ref={observerTarget} className="py-4 flex justify-center">
+                  {isFetchingNextPage && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span>더 불러오는 중...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -170,16 +327,16 @@ const ResumeCard = React.memo(({ resume }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleViewResume = useCallback(() => {
-    navigate(`/resume/${resume.resumeId}`);
-  }, [navigate, resume.resumeId]);
+    navigate(`/resume/${resume.id}`);
+  }, [navigate, resume.id]);
 
   const handleResumeNameEdit = useCallback(
     (e) => {
       e.stopPropagation();
-      setEditTarget({ id: resume.resumeId, name: resume.name });
+      setEditTarget({ id: resume.id, name: resume.name });
       setIsEditDialogOpen(true);
     },
-    [resume.resumeId, resume.name]
+    [resume.id, resume.name]
   );
 
   const handleConfirmEdit = useCallback(
@@ -206,10 +363,10 @@ const ResumeCard = React.memo(({ resume }) => {
   const handleDeleteClick = useCallback(
     (e) => {
       e.stopPropagation();
-      setDeleteTarget(resume.resumeId);
+      setDeleteTarget(resume.id);
       setIsDeleteDialogOpen(true);
     },
-    [resume.resumeId]
+    [resume.id]
   );
 
   const handleConfirmDelete = useCallback(() => {
