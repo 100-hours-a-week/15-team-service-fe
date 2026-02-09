@@ -97,6 +97,19 @@ export const REPO_SORT_OPTIONS = {
   name: '이름 순',
 };
 
+// Resume Sort Options
+// ========================================
+
+export const RESUME_SORT_OPTIONS = {
+  UPDATED_DESC: 'UPDATED_DESC',
+  UPDATED_ASC: 'UPDATED_ASC',
+};
+
+export const RESUME_SORT_LABELS = {
+  [RESUME_SORT_OPTIONS.UPDATED_DESC]: '최근 업데이트 순',
+  [RESUME_SORT_OPTIONS.UPDATED_ASC]: '오래된 순',
+};
+
 // Upload Constants
 // ========================================
 
