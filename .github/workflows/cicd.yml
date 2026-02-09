@@ -6,7 +6,7 @@ on:
       - "**/*"
       - ".github/workflows/**"
   push:
-    branches: [ "main", "dev", "feature/cicd-s3"]
+    branches: [ "main", "dev"]
   workflow_dispatch:
     inputs:
       ci_run_id:
@@ -222,7 +222,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: >-
-      ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'main' || github.ref_name == 'feature/cicd-s3'}}
+      ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'main'}}
 
     steps:
       # 1) 저장소 체크아웃 (메타데이터만 필요)
