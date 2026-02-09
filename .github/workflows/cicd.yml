@@ -6,7 +6,7 @@ on:
       - "**/*"
       - ".github/workflows/**"
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "feature/cicd-s3"]
   workflow_dispatch:
     inputs:
       ci_run_id:
