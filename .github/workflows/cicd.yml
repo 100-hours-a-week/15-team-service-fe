@@ -3,10 +3,17 @@ name: FrontEnd CI/CD
 on:
   pull_request:
     paths:
-      - "**/*"
-      - ".github/workflows/**"
+      - "src/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.js"
+      - "postcss.config.mjs"
+      - "eslint.config.js"
+      - "jsconfig.json"
+      - ".github/workflows/cicd.yml"
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev"]
   workflow_dispatch:
     inputs:
       ci_run_id:
@@ -19,6 +26,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  id-token: write
   actions: read
   contents: read
   security-events: write
@@ -214,6 +222,67 @@ jobs:
               elapsed=$((elapsed + HEALTH_INTERVAL))
             done
             echo "[7/7] deploy done (release=$TS, branch=${BRANCH_NAME:-unknown})"
+  
+  deploy-s3:
+    name: Deploy (S3 + CloudFront)
+    needs: fe-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: >-
+      ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'main'}}
+
+    steps:
+      # 1) 저장소 체크아웃 (메타데이터만 필요)
+      - name: Checkout (metadata only)
+        uses: actions/checkout@v4
+
+      # 2) CI에서 생성된 dist 아티팩트 다운로드
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      # 3) dist 최소 검증
+      - name: Validate dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+
+      # 4) AWS 인증 (OIDC 권장)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # 5) S3 업로드 (동기화)
+      - name: Sync dist to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3 sync dist s3://${{ vars.S3_BUCKET_NAME }} \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html"
+
+          # index.html은 캐시 최소화 (SPA 갱신 대응)
+          aws s3 cp dist/index.html s3://${{ vars.S3_BUCKET_NAME }}/index.html \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      # 6) CloudFront 캐시 무효화
+      - name: Invalidate CloudFront cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      # 7) 배포 완료 로그
+      - name: Deploy done
+        run: echo "Deploy completed (S3 + CloudFront)"
 
   deploy-reuse-artifact:
     name: Deploy (reuse artifact)
