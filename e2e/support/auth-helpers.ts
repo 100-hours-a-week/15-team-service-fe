@@ -55,7 +55,8 @@ export async function loginWithGitHub(page: Page, baseURL: string) {
     { timeout: 30000 }
   );
 
-  // 8. 로그인 완료 확인 (홈 페이지 또는 회원가입 페이지)
+  // 8. 로그인 완료 확인 (홈 페이지 또는 회원가입 페이지 또는 루트 페이지)
+  await page.waitForURL(/\/(home|signup|\/)?/);
   await page.waitForLoadState('load');
 
   console.log('✅ GitHub 로그인 성공');
