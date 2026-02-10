@@ -21,7 +21,7 @@ test.describe('Resume Generation Tests', () => {
 
         // 카테고리 선택 후 이력서 생성
         await page.getByRole('button', { name: 'AI', exact: true }).click();
-        await page.getByRole('button', { name: 'AI로 이력서 생성' }).click();
+        await page.getByRole('button', { name: '요약 생성' }).click();
         await page.getByRole('button', { name: '생성하기' }).click();
         await basePage.waitForLoadingComplete();
         await expect(page).toHaveURL(new RegExp(`resume/\\d+$`));
