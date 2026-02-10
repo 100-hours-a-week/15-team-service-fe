@@ -33,7 +33,7 @@ test.describe('Smoke Tests @smoke', () => {
     try {
       await basePage.expectPath('/signup');
       // 계정명 6자리수 랜덤 숫자 생성
-      const randomName = `테스트계정${Math.floor(Math.random() * 1000000)}`;
+      const randomName = `테스트계정${Math.floor(Math.random() * 10000)}`;
       await page.getByRole('textbox', { name: '이름을 입력하세요' }).fill(randomName);
       await page.getByRole('combobox').click();
       await page.getByRole('option', { name: 'AI' }).click();
