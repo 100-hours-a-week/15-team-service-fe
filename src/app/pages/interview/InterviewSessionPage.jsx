@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -21,22 +22,80 @@ export function InterviewSessionPage() {
 
   const hasMic = true;
   const isListening = false;
-  const messages = [
+  const [messages, setMessages] = useState([
     {
       type: 'question',
       text: SAMPLE_QUESTIONS[0],
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
     },
-  ];
+  ]);
   const elapsedTime = 0;
   const isLoading = false;
-  const textInput = '';
+  const [textInput, setTextInput] = useState('');
+  const isComposing = useRef(false);
+  const isSubmitting = useRef(false);
 
   const handleAnswer = () => {};
-  const handleEnd = () => {};
-  const handleTextChange = () => {};
-  const handleKeyDown = () => {};
-  const handleTextSubmit = () => {};
+
+  const handleEnd = () => {
+    navigate('/interview/summary');
+  };
+
+  const handleTextChange = (e) => {
+    setTextInput(e.target.value);
+  };
+
+  const handleCompositionStart = () => {
+    isComposing.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    isComposing.current = false;
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing.current) {
+      e.preventDefault();
+      handleTextSubmit();
+    }
+  };
+
+  const handleTextSubmit = () => {
+    if (!textInput.trim() || isSubmitting.current) return;
+
+    isSubmitting.current = true;
+    const answerText = textInput.trim();
+
+    // 답변 추가
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: 'answer',
+        text: answerText,
+        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
+    setTextInput('');
+
+    // TODO: 다음 질문 로직 (목업용으로 간단히 추가)
+    setTimeout(() => {
+      setMessages((prev) => {
+        const questionCount = prev.filter((m) => m.type === 'question').length;
+        if (questionCount < SAMPLE_QUESTIONS.length) {
+          return [
+            ...prev,
+            {
+              type: 'question',
+              text: SAMPLE_QUESTIONS[questionCount],
+              timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+            },
+          ];
+        }
+        return prev;
+      });
+      isSubmitting.current = false;
+    }, 1000);
+  };
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -128,6 +187,8 @@ export function InterviewSessionPage() {
               value={textInput}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
               disabled={isListening}
               className="flex-1 min-h-[44px] max-h-[120px] p-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
               rows={1}

@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
-import { FileText, AlertCircle, Search, X } from 'lucide-react';
+import { FileText, AlertCircle, Search, X, Mic } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { BottomNav } from '../components/layout/BottomNav';
 import { DropdownMenu } from '../components/common/DropdownMenu';
@@ -105,10 +105,36 @@ export function HomePage() {
   });
 
   // Flatten pages into single array
-  const resumes = useMemo(() => {
+  const resumesFromApi = useMemo(() => {
     if (!resumesData?.pages) return [];
     return resumesData.pages.flatMap((page) => page.data || []);
   }, [resumesData]);
+
+  // TODO: 목업 데이터 - 나중에 제거
+  const mockResumes = [
+    {
+      id: 1,
+      name: '카카오 백엔드 인턴 지원용',
+      positionId: 1,
+      positionName: '백엔드',
+      updatedAt: '2025-02-10T10:30:00',
+    },
+    {
+      id: 2,
+      name: '네이버 프론트엔드 신입 지원용',
+      positionId: 2,
+      positionName: '프론트엔드',
+      updatedAt: '2025-02-08T14:20:00',
+    },
+    {
+      id: 3,
+      name: '토스 풀스택 개발자 지원용',
+      positionId: 3,
+      positionName: '풀스택',
+      updatedAt: '2025-02-05T09:15:00',
+    },
+  ];
+  const resumes = mockResumes; // TODO: 배포 전 resumesFromApi로 변경
 
   const displayName = profileData?.name ?? '사용자';
   const displayPosition = profileData
@@ -433,7 +459,15 @@ const ResumeCard = React.memo(({ resume }) => {
             onClick={handleViewResume}
           >
             <FileText className="w-4 h-4" strokeWidth={1.5} />
-            프로젝트 요약 보기
+            요약 보기
+          </Button>
+          <Button
+            variant="secondary"
+            className="flex-1"
+            onClick={() => navigate(`/interview/start?resumeId=${resume.id}`)}
+          >
+            <Mic className="w-4 h-4" strokeWidth={1.5} />
+            모의 면접
           </Button>
         </div>
       </div>

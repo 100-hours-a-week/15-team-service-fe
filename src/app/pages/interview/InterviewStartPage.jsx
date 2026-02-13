@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { StepProgress } from '../../components/common/StepProgress';
@@ -6,6 +7,7 @@ import { SelectGrid } from '../../components/common/SelectGrid';
 import { POSITIONS } from '@/app/constants';
 
 export function InterviewStartPage() {
+  const navigate = useNavigate();
   const showModal = false;
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -16,8 +18,14 @@ export function InterviewStartPage() {
 
   const handleUseResumeData = () => {};
   const handleManualInput = () => {};
-  const handleNext = () => {};
-  const handleStart = () => {};
+
+  const handleNext = () => {
+    setStep((prev) => prev + 1);
+  };
+
+  const handleStart = () => {
+    navigate('/interview/session', { state: { formData } });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
