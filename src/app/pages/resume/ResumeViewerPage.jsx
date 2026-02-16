@@ -375,22 +375,36 @@ export function ResumeViewerPage() {
       let htmlContent =
         "<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #111;\">";
 
-      // User information section at the top (if available)
+      // Personal information header (profile photo + name + phone)
       if (userInfo?.name) {
-        const userInfoParts = [userInfo.name];
-        if (userInfo.position) {
-          userInfoParts.push(userInfo.position);
-        }
-        if (userInfo.phone) {
-          userInfoParts.push(userInfo.phone);
-        }
-        const userInfoText = userInfoParts.join(' | ');
+        const hasPhoto = userInfo.profileImageUrl;
 
-        htmlContent += `
-          <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">
-            <p style="font-size: 9px; color: #666; margin: 0;">작성자: ${userInfoText}</p>
-          </div>
-        `;
+        if (hasPhoto) {
+          // Layout with profile photo (horizontal: photo left, text right)
+          htmlContent += `
+            <div style="display: flex; align-items: center; margin-bottom: 24px; padding-bottom: 16px;">
+              <div style="flex-shrink: 0; margin-right: 20px;">
+                <img
+                  src="${userInfo.profileImageUrl}"
+                  alt="프로필 사진"
+                  style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; display: block;"
+                />
+              </div>
+              <div style="flex: 1;">
+                <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #111;">${userInfo.name}</h1>
+                ${userInfo.phone ? `<p style="font-size: 16px; margin: 0; color: #333;">${userInfo.phone}</p>` : ''}
+              </div>
+            </div>
+          `;
+        } else {
+          // Layout without profile photo (text only)
+          htmlContent += `
+            <div style="margin-bottom: 24px; padding-bottom: 16px;">
+              <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #111;">${userInfo.name}</h1>
+              ${userInfo.phone ? `<p style="font-size: 16px; margin: 0; color: #333;">${userInfo.phone}</p>` : ''}
+            </div>
+          `;
+        }
       }
 
       if (resumeData?.name) {
@@ -424,14 +438,14 @@ export function ResumeViewerPage() {
 
       if (resumeData?.education && Array.isArray(resumeData.education)) {
         htmlContent +=
-          '<h3 style="font-size: 12px; font-weight: bold; margin: 12px 0 4px 0;">학력</h3>';
+          '<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 4px 0;">학력</h3>';
         htmlContent += '<div style="margin-left: 5px;">';
         resumeData.education.forEach((edu) => {
           let eduText = '';
           if (edu.degree) eduText += edu.degree;
           if (edu.school) eduText += ` | ${edu.school}`;
           if (edu.period) eduText += ` | ${edu.period}`;
-          htmlContent += `<p style="font-size: 10px; margin: 2px 0; color: #111;">${eduText}</p>`;
+          htmlContent += `<p style="font-size: 12px; margin: 2px 0; color: #111;">${eduText}</p>`;
         });
         htmlContent += '</div>';
       }
@@ -445,9 +459,9 @@ export function ResumeViewerPage() {
           if (exp.title) expText += `<strong>${exp.title}</strong>`;
           if (exp.company) expText += ` | ${exp.company}`;
           if (exp.period) expText += ` | ${exp.period}`;
-          htmlContent += `<p style="font-size: 10px; margin: 4px 0; font-weight: bold; color: #111;">${expText}</p>`;
+          htmlContent += `<p style="font-size: 12px; margin: 4px 0; font-weight: bold; color: #111;">${expText}</p>`;
           if (exp.description) {
-            htmlContent += `<p style="font-size: 10px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(exp.description)}</p>`;
+            htmlContent += `<p style="font-size: 12px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(exp.description)}</p>`;
           }
         });
         htmlContent += '</div>';
@@ -455,24 +469,24 @@ export function ResumeViewerPage() {
 
       if (resumeData?.skills && Array.isArray(resumeData.skills)) {
         htmlContent +=
-          '<h3 style="font-size: 12px; font-weight: bold; margin: 12px 0 4px 0;">기술 스택</h3>';
-        htmlContent += `<p style="font-size: 10px; margin-left: 5px; color: #111;">${resumeData.skills.join(
+          '<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 4px 0;">기술 스택</h3>';
+        htmlContent += `<p style="font-size: 12px; margin-left: 5px; color: #111;">${resumeData.skills.join(
           ', '
         )}</p>`;
       }
 
       if (resumeData?.projects && Array.isArray(resumeData.projects)) {
         htmlContent +=
-          '<h3 style="font-size: 12px; font-weight: bold; margin: 12px 0 18px 0;">프로젝트</h3>';
+          '<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 18px 0;">프로젝트</h3>';
         htmlContent += '<div style="margin-left: 5px;">';
         resumeData.projects.forEach((project) => {
           htmlContent += '<div style="margin-bottom: 22px;">';
           let projText = '';
           if (project.name) projText += `<strong>${project.name}</strong>`;
           if (project.period) projText += ` | ${project.period}`;
-          htmlContent += `<p style="font-size: 10px; margin: 14px 0 6px 0; font-weight: bold; color: #111;">${projText}</p>`;
+          htmlContent += `<p style="font-size: 12px; margin: 14px 0 6px 0; font-weight: bold; color: #111;">${projText}</p>`;
           if (project.description) {
-            htmlContent += `<p style="font-size: 10px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(
+            htmlContent += `<p style="font-size: 12px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(
               project.description
             )}</p>`;
           }
@@ -481,10 +495,10 @@ export function ResumeViewerPage() {
             const techText = Array.isArray(techStack)
               ? techStack.join(', ')
               : techStack;
-            htmlContent += `<p style="font-size: 9px; margin: 2px 0 8px 0; font-style: italic; color: #333;">기술: ${techText}</p>`;
+            htmlContent += `<p style="font-size: 11px; margin: 2px 0 8px 0; font-style: italic; color: #333;">기술: ${techText}</p>`;
           }
           if (project.repoUrl) {
-            htmlContent += `<p style="font-size: 9px; margin: 2px 0 10px 0; color: #333;">${project.repoUrl}</p>`;
+            htmlContent += `<p style="font-size: 11px; margin: 2px 0 10px 0; color: #333;">${project.repoUrl}</p>`;
           }
           htmlContent += '</div>';
         });
@@ -514,6 +528,22 @@ export function ResumeViewerPage() {
       const userPhone = userProfile?.phone
         ? formatPhoneNumber(userProfile.phone)
         : null;
+      const profileImageUrl = userProfile?.profileImageUrl || null;
+
+      // Preload profile image if exists (without crossOrigin to avoid CORS preflight)
+      if (profileImageUrl) {
+        try {
+          await new Promise((resolve) => {
+            const img = new Image();
+            // Note: Do NOT set crossOrigin here - let html2canvas handle it with useCORS
+            img.onload = () => resolve();
+            img.onerror = () => resolve(); // Continue without image
+            img.src = profileImageUrl;
+          });
+        } catch {
+          // Continue without image
+        }
+      }
 
       let resumeData;
       try {
@@ -539,6 +569,7 @@ export function ResumeViewerPage() {
         name: userName,
         position: userPositionName,
         phone: userPhone,
+        profileImageUrl: profileImageUrl,
       };
       const htmlContent = buildResumeHtml(normalizedData, userInfo);
       const imgData = await htmlToImage(htmlContent);
