@@ -6,9 +6,9 @@ import html2canvas from 'html2canvas';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf';
 import pdfWorkerSource from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?raw';
 import {
-  // Save,
+  Save,
   Download,
-  // MessageCircle,
+  MessageCircle,
   AlertCircle,
   X,
   RefreshCw,
@@ -16,17 +16,19 @@ import {
 import { toast } from '@/app/lib/toast';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
-// import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
+import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
 import { ParsedResumeViewer } from '../../components/features/ParsedResumeViewer';
 import { WarningDialog } from '../../components/modals/WarningDialog';
 import { Button } from '../../components/common/Button';
-// import { useChatbot } from '@/app/hooks/useChatbot';
+import { useChatbot } from '@/app/hooks/useChatbot';
 import {
   useResumeDetail,
   useResumeVersion,
 } from '@/app/hooks/queries/useResumeQueries';
-// import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
-// import { useGenerateResumePDF } from '@/app/hooks/mutations/useResumeMutations';
+import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
+import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
+import { formatPhoneNumber } from '@/app/lib/utils';
+import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
 
 /**
  * Parse resume content from backend JSON and convert to YAML for viewing/parsing.
@@ -84,6 +86,9 @@ export function ResumeViewerPage() {
     refetch: refetchDetail,
   } = useResumeDetail(resumeId);
 
+  const { data: userProfile } = useUserProfile();
+  const { data: positions = [] } = usePositions();
+
   const currentVersionNo = resumeDetail?.currentVersionNo || 1;
 
   const {
@@ -92,22 +97,15 @@ export function ResumeViewerPage() {
     refetch: refetchVersion,
   } = useResumeVersion(resumeId, currentVersionNo, {
     enabled: !!resumeDetail,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      if (status === 'QUEUED' || status === 'PROCESSING') {
-        return 3000;
-      }
-      return false;
-    },
   });
 
-  // const saveVersionMutation = useSaveResumeVersion();
+  const saveVersionMutation = useSaveResumeVersion();
 
   const [yamlContent, setYamlContent] = useState('');
   const [rawContent, setRawContent] = useState('');
   const [activeTab, setActiveTab] = useState('preview');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  // const [showChatbot, setShowChatbot] = useState(false);
+  const [showChatbot, setShowChatbot] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [pdfData, setPdfData] = useState(null);
@@ -243,46 +241,49 @@ export function ResumeViewerPage() {
     }
   }, []);
 
-  // const {
-  //   messages,
-  //   chatInput,
-  //   isUpdating,
-  //   isPaused,
-  //   onInputChange,
-  //   onSendMessage,
-  //   onTogglePause,
-  // } = useChatbot({
-  //   onUpdate: (content) => {
-  //     setYamlContent((prev) => prev + content);
-  //     setHasUnsavedChanges(true);
-  //   },
-  // });
+  const {
+    messages,
+    chatInput,
+    isUpdating,
+    isConnected,
+    onInputChange,
+    onSendMessage,
+  } = useChatbot({
+    resumeId,
+    onUpdate: (resumeData) => {
+      // Handle SSE event data (resume object)
+      if (resumeData) {
+        const yamlString = yaml.dump(resumeData, {
+          noRefs: true,
+          sortKeys: false,
+        });
+        setYamlContent(yamlString);
+        setHasUnsavedChanges(true);
+      }
+    },
+  });
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
   );
 
-  // const handleSave = useCallback(() => {
-  //   if (versionData?.status !== 'SUCCEEDED') {
-  //     toast.error('이력서 생성이 완료된 후 저장할 수 있습니다');
-  //     return;
-  //   }
-  //
-  //   saveVersionMutation.mutate(
-  //     { resumeId, versionNo: currentVersionNo },
-  //     {
-  //       onSuccess: () => {
-  //         setHasUnsavedChanges(false);
-  //       },
-  //     }
-  //   );
-  // }, [resumeId, currentVersionNo, versionData?.status, saveVersionMutation]);
+  const handleSave = useCallback(() => {
+    if (versionData?.status !== 'SUCCEEDED') {
+      toast.error('이력서 생성이 완료된 후 저장할 수 있습니다');
+      return;
+    }
 
-  // const handleSaveAndPreview = useCallback(() => {
-  //   handleSave();
-  //   setShowPreview(true);
-  // }, [handleSave]);
+    saveVersionMutation.mutate(
+      { resumeId, versionNo: currentVersionNo },
+      {
+        onSuccess: () => {
+          setHasUnsavedChanges(false);
+          toast.success('이력서가 저장되었습니다.');
+        },
+      }
+    );
+  }, [resumeId, currentVersionNo, versionData?.status, saveVersionMutation]);
 
   const handleSaveAndStay = useCallback(() => {
     setHasUnsavedChanges(false);
@@ -370,9 +371,27 @@ export function ResumeViewerPage() {
   }, []);
 
   const buildResumeHtml = useCallback(
-    (resumeData) => {
+    (resumeData, userInfo) => {
       let htmlContent =
         "<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #111;\">";
+
+      // User information section at the top (if available)
+      if (userInfo?.name) {
+        const userInfoParts = [userInfo.name];
+        if (userInfo.position) {
+          userInfoParts.push(userInfo.position);
+        }
+        if (userInfo.phone) {
+          userInfoParts.push(userInfo.phone);
+        }
+        const userInfoText = userInfoParts.join(' | ');
+
+        htmlContent += `
+          <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">
+            <p style="font-size: 9px; color: #666; margin: 0;">작성자: ${userInfoText}</p>
+          </div>
+        `;
+      }
 
       if (resumeData?.name) {
         htmlContent += `<h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0;">${resumeData.name}</h1>`;
@@ -487,6 +506,15 @@ export function ResumeViewerPage() {
 
       toast.loading('PDF 생성 중...', { id: 'pdf-loading' });
 
+      // Prepare user information for PDF
+      const userName = userProfile?.name || '';
+      const userPositionId = userProfile?.positionId;
+      const userPositionName =
+        positions.find((p) => p.id === userPositionId)?.name || '';
+      const userPhone = userProfile?.phone
+        ? formatPhoneNumber(userProfile.phone)
+        : null;
+
       let resumeData;
       try {
         resumeData = yaml.load(yamlContent);
@@ -507,7 +535,12 @@ export function ResumeViewerPage() {
         resumeData?.resume && typeof resumeData.resume === 'object'
           ? { ...resumeData, ...resumeData.resume }
           : resumeData;
-      const htmlContent = buildResumeHtml(normalizedData);
+      const userInfo = {
+        name: userName,
+        position: userPositionName,
+        phone: userPhone,
+      };
+      const htmlContent = buildResumeHtml(normalizedData, userInfo);
       const imgData = await htmlToImage(htmlContent);
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -614,7 +647,14 @@ export function ResumeViewerPage() {
         error instanceof Error ? error.message : String(error);
       toast.error(`PDF 생성 중 오류가 발생했습니다: ${errorMessage}`);
     }
-  }, [buildResumeHtml, htmlToImage, yamlContent, pdfUrl]);
+  }, [
+    buildResumeHtml,
+    htmlToImage,
+    yamlContent,
+    pdfUrl,
+    userProfile,
+    positions,
+  ]);
 
   const status = versionData?.status;
   const isProcessing = status === 'QUEUED' || status === 'PROCESSING';
@@ -725,16 +765,18 @@ export function ResumeViewerPage() {
         showBack
         action={
           <div className="flex items-center gap-0">
-            {/* <button
-              onClick={handleSaveAndPreview}
-              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            <button
+              type="button"
+              onClick={handleSave}
+              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="이력서 저장"
             >
               <Save className="w-5 h-5 text-gray-900" strokeWidth={1.5} />
-            </button> */}
+            </button>
             <button
+              type="button"
               onClick={handleExportPDF}
-              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="PDF 다운로드"
             >
               <Download className="w-5 h-5 text-gray-900" strokeWidth={1.5} />
@@ -796,17 +838,17 @@ export function ResumeViewerPage() {
             </div>
           )}
 
-          {/* <button
+          <button
             onClick={() => setShowChatbot(true)}
             className="fixed bottom-24 right-[calc(50%-195px+20px)] w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center z-10"
             aria-label="AI 챗봇 열기"
           >
             <MessageCircle className="w-6 h-6" strokeWidth={1.5} />
-          </button> */}
+          </button>
         </div>
       </div>
 
-      {/* <ChatbotBottomSheet
+      <ChatbotBottomSheet
         isOpen={showChatbot}
         onClose={() => setShowChatbot(false)}
         messages={messages}
@@ -814,9 +856,8 @@ export function ResumeViewerPage() {
         onInputChange={onInputChange}
         onSendMessage={onSendMessage}
         isUpdating={isUpdating}
-        isPaused={isPaused}
-        onTogglePause={onTogglePause}
-      /> */}
+        isConnected={isConnected}
+      />
 
       {showPDFViewer && pdfUrl && (
         <>
