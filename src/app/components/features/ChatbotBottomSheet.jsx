@@ -209,7 +209,11 @@ export const ChatbotBottomSheet = ({
         <Drawer.Overlay className="fixed inset-y-0 left-1/2 z-20 w-full max-w-[390px] -translate-x-1/2 bg-black/50" />
         <Drawer.Content
           className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-30 flex flex-col max-w-[390px] mx-auto w-full"
-          style={{ height: '70vh' }}
+          style={{
+            height: '70vh',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
+          }}
         >
           {/* Header */}
           <div className="p-5 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
@@ -384,7 +388,7 @@ export const ChatbotBottomSheet = ({
                 }}
                 onKeyDown={handleKeyDown}
                 disabled={isUpdating || !isConnected}
-                className="flex-1 min-h-[44px] max-h-[120px] p-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 min-h-[44px] max-h-[120px] p-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-sm"
                 rows={1}
                 maxLength={MAX_INPUT_LENGTH}
               />
