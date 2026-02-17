@@ -68,6 +68,29 @@ export const useChatbot = (options = {}) => {
         console.warn('[useChatbot] Task ID mismatch - ignoring event');
       }
     },
+    onEditFailed: (eventData) => {
+      // Only handle if it matches our active task
+      if (eventData.taskId === activeTaskIdRef.current) {
+        // Extract error details from SSE payload
+        const errorMessage =
+          eventData.errorMessage || '알 수 없는 오류가 발생했습니다';
+
+        // Add AI error message to chat
+        appendMessage(
+          'assistant',
+          `죄송합니다. 수정 작업 중 문제가 발생했습니다. 재시도해주세요.\n${errorMessage}.`
+        );
+
+        // Show error toast
+        toast.error(`이력서 수정 실패: ${errorMessage}`);
+
+        // Reset state
+        setIsUpdating(false);
+        activeTaskIdRef.current = null;
+      } else {
+        console.warn('[useChatbot] Task ID mismatch - ignoring failed event');
+      }
+    },
   });
 
   // Edit resume mutation (PATCH /resumes/{id})
@@ -77,18 +100,26 @@ export const useChatbot = (options = {}) => {
       // Store task ID to match with SSE event
       activeTaskIdRef.current = data.taskId;
       setIsUpdating(true);
+
+      // Add AI acknowledgment message immediately
+      appendMessage('assistant', '확인했습니다. 수정 시작하겠습니다.');
     },
     onError: (error) => {
       console.error('[useChatbot] PATCH request error:', error);
       const errorCode = error.response?.data?.code;
       const errorMessage = error.response?.data?.message;
 
+      // Add error message to chat instead of toast
       if (errorCode === 'RESUME_EDIT_IN_PROGRESS') {
-        toast.error(
-          '이미 수정 중인 작업이 있습니다. 완료 후 다시 시도해주세요.'
+        appendMessage(
+          'assistant',
+          '죄송합니다. 이미 수정 중인 작업이 있습니다. 완료 후 다시 시도해주세요.'
         );
       } else {
-        toast.error(errorMessage || '수정 요청에 실패했습니다.');
+        appendMessage(
+          'assistant',
+          `죄송합니다. 요청 처리 중 문제가 발생했습니다.\n${errorMessage || '알 수 없는 오류가 발생했습니다.'}`
+        );
       }
 
       setIsUpdating(false);

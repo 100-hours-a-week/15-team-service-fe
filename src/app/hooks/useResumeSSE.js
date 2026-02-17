@@ -7,18 +7,21 @@ import { API_CONFIG } from '@/app/api/config';
  * @param {number | null} resumeId - Resume ID to subscribe to (null = no subscription)
  * @param {Object} options
  * @param {Function} options.onEditComplete - Callback for resume-edit-complete event
+ * @param {Function} options.onEditFailed - Callback for resume-edit-failed event
  * @returns {{ isConnected: boolean }}
  */
 export function useResumeSSE(resumeId, options = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const clientRef = useRef(null);
-  const { onEditComplete } = options;
+  const { onEditComplete, onEditFailed } = options;
 
   // Prevent stale closure - store latest callback in ref
   const onEditCompleteRef = useRef(onEditComplete);
+  const onEditFailedRef = useRef(onEditFailed);
   useEffect(() => {
     onEditCompleteRef.current = onEditComplete;
-  }, [onEditComplete]);
+    onEditFailedRef.current = onEditFailed;
+  }, [onEditComplete, onEditFailed]);
 
   useEffect(() => {
     if (!resumeId) {
@@ -41,6 +44,11 @@ export function useResumeSSE(resumeId, options = {}) {
     // Listen for resume-edit-complete events
     client.addEventListener('resume-edit-complete', (eventData) => {
       onEditCompleteRef.current?.(eventData);
+    });
+
+    // Listen for resume-edit-failed events
+    client.addEventListener('resume-edit-failed', (eventData) => {
+      onEditFailedRef.current?.(eventData);
     });
 
     client.connect();

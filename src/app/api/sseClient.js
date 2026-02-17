@@ -22,7 +22,6 @@ export class SSEClient {
     };
 
     this.eventSource.onerror = (error) => {
-      console.error('[SSEClient] Connection error:', error);
       this.isConnected = false;
       this.onError?.(error);
     };
