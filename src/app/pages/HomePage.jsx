@@ -327,8 +327,8 @@ const ResumeCard = React.memo(({ resume }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleViewResume = useCallback(() => {
-    navigate(`/resume/${resume.id}`);
-  }, [navigate, resume.id]);
+    navigate(`/resume/${resume.resumeId || resume.id}`);
+  }, [navigate, resume]);
 
   const handleResumeNameEdit = useCallback(
     (e) => {
