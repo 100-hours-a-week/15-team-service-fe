@@ -50,6 +50,13 @@ export const API_CONFIG = {
     // Uploads
     UPLOADS: '/uploads',
     UPLOAD_BY_ID: (id) => `/uploads/${id}`,
+
+    // Notifications
+    NOTIFICATIONS_STREAM: '/notifications/stream',
+    NOTIFICATIONS: '/notifications',
+    NOTIFICATIONS_BADGE: '/notifications/badge',
+    NOTIFICATIONS_SEEN: '/notifications/seen',
+    NOTIFICATION_READ: (id) => `/notifications/${id}/read`,
   },
   TIMEOUT: 30000,
   STREAMING_TIMEOUT: 300000,
