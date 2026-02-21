@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Bell, FileText, MessageSquare, Loader2 } from 'lucide-react';
 import { Drawer } from 'vaul';
-import { useNotificationSSE } from '@/app/hooks/useNotificationSSE';
+import { useNotificationContext } from '@/app/hooks/useNotificationSSE';
 import { useNotifications } from '@/app/hooks/queries/useNotificationQueries';
 import {
   useNotificationSeen,
@@ -24,7 +24,7 @@ export function NotificationSheet() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { hasNew, clearBadge } = useNotificationSSE();
+  const { hasNew, clearBadge } = useNotificationContext();
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useNotifications(isOpen);
   const seenMutation = useNotificationSeen();
@@ -45,9 +45,8 @@ export function NotificationSheet() {
     const latestId = data?.pages[0]?.latestId;
     if (latestId && !didCallSeenRef.current) {
       didCallSeenRef.current = true;
-      seenMutateRef.current(latestId, {
-        onSuccess: () => clearBadge(),
-      });
+      clearBadge();
+      seenMutateRef.current(latestId);
     }
   }, [isOpen, data?.pages, clearBadge]);
 

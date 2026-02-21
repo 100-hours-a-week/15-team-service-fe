@@ -1,8 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { API_CONFIG } from '@/app/api/config';
 import { fetchNotificationBadge } from '@/app/api/endpoints/notifications';
+
+/** Global context so RootLayout can host the single SSE connection. */
+export const NotificationContext = createContext({
+  hasNew: false,
+  clearBadge: () => {},
+});
+
+/** Consume the SSE badge state provided by RootLayout. */
+export const useNotificationContext = () => useContext(NotificationContext);
 
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
 
