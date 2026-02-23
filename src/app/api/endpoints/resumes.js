@@ -31,7 +31,6 @@ export const fetchResumes = async ({
   const response = await apiClient.get(API_CONFIG.ENDPOINTS.RESUMES, {
     params,
   });
-
   // Response structure: { code, message, data: { data: [], before: null, next: string | null } }
   return response.data.data;
 };

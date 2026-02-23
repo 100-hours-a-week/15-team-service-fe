@@ -124,6 +124,7 @@ export function ResumeViewerPage() {
       const parsed = parseResumeContent(versionData.content);
       setYamlContent(parsed);
       setRawContent(versionData.content);
+      setHasUnsavedChanges(versionData.committedAt === null);
     }
   }, [versionData]);
 
@@ -258,6 +259,7 @@ export function ResumeViewerPage() {
           sortKeys: false,
         });
         setYamlContent(yamlString);
+        setRawContent(JSON.stringify(resumeData));
         setHasUnsavedChanges(true);
       }
     },
