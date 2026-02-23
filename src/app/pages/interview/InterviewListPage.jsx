@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from '@/app/lib/toast';
@@ -22,55 +22,160 @@ import {
   FILTER_ALL_LABEL,
 } from '@/app/constants';
 import { cn } from '@/app/lib/utils';
+import { useInterviews } from '@/app/hooks/queries/useInterviewQueries';
+import {
+  useDeleteInterview,
+  useRenameInterview,
+} from '@/app/hooks/mutations/useInterviewMutations';
 
-/**
- * @typedef {import('@/app/types').Interview} Interview
- * @typedef {import('@/app/types').InterviewType} InterviewType
- * @typedef {import('@/app/types').SortOption} SortOption
- */
+const ITEMS_PER_PAGE = 10;
 
 export function InterviewListPage() {
-  const interviews = [
-    {
-      id: '1',
-      name: '2025-12-23_기술_백엔드_한화시스템',
-      date: '2025-12-23',
-      type: 'technical',
-      position: '백엔드',
-      company: '한화시스템',
-    },
-    {
-      id: '2',
-      name: '2025-12-22_인성_백엔드_미지정',
-      date: '2025-12-22',
-      type: 'personality',
-      position: '백엔드',
-      company: '',
-    },
-  ];
+  const navigate = useNavigate();
 
-  const filterType = 'all';
-  const filterPosition = 'all';
-  const filterCompany = 'all';
-  const filterSort = 'newest';
-  const currentPage = 1;
-  const isFilterOpen = false;
+  const [filterType, setFilterType] = useState('all');
+  const [filterPosition, setFilterPosition] = useState('all');
+  const [filterCompany, setFilterCompany] = useState('all');
+  const [filterSort, setFilterSort] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const uniqueCompanies = [];
-  const filteredAndSortedInterviews = interviews;
-  const totalPages = 1;
-  const paginatedInterviews = interviews;
-  const pageNumbers = [1];
+  const { data, isLoading, error } = useInterviews();
+  const deleteInterviewMutation = useDeleteInterview();
 
-  const activeFilterCount = 0;
+  const interviews = data?.data || [];
 
-  const handleTypeChange = () => {};
-  const handlePositionChange = () => {};
-  const handleCompanyChange = () => {};
-  const handleSortChange = () => {};
-  const handleResetFilters = () => {};
-  const handlePageChange = () => {};
-  const handleDeleteInterview = () => {};
+  const uniqueCompanies = useMemo(() => {
+    const companies = interviews
+      .map((i) => i.companyName)
+      .filter((c) => c && c.trim());
+    return [...new Set(companies)];
+  }, [interviews]);
+
+  const filteredAndSortedInterviews = useMemo(() => {
+    let result = [...interviews];
+
+    // Filter by type
+    if (filterType !== 'all') {
+      result = result.filter((i) => {
+        const type = i.interviewType?.toLowerCase();
+        if (filterType === 'technical') return type === 'technical';
+        if (filterType === 'personality') return type === 'behavioral';
+        return true;
+      });
+    }
+
+    // Filter by position
+    if (filterPosition !== 'all') {
+      result = result.filter((i) => i.positionName === filterPosition);
+    }
+
+    // Filter by company
+    if (filterCompany !== 'all') {
+      result = result.filter((i) => i.companyName === filterCompany);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      if (filterSort === 'newest') {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      } else if (filterSort === 'oldest') {
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      } else if (filterSort === 'name') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      return 0;
+    });
+
+    return result;
+  }, [interviews, filterType, filterPosition, filterCompany, filterSort]);
+
+  const totalPages = Math.ceil(filteredAndSortedInterviews.length / ITEMS_PER_PAGE);
+  const paginatedInterviews = filteredAndSortedInterviews.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - 1 && i <= currentPage + 1)
+      ) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== 'ellipsis') {
+        pages.push('ellipsis');
+      }
+    }
+    return pages;
+  }, [totalPages, currentPage]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterType !== 'all') count++;
+    if (filterPosition !== 'all') count++;
+    if (filterCompany !== 'all') count++;
+    return count;
+  }, [filterType, filterPosition, filterCompany]);
+
+  const handleTypeChange = (type) => {
+    setFilterType(type);
+    setCurrentPage(1);
+  };
+
+  const handlePositionChange = (position) => {
+    setFilterPosition(position);
+    setCurrentPage(1);
+  };
+
+  const handleCompanyChange = (company) => {
+    setFilterCompany(company);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (sort) => {
+    setFilterSort(sort);
+  };
+
+  const handleResetFilters = () => {
+    setFilterType('all');
+    setFilterPosition('all');
+    setFilterCompany('all');
+    setFilterSort('newest');
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleDeleteInterview = async (id) => {
+    try {
+      await deleteInterviewMutation.mutateAsync(id);
+    } catch (error) {
+      console.error('Failed to delete interview:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20 flex items-center justify-center">
+        <p className="text-red-500">면접 목록을 불러오는데 실패했습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -79,7 +184,7 @@ export function InterviewListPage() {
         <div className="max-w-[390px] mx-auto flex items-center justify-between">
           <h1>면접 목록</h1>
           <button
-            onClick={() => {}}
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
             className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-gray-200 rounded-xl min-h-[44px] min-w-[44px] hover:border-primary transition-colors"
             aria-label="필터"
           >
@@ -175,38 +280,40 @@ export function InterviewListPage() {
               </div>
 
               {/* Company Filter (Data-driven) */}
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">
-                  회사
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => handleCompanyChange('all')}
-                    className={cn(
-                      'px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]',
-                      filterCompany === 'all'
-                        ? 'border-primary bg-blue-50 text-primary'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    )}
-                  >
-                    {FILTER_ALL_LABEL}
-                  </button>
-                  {uniqueCompanies.map((company) => (
+              {uniqueCompanies.length > 0 && (
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    회사
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
-                      key={company}
-                      onClick={() => handleCompanyChange(company)}
+                      onClick={() => handleCompanyChange('all')}
                       className={cn(
                         'px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]',
-                        filterCompany === company
+                        filterCompany === 'all'
                           ? 'border-primary bg-blue-50 text-primary'
                           : 'border-gray-200 bg-white hover:border-gray-300'
                       )}
                     >
-                      {company}
+                      {FILTER_ALL_LABEL}
                     </button>
-                  ))}
+                    {uniqueCompanies.map((company) => (
+                      <button
+                        key={company}
+                        onClick={() => handleCompanyChange(company)}
+                        className={cn(
+                          'px-3 py-2 text-sm rounded-xl border transition-all min-h-[44px]',
+                          filterCompany === company
+                            ? 'border-primary bg-blue-50 text-primary'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        )}
+                      >
+                        {company}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Sort Filter */}
               <div>
@@ -278,7 +385,6 @@ export function InterviewListPage() {
           <div className="max-w-[390px] mx-auto">
             <Pagination>
               <PaginationContent>
-                {/* Previous Button */}
                 <PaginationItem>
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
@@ -295,7 +401,6 @@ export function InterviewListPage() {
                   </button>
                 </PaginationItem>
 
-                {/* Page Numbers */}
                 {pageNumbers.map((pageNum, index) => (
                   <PaginationItem key={`page-${index}`}>
                     {pageNum === 'ellipsis' ? (
@@ -320,7 +425,6 @@ export function InterviewListPage() {
                   </PaginationItem>
                 ))}
 
-                {/* Next Button */}
                 <PaginationItem>
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
@@ -347,25 +451,24 @@ export function InterviewListPage() {
   );
 }
 
-/**
- * @typedef {Object} InterviewCardProps
- * @property {Interview} interview
- * @property {(id: string) => void} onDelete
- */
-
-/**
- * @param {InterviewCardProps} props
- */
 const InterviewCard = React.memo(
   ({ interview, onDelete }) => {
     const navigate = useNavigate();
-    /** @type {[string | null, React.Dispatch<React.SetStateAction<string | null>>]} */
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    const handleNameChange = useCallback((_e) => {
-      // 내용명 변경 로직
-    }, []);
+    const renameInterviewMutation = useRenameInterview();
+
+    const handleNameChange = useCallback(
+      (e) => {
+        e.stopPropagation();
+        const newName = prompt('새 이름을 입력하세요:', interview.name);
+        if (newName && newName !== interview.name) {
+          renameInterviewMutation.mutate({ id: interview.id, name: newName });
+        }
+      },
+      [interview.id, interview.name, renameInterviewMutation]
+    );
 
     const handleDelete = useCallback(
       (e) => {
@@ -381,7 +484,6 @@ const InterviewCard = React.memo(
       onDelete(deleteTarget);
       setIsDeleteDialogOpen(false);
       setDeleteTarget(null);
-      toast.success('면접 기록이 삭제되었습니다');
     }, [deleteTarget, onDelete]);
 
     const handleCancelDelete = useCallback(() => {
@@ -395,7 +497,7 @@ const InterviewCard = React.memo(
 
     const menuItems = [
       {
-        label: '내용명 변경',
+        label: '이름 변경',
         onClick: handleNameChange,
       },
       {
@@ -404,6 +506,24 @@ const InterviewCard = React.memo(
         variant: 'danger',
       },
     ];
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+    };
+
+    const getTypeLabel = (type) => {
+      if (!type) return '';
+      const lowerType = type.toLowerCase();
+      if (lowerType === 'technical') return '기술';
+      if (lowerType === 'behavioral') return '인성';
+      return type;
+    };
 
     return (
       <>
@@ -416,7 +536,7 @@ const InterviewCard = React.memo(
               <h4 className="mb-1 truncate">{interview.name}</h4>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Calendar className="w-4 h-4" strokeWidth={1.5} />
-                <span>{interview.date}</span>
+                <span>{formatDate(interview.createdAt)}</span>
               </div>
             </div>
 
@@ -426,19 +546,21 @@ const InterviewCard = React.memo(
           <div className="flex items-center gap-2 text-sm">
             <span
               className={`px-3 py-1 rounded-full ${
-                interview.type === 'technical'
+                interview.interviewType?.toLowerCase() === 'technical'
                   ? 'bg-purple-50 text-purple-700'
                   : 'bg-green-50 text-green-700'
               }`}
             >
-              {interview.type === 'technical' ? '기술' : '인성'}
+              {getTypeLabel(interview.interviewType)}
             </span>
-            <span className="px-3 py-1 bg-blue-50 text-primary rounded-full">
-              {interview.position}
-            </span>
-            {interview.company && (
+            {interview.positionName && (
+              <span className="px-3 py-1 bg-blue-50 text-primary rounded-full">
+                {interview.positionName}
+              </span>
+            )}
+            {interview.companyName && (
               <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full">
-                {interview.company}
+                {interview.companyName}
               </span>
             )}
           </div>
@@ -449,7 +571,7 @@ const InterviewCard = React.memo(
           onClose={handleCancelDelete}
           onConfirm={handleConfirmDelete}
           title="면접 기록 삭제"
-          description="정말 이력서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+          description="정말 면접 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
           confirmText="삭제"
         />
       </>

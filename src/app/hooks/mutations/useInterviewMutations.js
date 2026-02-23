@@ -6,10 +6,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/app/lib/toast';
 import {
-  startInterview,
+  createInterview,
   submitInterviewAnswer,
-  completeInterview,
+  endInterview,
   deleteInterview,
+  renameInterview,
 } from '@/app/api/endpoints/interviews';
 import { interviewKeys } from '../queries/useInterviewQueries';
 
@@ -19,7 +20,7 @@ import { interviewKeys } from '../queries/useInterviewQueries';
  */
 export function useStartInterview() {
   return useMutation({
-    mutationFn: startInterview,
+    mutationFn: createInterview,
     onSuccess: () => {
       toast.success('면접이 시작되었습니다.');
     },
@@ -35,8 +36,8 @@ export function useStartInterview() {
  */
 export function useSubmitInterviewAnswer() {
   return useMutation({
-    mutationFn: ({ sessionId, answer, audioFile }) =>
-      submitInterviewAnswer(sessionId, { answer, audioFile }),
+    mutationFn: ({ interviewId, turnNo, answer, answerInputType }) =>
+      submitInterviewAnswer(interviewId, { turnNo, answer, answerInputType }),
     onError: () => {
       toast.error('답변 제출에 실패했습니다.');
     },
@@ -51,13 +52,9 @@ export function useCompleteInterview() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: completeInterview,
-    onSuccess: (completedInterview) => {
+    mutationFn: endInterview,
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
-      queryClient.setQueryData(
-        interviewKeys.detail(completedInterview.id),
-        completedInterview
-      );
       toast.success('면접이 완료되었습니다.');
     },
     onError: () => {
@@ -75,7 +72,6 @@ export function useDeleteInterview() {
 
   return useMutation({
     mutationFn: deleteInterview,
-    // Optimistic update
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: interviewKeys.lists() });
       const previousList = queryClient.getQueryData(interviewKeys.lists());
@@ -83,9 +79,8 @@ export function useDeleteInterview() {
       if (previousList) {
         queryClient.setQueryData(interviewKeys.lists(), (old) => ({
           ...old,
-          interviews:
-            old.interviews?.filter((interview) => interview.id !== id) || [],
-          total: (old.total || 0) - 1,
+          data:
+            old.data?.filter((interview) => interview.id !== id) || [],
         }));
       }
 
@@ -95,7 +90,6 @@ export function useDeleteInterview() {
       toast.success('면접 기록이 삭제되었습니다.');
     },
     onError: (error, id, context) => {
-      // Rollback
       if (context?.previousList) {
         queryClient.setQueryData(interviewKeys.lists(), context.previousList);
       }
@@ -103,6 +97,25 @@ export function useDeleteInterview() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
+    },
+  });
+}
+
+/**
+ * Rename interview mutation
+ * @returns {UseMutationResult} Mutation result
+ */
+export function useRenameInterview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, name }) => renameInterview(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
+      toast.success('면접 이름이 변경되었습니다.');
+    },
+    onError: () => {
+      toast.error('면접 이름 변경에 실패했습니다.');
     },
   });
 }

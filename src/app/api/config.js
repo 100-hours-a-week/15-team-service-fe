@@ -28,11 +28,11 @@ export const API_CONFIG = {
     // Interviews
     INTERVIEWS: '/interviews',
     INTERVIEW_BY_ID: (id) => `/interviews/${id}`,
-    INTERVIEW_SESSION: '/interviews/session',
-    INTERVIEW_SUBMIT_ANSWER: (sessionId) =>
-      `/interviews/session/${sessionId}/answer`,
-    INTERVIEW_COMPLETE: (sessionId) =>
-      `/interviews/session/${sessionId}/complete`,
+    INTERVIEW_TYPES: '/interviews/types',
+    INTERVIEW_STREAM: (id) => `/interviews/${id}/stream`,
+    INTERVIEW_MESSAGES: (id) => `/interviews/${id}/messages`,
+    INTERVIEW_END: (id) => `/interviews/${id}/end`,
+    INTERVIEW_RENAME: (id) => `/interviews/${id}/name`,
 
     // Repositories
     REPOSITORIES: '/repositories',

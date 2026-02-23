@@ -4,7 +4,8 @@ import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { StepProgress } from '../../components/common/StepProgress';
 import { SelectGrid } from '../../components/common/SelectGrid';
-import { POSITIONS } from '@/app/constants';
+import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
+import { useStartInterview } from '@/app/hooks/mutations/useInterviewMutations';
 
 export function InterviewStartPage() {
   const navigate = useNavigate();
@@ -12,19 +13,64 @@ export function InterviewStartPage() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     type: '',
-    position: '',
+    positionId: null,
+    positionName: '',
     company: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: positionsData } = usePositions();
+  const positions = positionsData?.data || [];
+  const positionNames = positions.map((p) => p.name);
+
+  const startInterviewMutation = useStartInterview();
 
   const handleUseResumeData = () => {};
   const handleManualInput = () => {};
 
   const handleNext = () => {
+<<<<<<< Updated upstream
     setStep((prev) => prev + 1);
   };
 
   const handleStart = () => {
     navigate('/interview/session', { state: { formData } });
+=======
+    if (step < 3) setStep(step + 1);
+  };
+
+  const handleStart = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        interviewType: formData.type === 'personality' ? 'BEHAVIORAL' : 'TECHNICAL',
+        positionId: formData.positionId,
+        companyId: null,
+      };
+
+      const result = await startInterviewMutation.mutateAsync(payload);
+      const interviewId = result?.data?.id;
+
+      if (interviewId) {
+        navigate(`/interview/session/${interviewId}`);
+      }
+    } catch (error) {
+      console.error('Failed to start interview:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePositionSelect = (posName) => {
+    const selectedPosition = positions.find((p) => p.name === posName);
+    setFormData({
+      ...formData,
+      positionName: posName,
+      positionId: selectedPosition?.id || null,
+    });
+>>>>>>> Stashed changes
   };
 
   return (
@@ -124,16 +170,16 @@ export function InterviewStartPage() {
               </div>
 
               <SelectGrid
-                items={POSITIONS}
-                selected={formData.position}
-                onSelect={(pos) => setFormData({ ...formData, position: pos })}
+                items={positionNames}
+                selected={formData.positionName}
+                onSelect={handlePositionSelect}
               />
 
               <Button
                 variant="primary"
                 fullWidth
                 onClick={handleNext}
-                disabled={!formData.position}
+                disabled={!formData.positionId}
               >
                 다음
               </Button>
@@ -166,7 +212,7 @@ export function InterviewStartPage() {
                   </p>
                   <p>
                     <span className="text-gray-600">포지션:</span>{' '}
-                    {formData.position}
+                    {formData.positionName}
                   </p>
                   <p>
                     <span className="text-gray-600">기업:</span>{' '}
@@ -176,8 +222,13 @@ export function InterviewStartPage() {
               </div>
 
               <div className="space-y-3">
-                <Button variant="primary" fullWidth onClick={handleStart}>
-                  면접 시작
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleStart}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '시작 중...' : '면접 시작'}
                 </Button>
                 <Button variant="ghost" fullWidth onClick={() => setStep(2)}>
                   이전

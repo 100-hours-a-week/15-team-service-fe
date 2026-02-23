@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchInterviews,
   fetchInterviewById,
+  fetchInterviewTypes,
 } from '@/app/api/endpoints/interviews';
 
 /**
@@ -19,6 +20,7 @@ export const interviewKeys = {
   list: (filters) => [...interviewKeys.lists(), filters],
   details: () => [...interviewKeys.all, 'detail'],
   detail: (id) => [...interviewKeys.details(), id],
+  types: () => [...interviewKeys.all, 'types'],
 };
 
 /**
@@ -48,5 +50,17 @@ export function useInterview(id, options = {}) {
     enabled: !!id,
     staleTime: 1000 * 60 * 5, // 5분
     ...options,
+  });
+}
+
+/**
+ * Fetch interview types
+ * @returns {UseQueryResult} Query result with interview types
+ */
+export function useInterviewTypes() {
+  return useQuery({
+    queryKey: interviewKeys.types(),
+    queryFn: fetchInterviewTypes,
+    staleTime: 1000 * 60 * 60, // 1시간
   });
 }
