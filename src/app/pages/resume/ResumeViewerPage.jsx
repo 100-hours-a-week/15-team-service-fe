@@ -258,6 +258,7 @@ export function ResumeViewerPage() {
           sortKeys: false,
         });
         setYamlContent(yamlString);
+        setRawContent(JSON.stringify(resumeData));
         setHasUnsavedChanges(true);
       }
     },
