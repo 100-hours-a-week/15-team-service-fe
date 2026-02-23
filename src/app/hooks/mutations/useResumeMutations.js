@@ -87,7 +87,6 @@ export function useSaveResumeVersion() {
       queryClient.invalidateQueries({
         queryKey: ['resume', resumeId, 'version', versionNo],
       });
-      toast.success('저장되었습니다.');
     },
     onError: (error) => {
       const errorCode = error.response?.data?.code;
