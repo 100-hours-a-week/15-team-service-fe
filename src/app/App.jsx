@@ -7,6 +7,10 @@ import {
 } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ensureCsrfToken } from './lib/utils';
+import {
+  useNotificationSSE,
+  NotificationContext,
+} from './hooks/useNotificationSSE';
 
 import { OnboardingPage } from './pages/auth/OnboardingPage';
 import { SignupPage } from './pages/auth/SignupPage';
@@ -29,34 +33,39 @@ function RootLayout() {
     ensureCsrfToken();
   }, []);
 
+  // Single SSE connection for the entire app — toast fires on any page
+  const notification = useNotificationSSE();
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div
-        id="app-container"
-        className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative"
-      >
-        <Outlet />
-        <Toaster
-          position="bottom-center"
-          toastOptions={{
-            style: {
-              backgroundColor: 'rgba(75, 85, 99, 0.8)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              color: '#FFFFFF',
-              border: 'none',
-              width: '320px',
-              position: 'absolute',
-              bottom: '60px',
-              left: 'calc(47%)',
-              transform: 'translateX(-50%)',
-            },
-            className: '!rounded-full !px-6',
-          }}
-          offset={80}
-        />
+    <NotificationContext.Provider value={notification}>
+      <div className="min-h-screen bg-gray-50">
+        <div
+          id="app-container"
+          className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative"
+        >
+          <Outlet />
+          <Toaster
+            position="bottom-center"
+            toastOptions={{
+              style: {
+                backgroundColor: 'rgba(75, 85, 99, 0.8)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                color: '#FFFFFF',
+                border: 'none',
+                width: '320px',
+                position: 'absolute',
+                bottom: '60px',
+                left: 'calc(47%)',
+                transform: 'translateX(-50%)',
+              },
+              className: '!rounded-full !px-6',
+            }}
+            offset={80}
+          />
+        </div>
       </div>
-    </div>
+    </NotificationContext.Provider>
   );
 }
 

@@ -416,6 +416,13 @@ export function ChatRoomListSheet() {
     return currentDate !== prevDate;
   };
 
+  // Open sheet via custom event dispatched by NotificationSheet (CHAT notification click)
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener('open-chat-sheet', handler);
+    return () => window.removeEventListener('open-chat-sheet', handler);
+  }, []);
+
   // Reset to list view when sheet is closed
   useEffect(() => {
     if (!isOpen) {
