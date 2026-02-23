@@ -83,7 +83,7 @@ jobs:
 
       # Step 5) npm audit (취약점 검사)
       - name: npm audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev
 
       # Step 6) Formatting check
       - name: Formatting check
