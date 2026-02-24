@@ -31,7 +31,6 @@ export const fetchResumes = async ({
   const response = await apiClient.get(API_CONFIG.ENDPOINTS.RESUMES, {
     params,
   });
-
   // Response structure: { code, message, data: { data: [], before: null, next: string | null } }
   return response.data.data;
 };
@@ -90,4 +89,18 @@ export const streamResumeChat = async (id, message, options) => {
     { message },
     options
   );
+};
+
+/**
+ * Edit resume with AI assistant (PATCH request)
+ * @param {number} resumeId - Resume ID
+ * @param {string} message - User edit request message
+ * @returns {Promise<{resumeId, versionNo, name, taskId, updatedAt}>}
+ */
+export const editResume = async (resumeId, message) => {
+  const response = await mutatingClient.patch(
+    API_CONFIG.ENDPOINTS.RESUME_EDIT(resumeId),
+    { message }
+  );
+  return response.data.data;
 };

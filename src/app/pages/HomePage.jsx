@@ -14,6 +14,7 @@ import { DropdownMenu } from '../components/common/DropdownMenu';
 import { ConfirmDialog } from '../components/modals/ConfirmDialog';
 import { EditTextDialog } from '../components/modals/EditTextDialog';
 import { ChatRoomListSheet } from '../components/features/ChatRoomListSheet';
+import { NotificationSheet } from '../components/features/NotificationSheet';
 import {
   Select,
   SelectContent,
@@ -195,6 +196,7 @@ export function HomePage() {
             </div>
             <div className="flex items-center gap-2">
               <ChatRoomListSheet />
+              <NotificationSheet />
             </div>
           </div>
         </div>
@@ -353,8 +355,8 @@ const ResumeCard = React.memo(({ resume }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleViewResume = useCallback(() => {
-    navigate(`/resume/${resume.id}`);
-  }, [navigate, resume.id]);
+    navigate(`/resume/${resume.resumeId || resume.id}`);
+  }, [navigate, resume]);
 
   const handleResumeNameEdit = useCallback(
     (e) => {

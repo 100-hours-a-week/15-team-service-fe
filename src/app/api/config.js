@@ -24,6 +24,8 @@ export const API_CONFIG = {
     RESUME_RENAME: (id) => `/resumes/${id}/name`,
     RESUME_VERSION: (id, versionNo) => `/resumes/${id}/versions/${versionNo}`,
     RESUME_AI_CHAT: (id) => `/resumes/${id}/chat`,
+    RESUME_EDIT: (id) => `/resumes/${id}`,
+    RESUME_SSE_STREAM: (id) => `/resumes/${id}/stream`,
 
     // Interviews
     INTERVIEWS: '/interviews',
@@ -48,6 +50,13 @@ export const API_CONFIG = {
     // Uploads
     UPLOADS: '/uploads',
     UPLOAD_BY_ID: (id) => `/uploads/${id}`,
+
+    // Notifications
+    NOTIFICATIONS_STREAM: '/notifications/stream',
+    NOTIFICATIONS: '/notifications',
+    NOTIFICATIONS_BADGE: '/notifications/badge',
+    NOTIFICATIONS_SEEN: '/notifications/seen',
+    NOTIFICATION_READ: (id) => `/notifications/${id}/read`,
   },
   TIMEOUT: 30000,
   STREAMING_TIMEOUT: 300000,
