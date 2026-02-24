@@ -37,8 +37,8 @@ export function useStartInterview() {
  */
 export function useSubmitInterviewAnswer() {
   return useMutation({
-    mutationFn: ({ interviewId, turnNo, answer, answerInputType }) =>
-      submitInterviewAnswer(interviewId, { turnNo, answer, answerInputType }),
+    mutationFn: ({ interviewId, turnNo, answer, answerInputType, audioUrl }) =>
+      submitInterviewAnswer(interviewId, { turnNo, answer, answerInputType, audioUrl }),
     onError: (error) => {
       const message = error?.response?.data?.message || '답변 제출에 실패했습니다. 다시 시도해주세요.';
       toast.error(message);

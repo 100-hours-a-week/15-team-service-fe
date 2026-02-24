@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Mic, MicOff, Send, WifiOff, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, Send, WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { cn } from '../../lib/utils';
 import { toast } from '@/app/lib/toast';
 import { useInterviewSSE } from '@/app/hooks/useInterviewSSE';
+import { useAudioRecorder } from '@/app/hooks/useAudioRecorder';
+import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
 import {
   useSubmitInterviewAnswer,
   useCompleteInterview,
@@ -19,16 +21,30 @@ export function InterviewSessionPage() {
   const [textInput, setTextInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [isListening, setIsListening] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [isEnding, setIsEnding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const messagesEndRef = useRef(null);
   const timerRef = useRef(null);
 
   const submitAnswerMutation = useSubmitInterviewAnswer();
   const endInterviewMutation = useCompleteInterview();
+
+  // Audio recording
+  const {
+    isRecording,
+    audioBlob,
+    duration: recordingDuration,
+    error: recordingError,
+    startRecording,
+    stopRecording,
+    resetRecording,
+    getAudioFile,
+  } = useAudioRecorder();
+
+  const { upload } = useUploadFile('INTERVIEW_AUDIO');
 
   const handleQuestion = useCallback((data) => {
     setMessages((prev) => [
@@ -101,6 +117,20 @@ export function InterviewSessionPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Show recording error
+  useEffect(() => {
+    if (recordingError) {
+      toast.error(recordingError);
+    }
+  }, [recordingError]);
+
+  // Handle audio submission when recording stops
+  useEffect(() => {
+    if (audioBlob && !isRecording) {
+      handleAudioSubmit();
+    }
+  }, [audioBlob, isRecording]);
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -150,9 +180,55 @@ export function InterviewSessionPage() {
     }
   };
 
-  const handleAnswer = () => {
-    // TODO: Implement voice recording
-    setIsListening(!isListening);
+  const handleAudioSubmit = async () => {
+    if (!audioBlob || !currentTurnNo || isSubmitting || isUploading) return;
+
+    const audioFile = getAudioFile();
+    if (!audioFile) return;
+
+    setIsUploading(true);
+
+    try {
+      // Upload audio to S3
+      const uploadResult = await upload(audioFile);
+      const audioUrl = `https://cdn.commit-me.com/${uploadResult.s3Key}`;
+
+      // Add answer to local messages
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: 'answer',
+          text: '[음성 답변]',
+          isAudio: true,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+
+      // Submit answer with audio URL
+      await submitAnswerMutation.mutateAsync({
+        interviewId: Number(interviewId),
+        turnNo: currentTurnNo,
+        answer: '[음성 답변]',
+        answerInputType: 'AUDIO',
+        audioUrl,
+      });
+
+      toast.success('음성 답변이 전송되었습니다.');
+    } catch (error) {
+      console.error('Failed to submit audio answer:', error);
+      toast.error('음성 답변 전송에 실패했습니다.');
+    } finally {
+      setIsUploading(false);
+      resetRecording();
+    }
+  };
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
   };
 
   const handleEndInterview = async () => {
@@ -278,7 +354,13 @@ export function InterviewSessionPage() {
       <div className="bg-white border-t border-gray-200 px-5 py-4">
         <div className="max-w-[390px] mx-auto flex flex-col gap-3">
           <p className="text-sm text-gray-600 text-center">
-            {isSubmitting ? '답변 전송 중...' : isListening ? '말하는 중...' : '답변을 입력하세요'}
+            {isUploading
+              ? '음성 업로드 중...'
+              : isSubmitting
+                ? '답변 전송 중...'
+                : isRecording
+                  ? `녹음 중... ${formatTime(recordingDuration)}`
+                  : '답변을 입력하세요'}
           </p>
 
           <div className="flex items-end gap-2">
@@ -287,17 +369,17 @@ export function InterviewSessionPage() {
               value={textInput}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
-              disabled={isListening || isSubmitting}
+              disabled={isRecording || isSubmitting || isUploading}
               className="flex-1 min-h-[44px] max-h-[120px] p-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
               rows={1}
             />
 
             <button
               onClick={handleTextSubmit}
-              disabled={!textInput.trim() || isListening || isSubmitting}
+              disabled={!textInput.trim() || isRecording || isSubmitting || isUploading}
               className={cn(
                 'p-3 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0',
-                textInput.trim() && !isListening && !isSubmitting
+                textInput.trim() && !isRecording && !isSubmitting && !isUploading
                   ? 'bg-primary text-white'
                   : 'bg-gray-200 text-gray-400'
               )}
@@ -306,11 +388,18 @@ export function InterviewSessionPage() {
             </button>
 
             <button
-              onClick={handleAnswer}
-              disabled={isSubmitting}
-              className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-50 flex-shrink-0"
+              onClick={handleMicClick}
+              disabled={isSubmitting || isUploading}
+              className={cn(
+                "w-16 h-16 rounded-full flex items-center justify-center disabled:opacity-50 flex-shrink-0 transition-colors",
+                isRecording
+                  ? "bg-red-500 text-white animate-pulse"
+                  : "bg-primary text-white"
+              )}
             >
-              {isListening ? (
+              {isUploading ? (
+                <Loader2 className="w-8 h-8 animate-spin" strokeWidth={1.5} />
+              ) : isRecording ? (
                 <MicOff className="w-8 h-8" strokeWidth={1.5} />
               ) : (
                 <Mic className="w-8 h-8" strokeWidth={1.5} />
