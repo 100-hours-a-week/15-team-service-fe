@@ -44,15 +44,9 @@ export const fetchInterviewById = async (id) => {
  * @param {number} payload.resumeVersionId - Resume version ID (optional)
  * @returns {Promise<Object>} - Created interview with aiSessionId
  */
-<<<<<<< Updated upstream
 export const startInterview = async (payload) => {
   const response = await mutatingClient.post(
-    API_CONFIG.ENDPOINTS.INTERVIEW_SESSION,
-=======
-export const createInterview = async (payload) => {
-  const response = await apiClient.post(
     API_CONFIG.ENDPOINTS.INTERVIEWS,
->>>>>>> Stashed changes
     payload
   );
   return response.data;
@@ -67,15 +61,9 @@ export const createInterview = async (payload) => {
  * @param {string} payload.answerInputType - Input type (TEXT, AUDIO)
  * @returns {Promise<Object>} - Response
  */
-<<<<<<< Updated upstream
-export const submitInterviewAnswer = async (sessionId, payload) => {
-  const response = await mutatingClient.post(
-    API_CONFIG.ENDPOINTS.INTERVIEW_SUBMIT_ANSWER(sessionId),
-=======
 export const submitInterviewAnswer = async (interviewId, payload) => {
-  const response = await apiClient.post(
+  const response = await mutatingClient.post(
     API_CONFIG.ENDPOINTS.INTERVIEW_MESSAGES(interviewId),
->>>>>>> Stashed changes
     payload
   );
   return response.data;
@@ -86,15 +74,9 @@ export const submitInterviewAnswer = async (interviewId, payload) => {
  * @param {number} interviewId - Interview ID
  * @returns {Promise<Object>} - Response with feedback
  */
-<<<<<<< Updated upstream
-export const completeInterview = async (sessionId) => {
+export const completeInterview = async (interviewId) => {
   const response = await mutatingClient.post(
-    API_CONFIG.ENDPOINTS.INTERVIEW_COMPLETE(sessionId)
-=======
-export const endInterview = async (interviewId) => {
-  const response = await apiClient.post(
     API_CONFIG.ENDPOINTS.INTERVIEW_END(interviewId)
->>>>>>> Stashed changes
   );
   return response.data;
 };

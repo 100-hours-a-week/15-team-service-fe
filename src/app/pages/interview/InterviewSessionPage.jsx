@@ -1,10 +1,5 @@
-<<<<<<< Updated upstream
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-=======
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
->>>>>>> Stashed changes
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { cn } from '../../lib/utils';
@@ -18,84 +13,6 @@ export function InterviewSessionPage() {
   const navigate = useNavigate();
   const { interviewId } = useParams();
 
-<<<<<<< Updated upstream
-  const hasMic = true;
-  const isListening = false;
-  const [messages, setMessages] = useState([
-    {
-      type: 'question',
-      text: SAMPLE_QUESTIONS[0],
-      timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
-  const elapsedTime = 0;
-  const isLoading = false;
-  const [textInput, setTextInput] = useState('');
-  const isComposing = useRef(false);
-  const isSubmitting = useRef(false);
-
-  const handleAnswer = () => {};
-
-  const handleEnd = () => {
-    navigate('/interview/summary');
-  };
-
-  const handleTextChange = (e) => {
-    setTextInput(e.target.value);
-  };
-
-  const handleCompositionStart = () => {
-    isComposing.current = true;
-  };
-
-  const handleCompositionEnd = () => {
-    isComposing.current = false;
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isComposing.current) {
-      e.preventDefault();
-      handleTextSubmit();
-    }
-  };
-
-  const handleTextSubmit = () => {
-    if (!textInput.trim() || isSubmitting.current) return;
-
-    isSubmitting.current = true;
-    const answerText = textInput.trim();
-
-    // 답변 추가
-    setMessages((prev) => [
-      ...prev,
-      {
-        type: 'answer',
-        text: answerText,
-        timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-    setTextInput('');
-
-    // TODO: 다음 질문 로직 (목업용으로 간단히 추가)
-    setTimeout(() => {
-      setMessages((prev) => {
-        const questionCount = prev.filter((m) => m.type === 'question').length;
-        if (questionCount < SAMPLE_QUESTIONS.length) {
-          return [
-            ...prev,
-            {
-              type: 'question',
-              text: SAMPLE_QUESTIONS[questionCount],
-              timestamp: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-            },
-          ];
-        }
-        return prev;
-      });
-      isSubmitting.current = false;
-    }, 1000);
-  };
-=======
   const [messages, setMessages] = useState([]);
   const [currentTurnNo, setCurrentTurnNo] = useState(null);
   const [textInput, setTextInput] = useState('');
@@ -181,7 +98,6 @@ export function InterviewSessionPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
->>>>>>> Stashed changes
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -256,23 +172,9 @@ export function InterviewSessionPage() {
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           <p>면접 질문을 준비 중입니다</p>
-<<<<<<< Updated upstream
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasMic) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-5">
-        <div className="text-center">
-          <p className="mb-4">마이크 권한이 필요합니다</p>
-          <Button onClick={() => navigate('/')}>홈으로</Button>
-=======
           {!isConnected && (
             <p className="text-sm text-gray-500 mt-2">서버에 연결 중...</p>
           )}
->>>>>>> Stashed changes
         </div>
       </div>
     );
@@ -342,13 +244,7 @@ export function InterviewSessionPage() {
               value={textInput}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
-<<<<<<< Updated upstream
-              onCompositionStart={handleCompositionStart}
-              onCompositionEnd={handleCompositionEnd}
-              disabled={isListening}
-=======
               disabled={isListening || isSubmitting}
->>>>>>> Stashed changes
               className="flex-1 min-h-[44px] max-h-[120px] p-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
               rows={1}
             />

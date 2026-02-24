@@ -115,7 +115,6 @@ const router = createBrowserRouter([
         ),
       },
       { path: '/auth/callback', element: <AuthCallbackPage /> },
-<<<<<<< Updated upstream
       {
         path: '/signup',
         element: (
@@ -166,7 +165,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/interview/session',
+        path: '/interview/session/:interviewId',
         element: (
           <ProtectedRoute>
             <InterviewSessionPage />
@@ -205,19 +204,6 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-=======
-      { path: '/signup', element: <SignupPage /> },
-      { path: '/home', element: <HomePage /> },
-      { path: '/repo-select', element: <RepoSelectPage /> },
-      { path: '/create-resume', element: <CreateResumePage /> },
-      { path: '/resume/:id', element: <ResumeViewerPage /> },
-      { path: '/interview/start', element: <InterviewStartPage /> },
-      { path: '/interview/session/:interviewId', element: <InterviewSessionPage /> },
-      { path: '/interview/summary', element: <InterviewSummaryPage /> },
-      { path: '/interview/detail/:id', element: <InterviewDetailPage /> },
-      { path: '/interviews', element: <InterviewListPage /> },
-      { path: '/settings', element: <SettingsPage /> },
->>>>>>> Stashed changes
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

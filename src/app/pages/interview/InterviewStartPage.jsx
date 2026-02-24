@@ -29,13 +29,6 @@ export function InterviewStartPage() {
   const handleManualInput = () => {};
 
   const handleNext = () => {
-<<<<<<< Updated upstream
-    setStep((prev) => prev + 1);
-  };
-
-  const handleStart = () => {
-    navigate('/interview/session', { state: { formData } });
-=======
     if (step < 3) setStep(step + 1);
   };
 
@@ -70,7 +63,6 @@ export function InterviewStartPage() {
       positionName: posName,
       positionId: selectedPosition?.id || null,
     });
->>>>>>> Stashed changes
   };
 
   return (
