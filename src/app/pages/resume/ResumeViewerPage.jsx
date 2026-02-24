@@ -3,7 +3,7 @@ import { useParams, useBlocker, useNavigate } from 'react-router-dom';
 import yaml from 'js-yaml';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorkerSource from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?raw';
 import {
   Save,
