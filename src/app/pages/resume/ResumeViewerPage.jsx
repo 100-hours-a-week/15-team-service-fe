@@ -270,6 +270,18 @@ export function ResumeViewerPage() {
       hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
   );
 
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const handleSave = useCallback(() => {
     if (versionData?.status !== 'SUCCEEDED') {
       toast.error('이력서 생성이 완료된 후 저장할 수 있습니다');
