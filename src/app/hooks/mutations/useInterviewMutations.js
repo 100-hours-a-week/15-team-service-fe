@@ -6,9 +6,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/app/lib/toast';
 import {
-  createInterview,
+  startInterview,
   submitInterviewAnswer,
-  endInterview,
+  completeInterview,
   deleteInterview,
   renameInterview,
 } from '@/app/api/endpoints/interviews';
@@ -20,12 +20,13 @@ import { interviewKeys } from '../queries/useInterviewQueries';
  */
 export function useStartInterview() {
   return useMutation({
-    mutationFn: createInterview,
+    mutationFn: startInterview,
     onSuccess: () => {
       toast.success('면접이 시작되었습니다.');
     },
-    onError: () => {
-      toast.error('면접 시작에 실패했습니다.');
+    onError: (error) => {
+      const message = error?.response?.data?.message || '면접 시작에 실패했습니다.';
+      toast.error(message);
     },
   });
 }
@@ -38,8 +39,9 @@ export function useSubmitInterviewAnswer() {
   return useMutation({
     mutationFn: ({ interviewId, turnNo, answer, answerInputType }) =>
       submitInterviewAnswer(interviewId, { turnNo, answer, answerInputType }),
-    onError: () => {
-      toast.error('답변 제출에 실패했습니다.');
+    onError: (error) => {
+      const message = error?.response?.data?.message || '답변 제출에 실패했습니다. 다시 시도해주세요.';
+      toast.error(message);
     },
   });
 }
@@ -52,13 +54,14 @@ export function useCompleteInterview() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: endInterview,
+    mutationFn: completeInterview,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
       toast.success('면접이 완료되었습니다.');
     },
-    onError: () => {
-      toast.error('면접 완료 처리에 실패했습니다.');
+    onError: (error) => {
+      const message = error?.response?.data?.message || '면접 완료 처리에 실패했습니다.';
+      toast.error(message);
     },
   });
 }

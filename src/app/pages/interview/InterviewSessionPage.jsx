@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Mic, MicOff, Send } from 'lucide-react';
+import { Mic, MicOff, Send, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { cn } from '../../lib/utils';
+import { toast } from '@/app/lib/toast';
 import { useInterviewSSE } from '@/app/hooks/useInterviewSSE';
 import {
   useSubmitInterviewAnswer,
@@ -62,9 +63,10 @@ export function InterviewSessionPage() {
 
   const handleSSEError = useCallback((error) => {
     console.error('SSE error:', error);
+    toast.error(error?.message || '서버 연결이 끊어졌습니다.');
   }, []);
 
-  const { isConnected, connect, disconnect } = useInterviewSSE(interviewId, {
+  const { isConnected, connectionState, connect, disconnect, retryCount } = useInterviewSSE(interviewId, {
     onQuestion: handleQuestion,
     onFeedback: handleFeedback,
     onEnd: handleEnd,
@@ -166,14 +168,44 @@ export function InterviewSessionPage() {
     }
   };
 
+  // 연결 실패 상태
+  if (connectionState === 'failed') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center px-5">
+          <WifiOff className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <p className="text-lg font-medium mb-2">연결이 끊어졌습니다</p>
+          <p className="text-sm text-gray-500 mb-6">
+            서버와의 연결에 실패했습니다. 다시 시도해주세요.
+          </p>
+          <div className="space-y-3">
+            <Button variant="primary" onClick={connect} fullWidth>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              다시 연결
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/')} fullWidth>
+              홈으로 돌아가기
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 로딩 상태
   if (isLoading && messages.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           <p>면접 질문을 준비 중입니다</p>
-          {!isConnected && (
+          {connectionState === 'connecting' && (
             <p className="text-sm text-gray-500 mt-2">서버에 연결 중...</p>
+          )}
+          {connectionState === 'reconnecting' && (
+            <p className="text-sm text-orange-500 mt-2">
+              재연결 중... ({retryCount}/5)
+            </p>
           )}
         </div>
       </div>
@@ -182,17 +214,28 @@ export function InterviewSessionPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Timer */}
+      {/* Timer & Connection Status */}
       <div className="bg-white border-b border-gray-200 px-5 py-3">
         <div className="max-w-[390px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-sm font-mono">{formatTime(elapsedTime)}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                isConnected ? "bg-red-500 animate-pulse" : "bg-orange-500"
+              )} />
+              <span className="text-sm font-mono">{formatTime(elapsedTime)}</span>
+            </div>
+            {connectionState === 'reconnecting' && (
+              <span className="text-xs text-orange-500 flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                재연결 중
+              </span>
+            )}
           </div>
           <Button
             variant="danger"
             onClick={handleEndInterview}
-            disabled={isEnding}
+            disabled={isEnding || !isConnected}
             className="h-9 px-4 text-sm"
           >
             {isEnding ? '종료 중...' : '종료'}
