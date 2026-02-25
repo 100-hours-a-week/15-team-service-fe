@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchInterviews,
   fetchInterviewById,
+  fetchInterviewMessages,
 } from '@/app/api/endpoints/interviews';
 
 /**
@@ -19,6 +20,8 @@ export const interviewKeys = {
   list: (filters) => [...interviewKeys.lists(), filters],
   details: () => [...interviewKeys.all, 'detail'],
   detail: (id) => [...interviewKeys.details(), id],
+  messages: () => [...interviewKeys.all, 'messages'],
+  message: (id) => [...interviewKeys.messages(), id],
 };
 
 /**
@@ -47,6 +50,22 @@ export function useInterview(id, options = {}) {
     queryFn: () => fetchInterviewById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5, // 5분
+    ...options,
+  });
+}
+
+/**
+ * Fetch interview messages
+ * @param {string} id - Interview ID
+ * @param {Object} options - Additional query options
+ * @returns {UseQueryResult} Query result with interview messages
+ */
+export function useInterviewMessages(id, options = {}) {
+  return useQuery({
+    queryKey: interviewKeys.message(id),
+    queryFn: () => fetchInterviewMessages(id),
+    enabled: !!id,
+    staleTime: 1000 * 60,
     ...options,
   });
 }

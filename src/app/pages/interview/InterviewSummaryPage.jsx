@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
@@ -89,7 +90,60 @@ const MOCK_EVALUATION = {
 export function InterviewSummaryPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { duration = 150 } = location.state || {};
+  const {
+    duration = 150,
+    messages = null,
+    feedback = null,
+  } = location.state || {};
+
+  const feedbackMap = useMemo(() => {
+    if (!feedback?.feedbacks) return new Map();
+    return new Map(
+      feedback.feedbacks.map((item) => [item.turnNo, item.modelAnswer])
+    );
+  }, [feedback]);
+
+  const scriptEntries = useMemo(() => {
+    if (!messages || messages.length === 0) return MOCK_SCRIPT;
+    const entries = [];
+    messages.forEach((msg) => {
+      if (msg.type === 'question') {
+        entries.push({
+          timestamp: msg.timestamp,
+          speaker: '면접관',
+          content: msg.text,
+        });
+        return;
+      }
+      if (msg.type === 'answer') {
+        entries.push({
+          timestamp: msg.timestamp,
+          speaker: '유저',
+          content: msg.text,
+        });
+        const modelAnswer = feedbackMap.get(msg.turnNo);
+        if (modelAnswer) {
+          entries.push({
+            timestamp: msg.timestamp,
+            speaker: 'AI',
+            content: `모범답변: "${modelAnswer}"`,
+          });
+        }
+      }
+    });
+    return entries.length > 0 ? entries : MOCK_SCRIPT;
+  }, [messages, feedbackMap]);
+
+  const evaluationData = useMemo(() => {
+    if (!feedback?.overallFeedback) return MOCK_EVALUATION;
+    const overall = feedback.overallFeedback;
+    return {
+      summary: overall.summary || '피드백이 생성되었습니다.',
+      strengths: overall.keyStrengths || [],
+      improvements: overall.keyImprovements || [],
+      nextActions: [],
+    };
+  }, [feedback]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -108,10 +162,10 @@ export function InterviewSummaryPage() {
           </div>
 
           {/* Interview Script */}
-          <InterviewScript entries={MOCK_SCRIPT} />
+          <InterviewScript entries={scriptEntries} />
 
           {/* AI Overall Evaluation */}
-          <EvaluationCard data={MOCK_EVALUATION} />
+          <EvaluationCard data={evaluationData} />
 
           <Button variant="primary" fullWidth onClick={() => navigate('/')}>
             홈으로
