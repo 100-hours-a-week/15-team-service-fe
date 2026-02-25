@@ -10,6 +10,7 @@ import {
   useNotificationRead,
 } from '@/app/hooks/mutations/useNotificationMutations';
 import { formatKoreanTimestamp } from '@/app/lib/utils';
+import { useInfiniteScroll } from '@/app/hooks/useInfiniteScroll';
 
 /**
  * Bell icon trigger + notification list sheet.
@@ -52,34 +53,11 @@ export function NotificationSheet() {
 
   const notifications = data?.pages.flatMap((page) => page.items) ?? [];
 
-  // hasNextPage, isFetchingNextPage를 ref로 유지해서 observer 재등록 없이 최신값 참조
-  const hasNextPageRef = useRef(hasNextPage);
-  const isFetchingNextPageRef = useRef(isFetchingNextPage);
-  hasNextPageRef.current = hasNextPage;
-  isFetchingNextPageRef.current = isFetchingNextPage;
-
-  // 인피니티 스크롤 observer
-  // notifications.length 변화 시에만 재등록 (sentinel div가 처음 렌더링될 때)
-  const observerRef = useRef(null);
-  useEffect(() => {
-    const el = observerRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          hasNextPageRef.current &&
-          !isFetchingNextPageRef.current
-        ) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [fetchNextPage, notifications.length]);
+  const observerRef = useInfiniteScroll({
+    fetchNextPage,
+    hasNextPage,
+    isFetching: isFetchingNextPage,
+  });
 
   const handleOpenChange = (open) => {
     setIsOpen(open);

@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-  useMemo,
-} from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
 import { FileText, AlertCircle, Search, X } from 'lucide-react';
@@ -29,6 +23,8 @@ import {
   useRenameResume,
   useDeleteResume,
 } from '@/app/hooks/mutations/useResumeMutations';
+import { useDebounce } from '@/app/hooks/useDebounce';
+import { useInfiniteScroll } from '@/app/hooks/useInfiniteScroll';
 
 /**
  * @typedef {Object} ResumeSummary
@@ -50,14 +46,8 @@ export function HomePage() {
 
   // Search and sort state
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [debouncedKeyword, setDebouncedKeyword] = useState('');
+  const debouncedKeyword = useDebounce(searchKeyword, 300);
   const [sortBy, setSortBy] = useState('UPDATED_DESC');
-
-  // Debounce ref for search input (300ms)
-  const searchDebounceRef = useRef(null);
-
-  // Intersection observer ref for infinite scroll
-  const observerTarget = useRef(null);
 
   // 프로젝트 요약 생성 완료 메시지 표시
   useEffect(() => {
@@ -72,23 +62,6 @@ export function HomePage() {
       return () => clearTimeout(timer);
     }
   }, [location.state, navigate, location.pathname]);
-
-  // Debounce search input (300ms)
-  useEffect(() => {
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-    }
-
-    searchDebounceRef.current = setTimeout(() => {
-      setDebouncedKeyword(searchKeyword);
-    }, 300);
-
-    return () => {
-      if (searchDebounceRef.current) {
-        clearTimeout(searchDebounceRef.current);
-      }
-    };
-  }, [searchKeyword]);
 
   // Fetch resumes with infinite scroll
   const {
@@ -117,28 +90,12 @@ export function HomePage() {
         ?.name || ''
     : '';
 
-  // Infinite scroll observer
-  useEffect(() => {
-    const target = observerTarget.current;
-    if (!target) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1, rootMargin: '100px' }
-    );
-
-    observer.observe(target);
-
-    return () => {
-      if (target) {
-        observer.unobserve(target);
-      }
-    };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const observerTarget = useInfiniteScroll({
+    fetchNextPage,
+    hasNextPage,
+    isFetching: isFetchingNextPage,
+    rootMargin: '100px',
+  });
 
   // Search input handler
   const handleSearchChange = useCallback((e) => {
@@ -153,7 +110,6 @@ export function HomePage() {
   // Clear search
   const handleClearSearch = useCallback(() => {
     setSearchKeyword('');
-    setDebouncedKeyword('');
   }, []);
 
   return (

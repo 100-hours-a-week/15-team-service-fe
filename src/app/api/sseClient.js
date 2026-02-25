@@ -37,8 +37,8 @@ export class SSEClient {
       try {
         const data = JSON.parse(event.data);
         callback(data);
-      } catch (error) {
-        console.error('[SSEClient] Event parse error:', error);
+      } catch {
+        // ignore parse errors
       }
     };
 

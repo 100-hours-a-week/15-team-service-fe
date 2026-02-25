@@ -8,7 +8,6 @@ import {
   saveResumeVersion,
   deleteResume,
 } from '@/app/api/endpoints/resumes';
-// import { resumeKeys } from '../queries/useResumeQueries';
 
 export function useCreateResume() {
   const queryClient = useQueryClient();

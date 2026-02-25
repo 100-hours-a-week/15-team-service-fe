@@ -7,7 +7,6 @@ import {
   useCallback,
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { API_CONFIG } from '@/app/api/config';
 import { fetchNotificationBadge } from '@/app/api/endpoints/notifications';
 
@@ -90,7 +89,14 @@ export function useNotificationSSE(enabled = true) {
         try {
           const payload = JSON.parse(event.data);
           setHasNew(true);
-          toast(payload.title ?? '새 알림이 도착했습니다.');
+          window.dispatchEvent(
+            new CustomEvent('notification-toast', {
+              detail: {
+                type: payload.type,
+                message: payload.payload?.message ?? '새 알림이 도착했습니다.',
+              },
+            })
+          );
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
         } catch {
           // Malformed — ignore
