@@ -29,6 +29,22 @@
  */
 
 /**
+ * @typedef {'TEXT' | 'VOICE'} AnswerInputType
+ */
+
+/**
+ * Interview message from backend API
+ * @typedef {Object} InterviewMessage
+ * @property {string} id - MongoDB ObjectId (string)
+ * @property {number} turnNo
+ * @property {string} question
+ * @property {AnswerInputType} answerInputType
+ * @property {string} answer
+ * @property {string} askedAt - ISO 8601 timestamp
+ * @property {string} answeredAt - ISO 8601 timestamp
+ */
+
+/**
  * @typedef {Object} Interview
  * @property {string} id
  * @property {string} name
