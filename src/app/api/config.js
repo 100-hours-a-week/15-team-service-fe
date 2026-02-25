@@ -30,11 +30,12 @@ export const API_CONFIG = {
     // Interviews
     INTERVIEWS: '/interviews',
     INTERVIEW_BY_ID: (id) => `/interviews/${id}`,
-    INTERVIEW_SESSION: '/interviews/session',
-    INTERVIEW_SUBMIT_ANSWER: (sessionId) =>
-      `/interviews/session/${sessionId}/answer`,
-    INTERVIEW_COMPLETE: (sessionId) =>
-      `/interviews/session/${sessionId}/complete`,
+    INTERVIEW_MESSAGES: (id) => `/interviews/${id}/messages`,
+    INTERVIEW_CREATE: '/interviews',
+    INTERVIEW_RENAME: (id) => `/interviews/${id}/name`,
+    INTERVIEW_SUBMIT_ANSWER: (interviewId) =>
+      `/interviews/${interviewId}/messages`,
+    INTERVIEW_COMPLETE: (interviewId) => `/interviews/${interviewId}/end`,
 
     // Repositories
     REPOSITORIES: '/repositories',
@@ -50,6 +51,9 @@ export const API_CONFIG = {
     // Uploads
     UPLOADS: '/uploads',
     UPLOAD_BY_ID: (id) => `/uploads/${id}`,
+
+    // STT
+    STT_TRANSCRIBE: '/stt/transcribe',
 
     // Notifications
     NOTIFICATIONS_STREAM: '/notifications/stream',

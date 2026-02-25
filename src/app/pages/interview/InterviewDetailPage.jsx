@@ -1,9 +1,14 @@
+import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { InterviewScript } from '../../components/features/InterviewScript';
 import { EvaluationCard } from '../../components/features/EvaluationCard';
 import { formatTime } from '@/app/lib/utils';
+import {
+  useInterview,
+  useInterviewMessages,
+} from '@/app/hooks/queries/useInterviewQueries';
 
 /**
  * @typedef {import('@/app/types').ScriptEntry} ScriptEntry
@@ -11,59 +16,7 @@ import { formatTime } from '@/app/lib/utils';
  */
 
 /** @type {ScriptEntry[]} */
-const MOCK_SCRIPT = [
-  {
-    timestamp: '0:00',
-    speaker: '면접관',
-    content: '안녕하세요. 자기소개 부탁드립니다.',
-  },
-  {
-    timestamp: '0:05',
-    speaker: '유저',
-    content:
-      '아, 저, 그... 안녕하세요. 저는 백엔드 개발자를 희망하는 예지입니다.',
-  },
-  {
-    timestamp: '0:15',
-    speaker: 'AI',
-    content:
-      '모범답변: "안녕하세요. 저는 Node.js와 Python을 활용한 백엔드 개발 경험이 있는 예지입니다. 특히 RESTful API 설계와 데이터베이스 최적화에 관심이 많습니다."',
-  },
-  {
-    timestamp: '0:35',
-    speaker: '면접관',
-    content: '가장 기억에 남는 프로젝트에 대해 말씀해주세요.',
-  },
-  {
-    timestamp: '0:40',
-    speaker: '유저',
-    content:
-      '커뮤니티 플랫폼을 만들었는데요, Express.js로 백엔드 서버를 구축했고 JWT 인증 시스템을 구현했습니다.',
-  },
-  {
-    timestamp: '1:05',
-    speaker: 'AI',
-    content:
-      '모범답변: "커뮤니티 플랫폼 프로젝트에서 Express.js 기반 백엔드 서버를 구축했습니다. 특히 JWT 인증 시스템 구현과 Redis 캐싱을 통해 응답 속도를 30% 향상시켰습니다. 이 과정에서 보안과 성능 최적화의 중요성을 배웠습니다."',
-  },
-  {
-    timestamp: '1:35',
-    speaker: '면접관',
-    content: '팀 프로젝트에서 갈등이 있었던 경험이 있나요?',
-  },
-  {
-    timestamp: '1:42',
-    speaker: '유저',
-    content:
-      '네, 있었습니다. 코드 스타일 차이로 의견이 맞지 않았는데, 팀 미팅을 통해 코딩 컨벤션을 정하고 해결했습니다.',
-  },
-  {
-    timestamp: '2:10',
-    speaker: 'AI',
-    content:
-      '모범답변: "팀원 간 코드 스타일 차이로 갈등이 있었습니다. 이를 해결하기 위해 팀 미팅을 제안하여 공통 코딩 컨벤션을 수립하고, ESLint와 Prettier를 도입하여 자동화했습니다. 이 경험을 통해 의사소통과 표준화의 중요성을 배웠습니다."',
-  },
-];
+const EMPTY_SCRIPT = [];
 
 /** @type {EvaluationData} */
 const MOCK_EVALUATION = {
@@ -87,11 +40,81 @@ const MOCK_EVALUATION = {
 
 export function InterviewDetailPage() {
   const { id } = useParams();
-  const duration = 150; // Mock duration in seconds
+  const interviewId = Number(id);
+  const { data: interview, isLoading, isError } = useInterview(interviewId);
+  const {
+    data: messages = [],
+    isLoading: isLoadingMessages,
+    isError: isMessagesError,
+  } = useInterviewMessages(interviewId);
+
+  const duration = useMemo(() => {
+    if (!interview?.startedAt || !interview?.endedAt) return null;
+    const start = new Date(interview.startedAt).getTime();
+    const end = new Date(interview.endedAt).getTime();
+    return Math.max(0, Math.floor((end - start) / 1000));
+  }, [interview]);
+
+  const parsedFeedback = useMemo(() => {
+    if (!interview?.totalFeedback) return null;
+    try {
+      return JSON.parse(interview.totalFeedback);
+    } catch {
+      return null;
+    }
+  }, [interview]);
+
+  const evaluationData = useMemo(() => {
+    if (!parsedFeedback?.overallFeedback) return MOCK_EVALUATION;
+    const overall = parsedFeedback.overallFeedback;
+    return {
+      summary: overall.summary || '피드백이 생성되었습니다.',
+      strengths: overall.keyStrengths || [],
+      improvements: overall.keyImprovements || [],
+      nextActions: [],
+    };
+  }, [parsedFeedback]);
+
+  const feedbackMap = useMemo(() => {
+    if (!parsedFeedback?.feedbacks) return new Map();
+    return new Map(
+      parsedFeedback.feedbacks.map((item) => [item.turnNo, item.modelAnswer])
+    );
+  }, [parsedFeedback]);
+
+  const scriptEntries = useMemo(() => {
+    if (!messages || messages.length === 0) return EMPTY_SCRIPT;
+    const entries = [];
+    messages.forEach((msg) => {
+      if (msg.question) {
+        entries.push({
+          timestamp: msg.askedAt || '',
+          speaker: '면접관',
+          content: msg.question,
+        });
+      }
+      if (msg.answer) {
+        entries.push({
+          timestamp: msg.answeredAt || '',
+          speaker: '유저',
+          content: msg.answer,
+        });
+        const modelAnswer = feedbackMap.get(msg.turnNo);
+        if (modelAnswer) {
+          entries.push({
+            timestamp: msg.answeredAt || '',
+            speaker: 'AI',
+            content: `모범답변: "${modelAnswer}"`,
+          });
+        }
+      }
+    });
+    return entries.length > 0 ? entries : EMPTY_SCRIPT;
+  }, [messages, feedbackMap]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <TopAppBar title={`2025-12-23_기술_백엔드_${id}`} showBack />
+      <TopAppBar title={interview?.name || '면접 상세'} showBack />
 
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto space-y-6">
@@ -100,16 +123,36 @@ export function InterviewDetailPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">진행 시간</span>
               <span className="font-medium text-gray-900">
-                {formatTime(duration)}
+                {duration !== null ? formatTime(duration) : '-'}
               </span>
             </div>
           </div>
 
           {/* Interview Script */}
-          <InterviewScript entries={MOCK_SCRIPT} />
+          {isLoading || isLoadingMessages ? (
+            <div className="bg-white rounded-2xl p-5 border border-gray-200">
+              <p className="text-sm text-gray-500">
+                면접 정보를 불러오는 중입니다.
+              </p>
+            </div>
+          ) : isError || isMessagesError ? (
+            <div className="bg-white rounded-2xl p-5 border border-gray-200">
+              <p className="text-sm text-gray-500">
+                면접 정보를 불러오지 못했습니다.
+              </p>
+            </div>
+          ) : scriptEntries.length === 0 ? (
+            <div className="bg-white rounded-2xl p-5 border border-gray-200">
+              <p className="text-sm text-gray-500">
+                현재는 면접 스크립트를 제공하지 않습니다.
+              </p>
+            </div>
+          ) : (
+            <InterviewScript entries={scriptEntries} />
+          )}
 
           {/* AI Overall Evaluation */}
-          <EvaluationCard data={MOCK_EVALUATION} />
+          <EvaluationCard data={evaluationData} />
         </div>
       </div>
 

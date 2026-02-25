@@ -14,7 +14,7 @@ export const fetchInterviews = async (params = {}) => {
   const response = await apiClient.get(API_CONFIG.ENDPOINTS.INTERVIEWS, {
     params,
   });
-  return response.data;
+  return response.data.data;
 };
 
 /**
@@ -26,53 +26,75 @@ export const fetchInterviewById = async (id) => {
   const response = await apiClient.get(
     API_CONFIG.ENDPOINTS.INTERVIEW_BY_ID(id)
   );
-  return response.data;
+  return response.data.data;
+};
+
+/**
+ * Fetch interview messages by ID
+ * @param {string} id - Interview ID
+ * @returns {Promise<Object>} - Interview messages
+ */
+export const fetchInterviewMessages = async (id) => {
+  const response = await apiClient.get(
+    API_CONFIG.ENDPOINTS.INTERVIEW_MESSAGES(id)
+  );
+  return response.data.data;
+};
+
+/**
+ * Rename interview
+ * @param {string} id - Interview ID
+ * @param {string} name - New name
+ */
+export const renameInterview = async (id, name) => {
+  const response = await mutatingClient.patch(
+    API_CONFIG.ENDPOINTS.INTERVIEW_RENAME(id),
+    { name }
+  );
+  return response.data.data;
 };
 
 /**
  * Start new interview session
  * @param {Object} payload - Interview configuration
- * @param {string} payload.resumeId - Resume ID
- * @param {string} payload.jobCategory - Job category (백엔드, 프론트엔드, etc.)
- * @param {string} payload.difficulty - Difficulty level (신입, 주니어, etc.)
- * @param {Array<string>} payload.techStacks - Selected tech stacks
- * @param {number} payload.questionCount - Number of questions (5-10)
- * @returns {Promise<Object>} - Session data with first question
+ * @returns {Promise<Object>} - Interview start data
  */
 export const startInterview = async (payload) => {
   const response = await mutatingClient.post(
-    API_CONFIG.ENDPOINTS.INTERVIEW_SESSION,
+    API_CONFIG.ENDPOINTS.INTERVIEW_CREATE,
     payload
   );
-  return response.data;
+  return response.data.data;
 };
 
 /**
  * Submit interview answer
- * @param {string} sessionId - Session ID
+ * @param {string} interviewId - Interview ID
  * @param {Object} payload - Answer data
+ * @param {number} payload.turnNo - Current turn number
  * @param {string} payload.answer - User's answer text
- * @param {File} payload.audioFile - Audio recording file (optional)
+ * @param {string} payload.answerInputType - "TEXT" or "AUDIO"
+ * @param {string | null} payload.audioUrl - Audio URL if provided
  * @returns {Promise<Object>} - Next question or completion status
  */
-export const submitInterviewAnswer = async (sessionId, payload) => {
+export const submitInterviewAnswer = async (interviewId, payload) => {
   const response = await mutatingClient.post(
-    API_CONFIG.ENDPOINTS.INTERVIEW_SUBMIT_ANSWER(sessionId),
+    API_CONFIG.ENDPOINTS.INTERVIEW_SUBMIT_ANSWER(interviewId),
     payload
   );
-  return response.data;
+  return response.data.data;
 };
 
 /**
  * Complete interview session
- * @param {string} sessionId - Session ID
+ * @param {string} interviewId - Interview ID
  * @returns {Promise<Object>} - Completed interview with evaluation
  */
-export const completeInterview = async (sessionId) => {
+export const completeInterview = async (interviewId) => {
   const response = await mutatingClient.post(
-    API_CONFIG.ENDPOINTS.INTERVIEW_COMPLETE(sessionId)
+    API_CONFIG.ENDPOINTS.INTERVIEW_COMPLETE(interviewId)
   );
-  return response.data;
+  return response.data.data;
 };
 
 /**
