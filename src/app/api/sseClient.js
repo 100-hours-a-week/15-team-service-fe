@@ -26,10 +26,6 @@ export class SSEClient {
       this.onError?.(error);
     };
 
-    this.eventSource.onmessage = () => {
-      // Generic message handler (not used)
-    };
-
     // Register all pre-configured event listeners
     this.eventListeners.forEach((callback, eventName) => {
       this.eventSource.addEventListener(eventName, callback);
