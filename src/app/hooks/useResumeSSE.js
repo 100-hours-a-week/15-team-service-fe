@@ -35,8 +35,7 @@ export function useResumeSSE(resumeId, options = {}) {
       onOpen: () => {
         setIsConnected(true);
       },
-      onError: (error) => {
-        console.error('[useResumeSSE] SSE connection error:', error);
+      onError: () => {
         setIsConnected(false);
       },
     });
@@ -46,7 +45,6 @@ export function useResumeSSE(resumeId, options = {}) {
       onEditCompleteRef.current?.(eventData);
     });
 
-    // Listen for resume-edit-failed events
     client.addEventListener('resume-edit-failed', (eventData) => {
       onEditFailedRef.current?.(eventData);
     });

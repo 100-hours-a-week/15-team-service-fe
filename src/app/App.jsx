@@ -11,6 +11,8 @@ import {
   useNotificationSSE,
   NotificationContext,
 } from './hooks/useNotificationSSE';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { NotificationToastBanner } from './components/features/NotificationToastBanner';
 
 import { OnboardingPage } from './pages/auth/OnboardingPage';
 import { SignupPage } from './pages/auth/SignupPage';
@@ -43,7 +45,10 @@ function RootLayout() {
           id="app-container"
           className="mx-auto max-w-[390px] min-h-screen bg-white shadow-xl relative"
         >
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
+          <NotificationToastBanner />
           <Toaster
             position="bottom-center"
             toastOptions={{

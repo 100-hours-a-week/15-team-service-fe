@@ -366,7 +366,8 @@ export const ChatbotBottomSheet = ({
           {/* Caption */}
           <div className="px-5 py-2 border-t border-gray-100 flex-shrink-0">
             <p className="text-xs text-gray-500 text-center">
-              해당 채팅창을 꺼도 백그라운드에서 수정이 진행됩니다.
+              해당 채팅창을 꺼도 백그라운드에서 수정이 진행됩니다. 단, 페이지를
+              나가면 채팅 내역은 다시 조회할 수 없습니다.
             </p>
           </div>
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -30,6 +30,7 @@ import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import { useCompleteOnboarding } from '@/app/hooks/mutations/useAuthMutations';
 import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
 import { validateImageFile } from '@/app/lib/validators';
+import { useProfileImageUpload } from '@/app/hooks/useProfileImageUpload';
 import { toast } from '@/app/lib/toast';
 
 export function SignupPage() {
@@ -39,9 +40,13 @@ export function SignupPage() {
     useCompleteOnboarding();
   const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
 
-  const [profileFile, setProfileFile] = useState(null);
-  const [profilePreviewUrl, setProfilePreviewUrl] = useState(null);
-  const profileFileInputRef = useRef(null);
+  const {
+    file: profileFile,
+    previewUrl: profilePreviewUrl,
+    fileInputRef: profileFileInputRef,
+    handleChange: handleProfileImageChange,
+    reset: removeProfileImage,
+  } = useProfileImageUpload();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -450,13 +455,6 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
     [errors.phoneCollection, agreements.phoneCollection]
   );
 
-  // Cleanup preview URL on unmount
-  useEffect(() => {
-    return () => {
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-    };
-  }, [profilePreviewUrl]);
-
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
@@ -465,45 +463,6 @@ Commit-me 서비스는 「개인정보보호법」 등 관련 법령에 따라 �
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-
-  const handleProfileImageChange = useCallback(
-    (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const validation = validateImageFile(file);
-      if (!validation.ok) {
-        if (validation.reason === 'type') {
-          toast.error('지원하지 않는 이미지 형식입니다.');
-        } else if (validation.reason === 'size') {
-          toast.error('이미지 용량이 너무 큽니다. 최대 5MB까지 가능합니다.');
-        }
-        e.target.value = '';
-        return;
-      }
-
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-
-      const previewUrl = URL.createObjectURL(file);
-      setProfileFile(file);
-      setProfilePreviewUrl(previewUrl);
-
-      // Reset so same file can be re-selected
-      e.target.value = '';
-    },
-    [profilePreviewUrl]
-  );
-
-  /**
-   * Removes the selected profile image and cleans up the preview URL
-   */
-  const removeProfileImage = useCallback(() => {
-    if (profilePreviewUrl) {
-      URL.revokeObjectURL(profilePreviewUrl);
-    }
-    setProfileFile(null);
-    setProfilePreviewUrl(null);
-  }, [profilePreviewUrl]);
 
   const handleSubmit = useCallback(
     async (e) => {

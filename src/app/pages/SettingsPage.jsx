@@ -39,6 +39,7 @@ import {
 import { useLogout } from '@/app/hooks/mutations/useAuthMutations';
 import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
 import { validateImageFile } from '@/app/lib/validators';
+import { useProfileImageUpload } from '@/app/hooks/useProfileImageUpload';
 import { toast } from '@/app/lib/toast';
 
 /**
@@ -116,9 +117,13 @@ export function SettingsPage() {
   const { mutateAsync: withdrawUser } = useWithdrawUser();
   const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
 
-  const [profileFile, setProfileFile] = useState(null);
-  const [profilePreviewUrl, setProfilePreviewUrl] = useState(null);
-  const profileFileInputRef = useRef(null);
+  const {
+    file: profileFile,
+    previewUrl: profilePreviewUrl,
+    fileInputRef: profileFileInputRef,
+    handleChange: handleProfileImageChange,
+    reset: resetProfileImage,
+  } = useProfileImageUpload();
 
   const [isEditing, setIsEditing] = useState(false);
   /** @type {[UserProfile, React.Dispatch<React.SetStateAction<UserProfile>>]} */
@@ -191,13 +196,6 @@ export function SettingsPage() {
     };
   }, []);
 
-  // Cleanup preview URL on unmount
-  useEffect(() => {
-    return () => {
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-    };
-  }, [profilePreviewUrl]);
-
   // Debounced name validation: Check character count after 1 second of no typing
   useEffect(() => {
     if (!isEditing) return;
@@ -217,53 +215,11 @@ export function SettingsPage() {
     return () => clearTimeout(timeoutId);
   }, [editData.name, isEditing]);
 
-  const handleProfileImageChange = useCallback(
-    (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const validation = validateImageFile(file);
-      if (!validation.ok) {
-        if (validation.reason === 'type') {
-          toast.error('지원하지 않는 이미지 형식입니다.');
-        } else if (validation.reason === 'size') {
-          toast.error('이미지 용량이 너무 큽니다. 최대 5MB까지 가능합니다.');
-        }
-        e.target.value = '';
-        return;
-      }
-
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-
-      const previewUrl = URL.createObjectURL(file);
-      setProfileFile(file);
-      setProfilePreviewUrl(previewUrl);
-
-      // Reset so same file can be re-selected
-      e.target.value = '';
-    },
-    [profilePreviewUrl]
-  );
-
-  /**
-   * Removes the profile image (both new preview and existing server image)
-   * Only works in edit mode
-   */
+  /** 선택한 이미지 + 서버 기존 이미지 모두 제거 */
   const removeProfileImage = useCallback(() => {
-    // Revoke new preview URL if exists
-    if (profilePreviewUrl) {
-      URL.revokeObjectURL(profilePreviewUrl);
-    }
-    // Clear new file state
-    setProfileFile(null);
-    setProfilePreviewUrl(null);
-
-    // Clear existing server image from editData
-    setEditData((prev) => ({
-      ...prev,
-      profileImage: null,
-    }));
-  }, [profilePreviewUrl]);
+    resetProfileImage();
+    setEditData((prev) => ({ ...prev, profileImage: null }));
+  }, [resetProfileImage]);
 
   const handleEdit = useCallback(() => {
     if (!profileData) return;
@@ -278,13 +234,11 @@ export function SettingsPage() {
       profileImage: profileData.profileImageUrl ?? null,
     });
     // Reset any previously selected new file
-    setProfileFile(null);
-    if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-    setProfilePreviewUrl(null);
+    resetProfileImage();
     setIsPhonePolicyAgreed(false);
     setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
     setIsEditing(true);
-  }, [profileData, positions, profilePreviewUrl]);
+  }, [profileData, positions, resetProfileImage]);
 
   const handleSave = useCallback(async () => {
     const newErrors = {};
@@ -367,9 +321,7 @@ export function SettingsPage() {
       });
 
       // Clear new file state after successful save
-      setProfileFile(null);
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-      setProfilePreviewUrl(null);
+      resetProfileImage();
 
       setIsEditing(false);
       setErrors({
@@ -404,7 +356,7 @@ export function SettingsPage() {
     positions,
     updateUserProfile,
     profileFile,
-    profilePreviewUrl,
+    resetProfileImage,
     upload,
     isPhonePolicyAgreed,
     profileData?.phonePolicyAgreed,
@@ -425,9 +377,7 @@ export function SettingsPage() {
       });
     }
     // Reset profile file state on cancel
-    setProfileFile(null);
-    if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-    setProfilePreviewUrl(null);
+    resetProfileImage();
     setIsEditing(false);
     setErrors({
       name: undefined,
@@ -436,7 +386,7 @@ export function SettingsPage() {
       phonePolicy: undefined,
     });
     setIsPhonePolicyAgreed(false);
-  }, [profileData, positions, profilePreviewUrl]);
+  }, [profileData, positions, resetProfileImage]);
 
   /**
    * Handle phone number input change with real-time validation
