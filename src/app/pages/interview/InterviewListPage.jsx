@@ -19,6 +19,7 @@ import {
   SORT_LABELS,
   FILTER_ALL_LABEL,
   FILTER_UNSPECIFIED_LABEL,
+  ITEMS_PER_PAGE,
 } from '@/app/constants';
 import {
   cn,
@@ -90,12 +91,12 @@ export function InterviewListPage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredAndSortedInterviews.length / 10)
+    Math.ceil(filteredAndSortedInterviews.length / ITEMS_PER_PAGE)
   );
 
   const paginatedInterviews = useMemo(() => {
-    const start = (currentPage - 1) * 10;
-    return filteredAndSortedInterviews.slice(start, start + 10);
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAndSortedInterviews.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredAndSortedInterviews, currentPage]);
 
   const pageNumbers = useMemo(

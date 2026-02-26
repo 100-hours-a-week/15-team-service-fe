@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
@@ -9,6 +9,7 @@ import {
   useInterview,
   useInterviewMessages,
 } from '@/app/hooks/queries/useInterviewQueries';
+import { useInterviewSSE } from '@/app/hooks/useInterviewSSE';
 
 /**
  * @typedef {import('@/app/types').ScriptEntry} ScriptEntry
@@ -18,29 +19,10 @@ import {
 /** @type {ScriptEntry[]} */
 const EMPTY_SCRIPT = [];
 
-/** @type {EvaluationData} */
-const MOCK_EVALUATION = {
-  summary:
-    '전반적으로 기술적인 역량과 경험을 잘 전달하셨습니다. 다만, 답변의 구체성을 높이고 STAR 기법을 활용하면 더욱 설득력 있는 면접이 될 것입니다.',
-  strengths: [
-    '프로젝트 경험을 구체적으로 설명하여 실무 능력을 잘 어필했습니다',
-    '기술 스택에 대한 이해도가 높아 보였습니다',
-    '갈등 해결 경험을 통해 협업 능력을 잘 보여주었습니다',
-  ],
-  improvements: [
-    '자기소개 시 더 자신감 있는 목소리와 명확한 발음이 필요합니다',
-    '프로젝트 성과를 수치화하여 표현하면 더 설득력이 있습니다',
-    '답변이 다소 짧아 보일 수 있으니 좀 더 풍부한 내용 전달이 필요합니다',
-  ],
-  nextActions: [
-    'STAR 기법(상황-과제-행동-결과)을 활용한 답변 연습',
-    '프로젝트 성과를 구체적인 수치로 정리하기',
-  ],
-};
-
 export function InterviewDetailPage() {
   const { id } = useParams();
   const interviewId = Number(id);
+  const [liveFeedback, setLiveFeedback] = useState(null);
   const { data: interview, isLoading, isError } = useInterview(interviewId);
   const {
     data: messages = [],
@@ -56,16 +38,24 @@ export function InterviewDetailPage() {
   }, [interview]);
 
   const parsedFeedback = useMemo(() => {
+    if (liveFeedback?.overallFeedback) return liveFeedback;
     if (!interview?.totalFeedback) return null;
     try {
       return JSON.parse(interview.totalFeedback);
     } catch {
       return null;
     }
-  }, [interview]);
+  }, [liveFeedback, interview]);
 
   const evaluationData = useMemo(() => {
-    if (!parsedFeedback?.overallFeedback) return MOCK_EVALUATION;
+    if (!parsedFeedback?.overallFeedback) {
+      return {
+        summary: '피드백을 생성 중입니다.',
+        strengths: [],
+        improvements: [],
+        nextActions: [],
+      };
+    }
     const overall = parsedFeedback.overallFeedback;
     return {
       summary: overall.summary || '피드백이 생성되었습니다.',
@@ -75,42 +65,39 @@ export function InterviewDetailPage() {
     };
   }, [parsedFeedback]);
 
-  const feedbackMap = useMemo(() => {
-    if (!parsedFeedback?.feedbacks) return new Map();
-    return new Map(
-      parsedFeedback.feedbacks.map((item) => [item.turnNo, item.modelAnswer])
-    );
-  }, [parsedFeedback]);
+  useInterviewSSE(
+    parsedFeedback?.overallFeedback ? null : interviewId,
+    {
+      onFeedback: (data) => {
+        if (!data?.totalFeedback) return;
+        try {
+          setLiveFeedback(JSON.parse(data.totalFeedback));
+        } catch {
+          setLiveFeedback(null);
+        }
+      },
+    }
+  );
 
   const scriptEntries = useMemo(() => {
     if (!messages || messages.length === 0) return EMPTY_SCRIPT;
     const entries = [];
     messages.forEach((msg) => {
-      if (msg.question) {
-        entries.push({
-          timestamp: msg.askedAt || '',
-          speaker: '면접관',
-          content: msg.question,
-        });
-      }
-      if (msg.answer) {
-        entries.push({
-          timestamp: msg.answeredAt || '',
-          speaker: '유저',
-          content: msg.answer,
-        });
-        const modelAnswer = feedbackMap.get(msg.turnNo);
-        if (modelAnswer) {
-          entries.push({
-            timestamp: msg.answeredAt || '',
-            speaker: 'AI',
-            content: `모범답변: "${modelAnswer}"`,
-          });
-        }
-      }
+      if (!msg.answer) return;
+      if (!msg.question) return;
+      entries.push({
+        timestamp: msg.askedAt || '',
+        speaker: '면접관',
+        content: msg.question,
+      });
+      entries.push({
+        timestamp: msg.answeredAt || '',
+        speaker: '유저',
+        content: msg.answer,
+      });
     });
     return entries.length > 0 ? entries : EMPTY_SCRIPT;
-  }, [messages, feedbackMap]);
+  }, [messages]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -152,7 +139,23 @@ export function InterviewDetailPage() {
           )}
 
           {/* AI Overall Evaluation */}
-          <EvaluationCard data={evaluationData} />
+          {parsedFeedback?.overallFeedback ? (
+            <EvaluationCard data={evaluationData} />
+          ) : (
+            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
+                <p className="text-sm text-gray-700">
+                  AI 피드백을 생성 중입니다. 잠시만 기다려주세요.
+                </p>
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="h-3 bg-gray-100 rounded animate-pulse" />
+                <div className="h-3 bg-gray-100 rounded animate-pulse w-5/6" />
+                <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
