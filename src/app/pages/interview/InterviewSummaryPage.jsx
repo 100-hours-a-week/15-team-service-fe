@@ -29,7 +29,7 @@ export function InterviewSummaryPage() {
   const [liveFeedback, setLiveFeedback] = useState(null);
 
   const interviewQuery = useInterview(interviewId, {
-    enabled: !!interviewId && !feedback?.overallFeedback,
+    enabled: !!interviewId,
   });
   const messagesQuery = useInterviewMessages(interviewId, {
     enabled: !!interviewId && (!messages || messages.length === 0),
@@ -133,6 +133,13 @@ export function InterviewSummaryPage() {
     };
   }, [resolvedFeedback]);
 
+  const interviewMetaLabel = useMemo(() => {
+    const interview = interviewQuery.data;
+    if (!interview?.positionName || !interview?.interviewType) return null;
+    const typeLabel = interview.interviewType === 'TECHNICAL' ? '기술' : '인성';
+    return `${interview.positionName} - ${typeLabel}`;
+  }, [interviewQuery.data]);
+
   useInterviewSSE(resolvedFeedback?.overallFeedback ? null : interviewId, {
     onFeedback: (data) => {
       if (!data?.totalFeedback) return;
@@ -171,7 +178,10 @@ export function InterviewSummaryPage() {
 
           {/* AI Overall Evaluation */}
           {resolvedFeedback?.overallFeedback ? (
-            <EvaluationCard data={evaluationData} />
+            <EvaluationCard
+              data={evaluationData}
+              metaLabel={interviewMetaLabel}
+            />
           ) : (
             <div className="bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center gap-3">

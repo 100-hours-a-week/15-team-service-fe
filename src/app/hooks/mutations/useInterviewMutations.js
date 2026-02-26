@@ -119,6 +119,32 @@ export function useRenameInterview() {
   return useMutation({
     mutationFn: ({ interviewId, name }) => renameInterview(interviewId, name),
     onSuccess: (updatedInterview) => {
+      if (updatedInterview?.id) {
+        queryClient.setQueriesData(
+          { queryKey: interviewKeys.lists() },
+          (old) => {
+            if (!old) return old;
+            if (Array.isArray(old)) {
+              return old.map((interview) =>
+                interview.id === updatedInterview.id
+                  ? { ...interview, name: updatedInterview.name }
+                  : interview
+              );
+            }
+            if (Array.isArray(old.interviews)) {
+              return {
+                ...old,
+                interviews: old.interviews.map((interview) =>
+                  interview.id === updatedInterview.id
+                    ? { ...interview, name: updatedInterview.name }
+                    : interview
+                ),
+              };
+            }
+            return old;
+          }
+        );
+      }
       queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
       if (updatedInterview?.id) {
         queryClient.setQueryData(

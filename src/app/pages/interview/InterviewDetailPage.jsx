@@ -65,6 +65,12 @@ export function InterviewDetailPage() {
     };
   }, [parsedFeedback]);
 
+  const interviewMetaLabel = useMemo(() => {
+    if (!interview?.positionName || !interview?.interviewType) return null;
+    const typeLabel = interview.interviewType === 'TECHNICAL' ? '기술' : '인성';
+    return `${interview.positionName} - ${typeLabel}`;
+  }, [interview]);
+
   useInterviewSSE(parsedFeedback?.overallFeedback ? null : interviewId, {
     onFeedback: (data) => {
       if (!data?.totalFeedback) return;
@@ -137,7 +143,10 @@ export function InterviewDetailPage() {
 
           {/* AI Overall Evaluation */}
           {parsedFeedback?.overallFeedback ? (
-            <EvaluationCard data={evaluationData} />
+            <EvaluationCard
+              data={evaluationData}
+              metaLabel={interviewMetaLabel}
+            />
           ) : (
             <div className="bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center gap-3">
