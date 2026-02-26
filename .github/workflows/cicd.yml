@@ -13,7 +13,7 @@ on:
       - "jsconfig.json"
       - ".github/workflows/cicd.yml"
   push:
-    branches: [ "main", "dev"]
+    branches: [ "main", "dev" ]
   workflow_dispatch:
     inputs:
       ci_run_id:
@@ -131,97 +131,101 @@ jobs:
             if-no-files-found: error
             retention-days: 1
 
-  deploy-current-run:
-    name: Deploy (current run)
-    needs: fe-ci
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    if: >-
-      ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'main' }}
+  #######################################
+  ### 아래는 V1 빅뱅 인스턴스에 배포하는 코드임 ###
+  #######################################
 
-    steps:
-      - name: Checkout (metadata only)
-        uses: actions/checkout@v4
+  # deploy-current-run:
+  #   name: Deploy (current run)
+  #   needs: fe-ci
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 20
+  #   if: >-
+  #     ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'main' }}
 
-      - name: Download dist artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: web-dist
-          path: dist
+  #   steps:
+  #     - name: Checkout (metadata only)
+  #       uses: actions/checkout@v4
 
-      - name: Pack dist
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f dist/index.html
-          tar -C dist -czf dist.tgz .
+  #     - name: Download dist artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: web-dist
+  #         path: dist
 
-      - name: Upload dist.tgz to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: 22
-          source: "dist.tgz"
-          target: "/tmp"
+  #     - name: Pack dist
+  #       shell: bash
+  #       run: |
+  #         set -euo pipefail
+  #         test -f dist/index.html
+  #         tar -C dist -czf dist.tgz .
 
-      - name: Deploy via SSH (current run)
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          WEB_ROOT: ${{ vars.WEB_ROOT }}
-          NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
-          HEALTH_URL: ${{ vars.HEALTH_URL }}
-          HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
-          HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
-          BRANCH_NAME: ${{ github.ref_name }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: 22
-          script_stop: true
-          command_timeout: 15m
-          envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL,BRANCH_NAME
+  #     - name: Upload dist.tgz to server
+  #       uses: appleboy/scp-action@v0.1.7
+  #       with:
+  #         host: ${{ secrets.DEPLOY_HOST }}
+  #         username: ${{ secrets.DEPLOY_USER }}
+  #         key: ${{ secrets.DEPLOY_SSH_KEY }}
+  #         port: 22
+  #         source: "dist.tgz"
+  #         target: "/tmp"
+
+  #     - name: Deploy via SSH (current run)
+  #       uses: appleboy/ssh-action@v1.0.3
+  #       env:
+  #         WEB_ROOT: ${{ vars.WEB_ROOT }}
+  #         NGINX_RELOAD: ${{ vars.NGINX_RELOAD }}
+  #         HEALTH_URL: ${{ vars.HEALTH_URL }}
+  #         HEALTH_TIMEOUT: ${{ vars.HEALTH_TIMEOUT }}
+  #         HEALTH_INTERVAL: ${{ vars.HEALTH_INTERVAL }}
+  #         BRANCH_NAME: ${{ github.ref_name }}
+  #       with:
+  #         host: ${{ secrets.DEPLOY_HOST }}
+  #         username: ${{ secrets.DEPLOY_USER }}
+  #         key: ${{ secrets.DEPLOY_SSH_KEY }}
+  #         port: 22
+  #         script_stop: true
+  #         command_timeout: 15m
+  #         envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL,BRANCH_NAME
           
-          script: |
-            set -euo pipefail
-            WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"
-            NGINX_RELOAD="${NGINX_RELOAD:-false}"
-            HEALTH_URL="${HEALTH_URL:-http://127.0.0.1/}"
-            HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
-            HEALTH_INTERVAL="${HEALTH_INTERVAL:-3}"
-            RELEASES_DIR="$WEB_ROOT/releases"
-            CURRENT_LINK="$WEB_ROOT/current"
-            TS="$(date +%Y%m%d-%H%M%S)"
-            NEW_DIR="$RELEASES_DIR/$TS"
-            echo "[1/7] prepare dirs"
-            sudo mkdir -p "$RELEASES_DIR"
-            sudo mkdir -p "$NEW_DIR"
-            echo "[2/7] extract dist into new release"
-            sudo tar -C "$NEW_DIR" -xzf /tmp/dist.tgz
-            sudo rm -f /tmp/dist.tgz
-            echo "[3/7] validate dist"
-            sudo test -f "$NEW_DIR/index.html"
-            echo "[4/7] atomic switch current -> new release"
-            sudo ln -sfn "$NEW_DIR" "$CURRENT_LINK"
-            echo "[5/7] (optional) nginx reload"
-            if [[ "$NGINX_RELOAD" == "true" ]]; then
-              sudo nginx -t
-              sudo systemctl reload nginx
-            fi
-            echo "[6/7] health check"
-            elapsed=0
-            until curl -fsS "$HEALTH_URL" > /dev/null; do
-              if [ "$elapsed" -ge "$HEALTH_TIMEOUT" ]; then
-                echo "Health check failed after ${HEALTH_TIMEOUT}s"
-                sudo systemctl status nginx --no-pager || true
-                exit 1
-              fi
-              sleep "$HEALTH_INTERVAL"
-              elapsed=$((elapsed + HEALTH_INTERVAL))
-            done
-            echo "[7/7] deploy done (release=$TS, branch=${BRANCH_NAME:-unknown})"
+  #         script: |
+  #           set -euo pipefail
+  #           WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"
+  #           NGINX_RELOAD="${NGINX_RELOAD:-false}"
+  #           HEALTH_URL="${HEALTH_URL:-http://127.0.0.1/}"
+  #           HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
+  #           HEALTH_INTERVAL="${HEALTH_INTERVAL:-3}"
+  #           RELEASES_DIR="$WEB_ROOT/releases"
+  #           CURRENT_LINK="$WEB_ROOT/current"
+  #           TS="$(date +%Y%m%d-%H%M%S)"
+  #           NEW_DIR="$RELEASES_DIR/$TS"
+  #           echo "[1/7] prepare dirs"
+  #           sudo mkdir -p "$RELEASES_DIR"
+  #           sudo mkdir -p "$NEW_DIR"
+  #           echo "[2/7] extract dist into new release"
+  #           sudo tar -C "$NEW_DIR" -xzf /tmp/dist.tgz
+  #           sudo rm -f /tmp/dist.tgz
+  #           echo "[3/7] validate dist"
+  #           sudo test -f "$NEW_DIR/index.html"
+  #           echo "[4/7] atomic switch current -> new release"
+  #           sudo ln -sfn "$NEW_DIR" "$CURRENT_LINK"
+  #           echo "[5/7] (optional) nginx reload"
+  #           if [[ "$NGINX_RELOAD" == "true" ]]; then
+  #             sudo nginx -t
+  #             sudo systemctl reload nginx
+  #           fi
+  #           echo "[6/7] health check"
+  #           elapsed=0
+  #           until curl -fsS "$HEALTH_URL" > /dev/null; do
+  #             if [ "$elapsed" -ge "$HEALTH_TIMEOUT" ]; then
+  #               echo "Health check failed after ${HEALTH_TIMEOUT}s"
+  #               sudo systemctl status nginx --no-pager || true
+  #               exit 1
+  #             fi
+  #             sleep "$HEALTH_INTERVAL"
+  #             elapsed=$((elapsed + HEALTH_INTERVAL))
+  #           done
+  #           echo "[7/7] deploy done (release=$TS, branch=${BRANCH_NAME:-unknown})"
   
   deploy-s3:
     name: Deploy (S3 + CloudFront)
@@ -283,6 +287,11 @@ jobs:
       # 7) 배포 완료 로그
       - name: Deploy done
         run: echo "Deploy completed (S3 + CloudFront)"
+
+
+  ###################################################
+  ### 아래는 빅뱅 인스턴스에 이전 아티팩트 수동 배포하는 코드임 ###
+  ###################################################
 
   deploy-reuse-artifact:
     name: Deploy (reuse artifact)
