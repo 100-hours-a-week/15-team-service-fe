@@ -6,7 +6,7 @@ on:
       - "**/*"
       - ".github/workflows/**"
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "V1" ]
   workflow_dispatch:
     inputs:
       ci_run_id:
