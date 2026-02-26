@@ -57,15 +57,7 @@ export function InterviewSessionPage() {
   const completeInterviewMutation = useCompleteInterview();
 
   const handleAnswer = () => {
-    if (isRecording || isTranscribing) return;
-    if (!currentTurnNo) {
-      toast.error('질문을 받은 뒤 답변할 수 있습니다.');
-      return;
-    }
-    if (!hasMic) {
-      fileInputRef.current?.click();
-      return;
-    }
+    if (isTranscribing) return;
     if (isRecording) {
       const elapsedMs = Date.now() - recordStartRef.current;
       if (elapsedMs < 1000) {
@@ -80,6 +72,14 @@ export function InterviewSessionPage() {
         stopStream();
         setIsRecording(false);
       }
+      return;
+    }
+    if (!currentTurnNo) {
+      toast.error('질문을 받은 뒤 답변할 수 있습니다.');
+      return;
+    }
+    if (!hasMic) {
+      fileInputRef.current?.click();
       return;
     }
     if (!window.MediaRecorder) {
@@ -198,6 +198,9 @@ export function InterviewSessionPage() {
         toast.error('음성 인식에 실패했습니다.');
         return;
       }
+
+      // STT 완료 후 바로 변환 상태 해제
+      setIsTranscribing(false);
 
       const answerText = sttResult.text.trim();
       setMessages((prev) => [
@@ -562,7 +565,9 @@ export function InterviewSessionPage() {
       <ConfirmDialog
         isOpen={isEndDialogOpen}
         title="면접 종료"
-        description="면접을 종료하시겠습니까?"
+        description={
+          '면접을 종료하시겠습니까?\n종료하시면 면접을 다시 이어서 진행할 수 없습니다.'
+        }
         confirmText="네"
         cancelText="아니오"
         onConfirm={handleConfirmEndDialog}

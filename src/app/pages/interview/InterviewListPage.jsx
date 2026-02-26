@@ -349,7 +349,7 @@ export function InterviewListPage() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {interviews.length > 0 && (
         <div className="px-5 pb-6">
           <div className="max-w-[390px] mx-auto">
             <Pagination>
@@ -487,7 +487,7 @@ const InterviewCard = React.memo(
 
     const menuItems = [
       {
-        label: '내용명 변경',
+        label: '면접명 변경',
         onClick: handleNameChange,
       },
       {
@@ -563,7 +563,16 @@ const InterviewCard = React.memo(
     );
   },
   (prevProps, nextProps) => {
-    return prevProps.interview.id === nextProps.interview.id;
+    const prev = prevProps.interview;
+    const next = nextProps.interview;
+    return (
+      prev.id === next.id &&
+      prev.name === next.name &&
+      prev.date === next.date &&
+      prev.type === next.type &&
+      prev.position === next.position &&
+      prev.company === next.company
+    );
   }
 );
 
