@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { StepProgress } from '../../components/common/StepProgress';
@@ -11,14 +11,25 @@ import { useStartInterview } from '@/app/hooks/mutations/useInterviewMutations';
 
 export function InterviewStartPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const showModal = false;
   const [step, setStep] = useState(1);
+
+  // 홈에서 이력서를 선택해서 넘어온 경우
+  const preselectedResume = location.state?.resumeId
+    ? {
+        resumeId: location.state.resumeId,
+        resumeVersionNo: location.state.resumeVersionNo,
+        resumeName: location.state.resumeName,
+      }
+    : null;
+
   const [formData, setFormData] = useState({
     type: '',
     positionId: null,
     company: '',
-    resumeId: null,
-    resumeVersionNo: null,
+    resumeId: preselectedResume?.resumeId || null,
+    resumeVersionNo: preselectedResume?.resumeVersionNo || null,
   });
 
   const { data: positions = [] } = usePositions();
@@ -67,11 +78,7 @@ export function InterviewStartPage() {
         return;
       }
 
-      navigate('/interview/session', {
-        state: {
-          interviewId: response.id,
-        },
-      });
+      navigate(`/interview/session/${response.id}`);
     } catch {
       // toast handled by mutation
     }
@@ -126,31 +133,40 @@ export function InterviewStartPage() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm text-gray-600">이력서 선택</label>
-                <select
-                  value={formData.resumeId || ''}
-                  onChange={(event) => {
-                    const resumeId = Number(event.target.value);
-                    const resume = resumes.find(
-                      (item) => item.resumeId === resumeId
-                    );
-                    setFormData({
-                      ...formData,
-                      resumeId: resume?.resumeId || null,
-                      resumeVersionNo: resume?.currentVersionNo || null,
-                    });
-                  }}
-                  className="w-full min-h-[44px] px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="">이력서를 선택해주세요</option>
-                  {resumes.map((resume) => (
-                    <option key={resume.resumeId} value={resume.resumeId}>
-                      {resume.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {preselectedResume ? (
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-600">선택된 이력서</label>
+                  <div className="w-full min-h-[44px] px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-700">
+                    {preselectedResume.resumeName || '선택된 이력서'}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-600">이력서 선택</label>
+                  <select
+                    value={formData.resumeId || ''}
+                    onChange={(event) => {
+                      const resumeId = Number(event.target.value);
+                      const resume = resumes.find(
+                        (item) => item.resumeId === resumeId
+                      );
+                      setFormData({
+                        ...formData,
+                        resumeId: resume?.resumeId || null,
+                        resumeVersionNo: resume?.currentVersionNo || null,
+                      });
+                    }}
+                    className="w-full min-h-[44px] px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="">이력서를 선택해주세요</option>
+                    {resumes.map((resume) => (
+                      <option key={resume.resumeId} value={resume.resumeId}>
+                        {resume.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="flex bg-white rounded-xl border-2 border-gray-200 p-1">
                 <button
@@ -256,16 +272,26 @@ export function InterviewStartPage() {
                   </p>
                   <p>
                     <span className="text-gray-600">이력서:</span>{' '}
-                    {selectedResume?.name || '미지정'}
+                    {preselectedResume?.resumeName || selectedResume?.name || '미지정'}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Button variant="primary" fullWidth onClick={handleStart}>
-                  면접 시작
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleStart}
+                  disabled={startInterviewMutation.isPending}
+                >
+                  {startInterviewMutation.isPending ? '면접 준비 중...' : '면접 시작'}
                 </Button>
-                <Button variant="ghost" fullWidth onClick={() => setStep(2)}>
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => setStep(2)}
+                  disabled={startInterviewMutation.isPending}
+                >
                   이전
                 </Button>
               </div>
