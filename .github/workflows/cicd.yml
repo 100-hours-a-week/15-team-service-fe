@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: >-
-      ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'main' }}
+      ${{ needs.fe-ci.result == 'success' && github.event_name == 'push' && github.ref_name == 'V1' }}
 
     steps:
       - name: Checkout (metadata only)
