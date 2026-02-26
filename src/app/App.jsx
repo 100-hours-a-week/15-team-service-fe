@@ -170,7 +170,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/interview/session',
+        path: '/interview/session/:interviewId',
         element: (
           <ProtectedRoute>
             <InterviewSessionPage />

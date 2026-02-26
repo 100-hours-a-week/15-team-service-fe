@@ -62,7 +62,8 @@ export const renameInterview = async (id, name) => {
 export const startInterview = async (payload) => {
   const response = await mutatingClient.post(
     API_CONFIG.ENDPOINTS.INTERVIEW_CREATE,
-    payload
+    payload,
+    { timeout: API_CONFIG.LONG_TIMEOUT }
   );
   return response.data.data;
 };
@@ -92,7 +93,9 @@ export const submitInterviewAnswer = async (interviewId, payload) => {
  */
 export const completeInterview = async (interviewId) => {
   const response = await mutatingClient.post(
-    API_CONFIG.ENDPOINTS.INTERVIEW_COMPLETE(interviewId)
+    API_CONFIG.ENDPOINTS.INTERVIEW_COMPLETE(interviewId),
+    {},
+    { timeout: API_CONFIG.LONG_TIMEOUT }
   );
   return response.data.data;
 };

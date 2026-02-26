@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
-import { FileText, AlertCircle, Search, X } from 'lucide-react';
+import { FileText, AlertCircle, Search, X, Mic } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { BottomNav } from '../components/layout/BottomNav';
 import { DropdownMenu } from '../components/common/DropdownMenu';
@@ -288,6 +288,16 @@ const ResumeCard = React.memo(({ resume }) => {
     navigate(`/resume/${resume.resumeId || resume.id}`);
   }, [navigate, resume]);
 
+  const handleStartInterview = useCallback(() => {
+    navigate('/interview/start', {
+      state: {
+        resumeId: resume.resumeId || resume.id,
+        resumeVersionNo: resume.currentVersionNo,
+        resumeName: resume.name,
+      },
+    });
+  }, [navigate, resume]);
+
   const handleResumeNameEdit = useCallback(
     (e) => {
       e.stopPropagation();
@@ -392,6 +402,14 @@ const ResumeCard = React.memo(({ resume }) => {
           >
             <FileText className="w-4 h-4" strokeWidth={1.5} />
             프로젝트 요약 보기
+          </Button>
+          <Button
+            variant="primary"
+            className="flex-1"
+            onClick={handleStartInterview}
+          >
+            <Mic className="w-4 h-4" strokeWidth={1.5} />
+            모의 면접
           </Button>
         </div>
       </div>

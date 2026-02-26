@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { cn } from '../../lib/utils';
@@ -26,8 +26,8 @@ import { transcribeAudio } from '@/app/api/endpoints/stt';
 
 export function InterviewSessionPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const interviewId = location.state?.interviewId;
+  const { interviewId } = useParams();
+  const numericInterviewId = interviewId ? Number(interviewId) : null;
 
   const [hasMic, setHasMic] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
@@ -77,13 +77,15 @@ export function InterviewSessionPage() {
     if (isEnding) return;
     setIsEnding(true);
     try {
-      await completeInterviewMutation.mutateAsync(interviewId);
+      await completeInterviewMutation.mutateAsync(numericInterviewId);
     } catch {
       setIsEnding(false);
     }
   };
   const handleTextChange = (event) => setTextInput(event.target.value);
   const handleKeyDown = (event) => {
+    // 한글 IME 조합 중일 때는 무시 (조합 완료 후 전송)
+    if (event.nativeEvent.isComposing) return;
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleTextSubmit();
@@ -107,7 +109,7 @@ export function InterviewSessionPage() {
 
     try {
       await submitAnswerMutation.mutateAsync({
-        interviewId,
+        interviewId: numericInterviewId,
         turnNo: currentTurnNo,
         answer: answerText,
         answerInputType: 'TEXT',
@@ -170,7 +172,7 @@ export function InterviewSessionPage() {
       ]);
 
       await submitAnswerMutation.mutateAsync({
-        interviewId,
+        interviewId: numericInterviewId,
         turnNo: currentTurnNo,
         answer: answerText,
         answerInputType: 'AUDIO',
@@ -236,15 +238,22 @@ export function InterviewSessionPage() {
     setIsLoading(false);
     setHasStarted(true);
     setCurrentTurnNo(data.turnNo);
-    setMessages((prev) => [
-      ...prev,
-      {
-        type: 'question',
-        text: data.question,
-        timestamp: data.askedAt,
-        turnNo: data.turnNo,
-      },
-    ]);
+    setMessages((prev) => {
+      // 같은 turnNo의 질문이 이미 있으면 중복 추가하지 않음
+      const exists = prev.some(
+        (msg) => msg.type === 'question' && msg.turnNo === data.turnNo
+      );
+      if (exists) return prev;
+      return [
+        ...prev,
+        {
+          type: 'question',
+          text: data.question,
+          timestamp: data.askedAt,
+          turnNo: data.turnNo,
+        },
+      ];
+    });
   }, []);
 
   const onFeedback = useCallback((data) => {
@@ -268,7 +277,7 @@ export function InterviewSessionPage() {
     });
   }, [elapsedTime, navigate]);
 
-  useInterviewSSE(interviewId, {
+  useInterviewSSE(numericInterviewId, {
     onQuestion,
     onFeedback,
     onError: () => {
@@ -287,10 +296,10 @@ export function InterviewSessionPage() {
   }, [hasStarted]);
 
   useEffect(() => {
-    if (!interviewId) {
+    if (!numericInterviewId) {
       setIsLoading(false);
     }
-  }, [interviewId]);
+  }, [numericInterviewId]);
 
   useEffect(() => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -340,7 +349,7 @@ export function InterviewSessionPage() {
     );
   }
 
-  if (!interviewId) {
+  if (!numericInterviewId) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-5">
         <div className="text-center space-y-4">

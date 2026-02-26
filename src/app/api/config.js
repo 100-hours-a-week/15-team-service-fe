@@ -63,5 +63,6 @@ export const API_CONFIG = {
     NOTIFICATION_READ: (id) => `/notifications/${id}/read`,
   },
   TIMEOUT: 30000,
+  LONG_TIMEOUT: 120000, // 2 minutes for AI-intensive operations
   STREAMING_TIMEOUT: 300000,
 };
