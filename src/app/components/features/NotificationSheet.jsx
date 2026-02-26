@@ -86,10 +86,10 @@ export function NotificationSheet() {
       <Drawer.Trigger asChild>
         <button
           type="button"
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center relative"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center relative text-gray-700 hover:text-primary transition-colors"
           aria-label="알림 열기"
         >
-          <Bell className="w-6 h-6 text-gray-700" />
+          <Bell className="w-6 h-6" />
           {hasNew && (
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
           )}
