@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
@@ -6,144 +6,143 @@ import { CheckCircle2 } from 'lucide-react';
 import { InterviewScript } from '../../components/features/InterviewScript';
 import { EvaluationCard } from '../../components/features/EvaluationCard';
 import { formatTime } from '@/app/lib/utils';
+import {
+  useInterview,
+  useInterviewMessages,
+} from '@/app/hooks/queries/useInterviewQueries';
+import { useInterviewSSE } from '@/app/hooks/useInterviewSSE';
 
 /**
  * @typedef {import('@/app/types').ScriptEntry} ScriptEntry
  * @typedef {import('@/app/types').EvaluationData} EvaluationData
  */
 
-/** @type {ScriptEntry[]} */
-const MOCK_SCRIPT = [
-  {
-    timestamp: '0:00',
-    speaker: '면접관',
-    content: '안녕하세요. 자기소개 부탁드립니다.',
-  },
-  {
-    timestamp: '0:05',
-    speaker: '유저',
-    content:
-      '아, 저, 그... 안녕하세요. 저는 백엔드 개발자를 희망하는 예지입니다.',
-  },
-  {
-    timestamp: '0:15',
-    speaker: 'AI',
-    content:
-      '모범답변: "안녕하세요. 저는 Node.js와 Python을 활용한 백엔드 개발 경험이 있는 예지입니다. 특히 RESTful API 설계와 데이터베이스 최적화에 관심이 많습니다."',
-  },
-  {
-    timestamp: '0:35',
-    speaker: '면접관',
-    content: '가장 기억에 남는 프로젝트에 대해 말씀해주세요.',
-  },
-  {
-    timestamp: '0:40',
-    speaker: '유저',
-    content:
-      '커뮤니티 플랫폼을 만들었는데요, Express.js로 백엔드 서버를 구축했고 JWT 인증 시스템을 구현했습니다.',
-  },
-  {
-    timestamp: '1:05',
-    speaker: 'AI',
-    content:
-      '모범답변: "커뮤니티 플랫폼 프로젝트에서 Express.js 기반 백엔드 서버를 구축했습니다. 특히 JWT 인증 시스템 구현과 Redis 캐싱을 통해 응답 속도를 30% 향상시켰습니다. 이 과정에서 보안과 성능 최적화의 중요성을 배웠습니다."',
-  },
-  {
-    timestamp: '1:35',
-    speaker: '면접관',
-    content: '팀 프로젝트에서 갈등이 있었던 경험이 있나요?',
-  },
-  {
-    timestamp: '1:42',
-    speaker: '유저',
-    content:
-      '네, 있었습니다. 코드 스타일 차이로 의견이 맞지 않았는데, 팀 미팅을 통해 코딩 컨벤션을 정하고 해결했습니다.',
-  },
-  {
-    timestamp: '2:10',
-    speaker: 'AI',
-    content:
-      '모범답변: "팀원 간 코드 스타일 차이로 갈등이 있었습니다. 이를 해결하기 위해 팀 미팅을 제안하여 공통 코딩 컨벤션을 수립하고, ESLint와 Prettier를 도입하여 자동화했습니다. 이 경험을 통해 의사소통과 표준화의 중요성을 배웠습니다."',
-  },
-];
-
-/** @type {EvaluationData} */
-const MOCK_EVALUATION = {
-  summary:
-    '전반적으로 기술적인 역량과 경험을 잘 전달하셨습니다. 다만, 답변의 구체성을 높이고 STAR 기법을 활용하면 더욱 설득력 있는 면접이 될 것입니다.',
-  strengths: [
-    '프로젝트 경험을 구체적으로 설명하여 실무 능력을 잘 어필했습니다',
-    '기술 스택에 대한 이해도가 높아 보였습니다',
-    '갈등 해결 경험을 통해 협업 능력을 잘 보여주었습니다',
-  ],
-  improvements: [
-    '자기소개 시 더 자신감 있는 목소리와 명확한 발음이 필요합니다',
-    '프로젝트 성과를 수치화하여 표현하면 더 설득력이 있습니다',
-    '답변이 다소 짧아 보일 수 있으니 좀 더 풍부한 내용 전달이 필요합니다',
-  ],
-  nextActions: [
-    'STAR 기법(상황-과제-행동-결과)을 활용한 답변 연습',
-    '프로젝트 성과를 구체적인 수치로 정리하기',
-  ],
-};
-
 export function InterviewSummaryPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const {
+    interviewId = null,
     duration = 150,
     messages = null,
     feedback = null,
   } = location.state || {};
+  const [liveFeedback, setLiveFeedback] = useState(null);
 
-  const feedbackMap = useMemo(() => {
-    if (!feedback?.feedbacks) return new Map();
-    return new Map(
-      feedback.feedbacks.map((item) => [item.turnNo, item.modelAnswer])
-    );
-  }, [feedback]);
+  const interviewQuery = useInterview(interviewId, {
+    enabled: !!interviewId && !feedback?.overallFeedback,
+  });
+  const messagesQuery = useInterviewMessages(interviewId, {
+    enabled: !!interviewId && (!messages || messages.length === 0),
+  });
+
+  const resolvedFeedback = useMemo(() => {
+    if (liveFeedback?.overallFeedback) return liveFeedback;
+    if (feedback?.overallFeedback) return feedback;
+    const totalFeedback = interviewQuery.data?.totalFeedback;
+    if (!totalFeedback) return null;
+    try {
+      return JSON.parse(totalFeedback);
+    } catch {
+      return null;
+    }
+  }, [liveFeedback, feedback, interviewQuery.data?.totalFeedback]);
+
+  const resolvedMessages = useMemo(() => {
+    if (messages && messages.length > 0) return messages;
+    if (messagesQuery.data && messagesQuery.data.length > 0) {
+      return messagesQuery.data.map((item) => ({
+        type: 'question',
+        text: item.question,
+        timestamp: item.askedAt,
+        turnNo: item.turnNo,
+        answer: item.answer,
+        answeredAt: item.answeredAt,
+      }));
+    }
+    return [];
+  }, [messages, messagesQuery.data]);
 
   const scriptEntries = useMemo(() => {
-    if (!messages || messages.length === 0) return MOCK_SCRIPT;
-    const entries = [];
-    messages.forEach((msg) => {
-      if (msg.type === 'question') {
-        entries.push({
-          timestamp: msg.timestamp,
-          speaker: '면접관',
-          content: msg.text,
-        });
-        return;
-      }
-      if (msg.type === 'answer') {
-        entries.push({
-          timestamp: msg.timestamp,
-          speaker: '유저',
-          content: msg.text,
-        });
-        const modelAnswer = feedbackMap.get(msg.turnNo);
-        if (modelAnswer) {
-          entries.push({
-            timestamp: msg.timestamp,
-            speaker: 'AI',
-            content: `모범답변: "${modelAnswer}"`,
+    if (!resolvedMessages || resolvedMessages.length === 0) return [];
+    const questionByTurn = new Map();
+    const answerByTurn = new Map();
+    const order = [];
+
+    resolvedMessages.forEach((msg) => {
+      const turnNo = msg.turnNo;
+      if (turnNo == null) return;
+
+      if (msg.type === 'question' || msg.question) {
+        if (!questionByTurn.has(turnNo)) {
+          questionByTurn.set(turnNo, {
+            timestamp: msg.timestamp || msg.askedAt,
+            text: msg.text || msg.question,
           });
+          order.push(turnNo);
+        }
+      }
+
+      const answerText =
+        msg.answer || (msg.type === 'answer' ? msg.text : null);
+      if (answerText) {
+        answerByTurn.set(turnNo, {
+          timestamp: msg.answeredAt || msg.timestamp,
+          text: answerText,
+        });
+        if (!questionByTurn.has(turnNo)) {
+          order.push(turnNo);
         }
       }
     });
-    return entries.length > 0 ? entries : MOCK_SCRIPT;
-  }, [messages, feedbackMap]);
+
+    const entries = [];
+    order.forEach((turnNo) => {
+      const question = questionByTurn.get(turnNo);
+      const answer = answerByTurn.get(turnNo);
+      if (!question || !answer) return;
+      entries.push({
+        timestamp: question.timestamp,
+        speaker: '면접관',
+        content: question.text,
+      });
+      entries.push({
+        timestamp: answer.timestamp,
+        speaker: '유저',
+        content: answer.text,
+      });
+    });
+
+    return entries;
+  }, [resolvedMessages]);
 
   const evaluationData = useMemo(() => {
-    if (!feedback?.overallFeedback) return MOCK_EVALUATION;
-    const overall = feedback.overallFeedback;
+    if (!resolvedFeedback?.overallFeedback) {
+      return {
+        summary: '피드백을 생성 중입니다.',
+        strengths: [],
+        improvements: [],
+        nextActions: [],
+      };
+    }
+    const overall = resolvedFeedback.overallFeedback;
     return {
       summary: overall.summary || '피드백이 생성되었습니다.',
       strengths: overall.keyStrengths || [],
       improvements: overall.keyImprovements || [],
       nextActions: [],
     };
-  }, [feedback]);
+  }, [resolvedFeedback]);
+
+  useInterviewSSE(resolvedFeedback?.overallFeedback ? null : interviewId, {
+    onFeedback: (data) => {
+      if (!data?.totalFeedback) return;
+      try {
+        setLiveFeedback(JSON.parse(data.totalFeedback));
+      } catch {
+        setLiveFeedback(null);
+      }
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -162,10 +161,32 @@ export function InterviewSummaryPage() {
           </div>
 
           {/* Interview Script */}
-          <InterviewScript entries={scriptEntries} />
+          {scriptEntries.length > 0 ? (
+            <InterviewScript entries={scriptEntries} />
+          ) : (
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 text-center text-sm text-gray-600">
+              면접 대화 내역을 불러오는 중입니다.
+            </div>
+          )}
 
           {/* AI Overall Evaluation */}
-          <EvaluationCard data={evaluationData} />
+          {resolvedFeedback?.overallFeedback ? (
+            <EvaluationCard data={evaluationData} />
+          ) : (
+            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
+                <p className="text-sm text-gray-700">
+                  AI 피드백을 생성 중입니다. 잠시만 기다려주세요.
+                </p>
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="h-3 bg-gray-100 rounded animate-pulse" />
+                <div className="h-3 bg-gray-100 rounded animate-pulse w-5/6" />
+                <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+              </div>
+            </div>
+          )}
 
           <Button variant="primary" fullWidth onClick={() => navigate('/')}>
             홈으로

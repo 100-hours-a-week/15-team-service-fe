@@ -381,9 +381,20 @@ export function generatePageNumbers(currentPage, totalPages) {
 export function sortInterviews(interviews = [], sortOption = 'newest') {
   const toTime = (dateValue) => Date.parse(dateValue) || 0;
 
-  return [...interviews].sort((a, b) =>
-    sortOption === 'oldest'
-      ? toTime(a.date) - toTime(b.date)
-      : toTime(b.date) - toTime(a.date)
-  );
+  const byName = (a, b) => {
+    const aName = (a.name || '').toLowerCase();
+    const bName = (b.name || '').toLowerCase();
+    return aName.localeCompare(bName, 'ko');
+  };
+
+  if (sortOption === 'name') {
+    return [...interviews].sort(byName);
+  }
+
+  return [...interviews].sort((a, b) => {
+    if (sortOption === 'oldest') {
+      return toTime(a.date) - toTime(b.date);
+    }
+    return toTime(b.date) - toTime(a.date);
+  });
 }

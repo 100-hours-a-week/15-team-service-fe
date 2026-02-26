@@ -4,6 +4,7 @@ import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { cn } from '../../lib/utils';
 import { useInterviewSSE } from '@/app/hooks/useInterviewSSE';
+import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import {
   useSubmitInterviewAnswer,
   useCompleteInterview,
@@ -31,7 +32,6 @@ export function InterviewSessionPage() {
 
   const [hasMic, setHasMic] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
-  const isListening = false;
   const [messages, setMessages] = useState([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,12 +40,16 @@ export function InterviewSessionPage() {
   const [currentTurnNo, setCurrentTurnNo] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [isEnding, setIsEnding] = useState(false);
+  const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [sseError, setSseError] = useState(false);
   const fileInputRef = useRef(null);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
+  const recordStartRef = useRef(0);
+  const stopRequestedRef = useRef(false);
+  const autoRestartedRef = useRef(false);
   const messagesRef = useRef(messages);
   const feedbackRef = useRef(feedback);
 
@@ -53,7 +57,7 @@ export function InterviewSessionPage() {
   const completeInterviewMutation = useCompleteInterview();
 
   const handleAnswer = () => {
-    if (isListening || isTranscribing) return;
+    if (isRecording || isTranscribing) return;
     if (!currentTurnNo) {
       toast.error('질문을 받은 뒤 답변할 수 있습니다.');
       return;
@@ -63,7 +67,19 @@ export function InterviewSessionPage() {
       return;
     }
     if (isRecording) {
-      recorderRef.current?.stop();
+      const elapsedMs = Date.now() - recordStartRef.current;
+      if (elapsedMs < 1000) {
+        toast.error('1초 이상 녹음해 주세요.');
+        return;
+      }
+      stopRequestedRef.current = true;
+      if (recorderRef.current?.state === 'recording') {
+        recorderRef.current.stop();
+      } else {
+        // Recorder already inactive but UI says recording - force cleanup
+        stopStream();
+        setIsRecording(false);
+      }
       return;
     }
     if (!window.MediaRecorder) {
@@ -77,10 +93,33 @@ export function InterviewSessionPage() {
     if (isEnding) return;
     setIsEnding(true);
     try {
-      await completeInterviewMutation.mutateAsync(numericInterviewId);
+      const response =
+        await completeInterviewMutation.mutateAsync(numericInterviewId);
+      let parsedFeedback = null;
+      if (response?.totalFeedback) {
+        try {
+          parsedFeedback = JSON.parse(response.totalFeedback);
+        } catch {
+          parsedFeedback = null;
+        }
+      }
+      navigate('/interview/summary', {
+        state: {
+          interviewId: numericInterviewId,
+          duration: elapsedTime,
+          messages: messagesRef.current,
+          feedback: parsedFeedback,
+        },
+      });
     } catch {
       setIsEnding(false);
     }
+  };
+  const handleOpenEndDialog = () => setIsEndDialogOpen(true);
+  const handleCancelEndDialog = () => setIsEndDialogOpen(false);
+  const handleConfirmEndDialog = async () => {
+    setIsEndDialogOpen(false);
+    await handleEnd();
   };
   const handleTextChange = (event) => setTextInput(event.target.value);
   const handleKeyDown = (event) => {
@@ -196,6 +235,19 @@ export function InterviewSessionPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       chunksRef.current = [];
+      recordStartRef.current = Date.now();
+      stopRequestedRef.current = false;
+
+      stream.getTracks().forEach((track) => {
+        track.onended = () => {
+          if (isRecording) {
+            setIsRecording(false);
+            toast.error(
+              '마이크 입력이 중단되었습니다. 권한/장치를 확인해주세요.'
+            );
+          }
+        };
+      });
 
       const options = MediaRecorder.isTypeSupported('audio/webm')
         ? { mimeType: 'audio/webm' }
@@ -208,10 +260,38 @@ export function InterviewSessionPage() {
           chunksRef.current.push(event.data);
         }
       };
-
+      recorder.onerror = () => {
+        toast.error('녹음 중 오류가 발생했습니다. 다시 시도해주세요.');
+      };
+      recorder.onstart = () => {
+        autoRestartedRef.current = false;
+      };
       recorder.onstop = async () => {
-        setIsRecording(false);
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const durationMs = Date.now() - recordStartRef.current;
+        const hasEnoughData = durationMs >= 1000 && blob.size >= 10 * 1024;
+        if (!stopRequestedRef.current && !hasEnoughData) {
+          stopStream();
+          if (!autoRestartedRef.current) {
+            autoRestartedRef.current = true;
+            setTimeout(() => {
+              startRecording();
+            }, 300);
+            return;
+          }
+          setIsRecording(false);
+          toast.error(
+            '녹음이 중단되었습니다. 마이크 권한/장치를 확인해주세요.'
+          );
+          return;
+        }
+        if (!hasEnoughData) {
+          stopStream();
+          setIsRecording(false);
+          toast.error('1초 이상 녹음해 주세요.');
+          return;
+        }
+        setIsRecording(false);
         const file = new File([blob], `interview-${Date.now()}.webm`, {
           type: 'audio/webm',
         });
@@ -259,7 +339,9 @@ export function InterviewSessionPage() {
   const onFeedback = useCallback((data) => {
     if (data?.totalFeedback) {
       try {
-        setFeedback(JSON.parse(data.totalFeedback));
+        const parsed = JSON.parse(data.totalFeedback);
+        feedbackRef.current = parsed;
+        setFeedback(parsed);
       } catch {
         setFeedback(null);
       }
@@ -268,14 +350,7 @@ export function InterviewSessionPage() {
 
   const onEnd = useCallback(() => {
     setHasStarted(false);
-    navigate('/interview/summary', {
-      state: {
-        duration: elapsedTime,
-        messages: messagesRef.current,
-        feedback: feedbackRef.current,
-      },
-    });
-  }, [elapsedTime, navigate]);
+  }, []);
 
   useInterviewSSE(numericInterviewId, {
     onQuestion,
@@ -380,7 +455,7 @@ export function InterviewSessionPage() {
           </div>
           <Button
             variant="danger"
-            onClick={handleEnd}
+            onClick={handleOpenEndDialog}
             className="h-9 px-4 text-sm"
             disabled={isEnding}
           >
@@ -425,9 +500,7 @@ export function InterviewSessionPage() {
               ? '음성을 텍스트로 변환 중...'
               : isRecording
                 ? '녹음 중...'
-                : isListening
-                  ? '말하는 중...'
-                  : '듣는 중...'}
+                : '대기 중...'}
           </p>
 
           {/* 입력 행: textarea + Send 버튼 + 마이크 버튼 */}
@@ -438,7 +511,7 @@ export function InterviewSessionPage() {
               value={textInput}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
-              disabled={isListening || isTranscribing}
+              disabled={isRecording || isTranscribing}
               className="flex-1 min-h-[44px] max-h-[120px] p-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
               rows={1}
             />
@@ -446,10 +519,10 @@ export function InterviewSessionPage() {
             {/* Send 버튼 */}
             <button
               onClick={handleTextSubmit}
-              disabled={!textInput.trim() || isListening || isTranscribing}
+              disabled={!textInput.trim() || isRecording || isTranscribing}
               className={cn(
                 'p-3 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0',
-                textInput.trim() && !isListening && !isTranscribing
+                textInput.trim() && !isRecording && !isTranscribing
                   ? 'bg-primary text-white'
                   : 'bg-gray-200 text-gray-400'
               )}
@@ -460,13 +533,18 @@ export function InterviewSessionPage() {
             {/* 마이크 버튼 (기존) */}
             <button
               onClick={handleAnswer}
-              disabled={isListening || isTranscribing}
-              className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-50 flex-shrink-0"
+              disabled={isTranscribing}
+              className={cn(
+                'p-3 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0 disabled:opacity-50',
+                isRecording
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-200 text-gray-600'
+              )}
             >
               {isRecording ? (
-                <MicOff className="w-8 h-8" strokeWidth={1.5} />
+                <MicOff className="w-5 h-5" strokeWidth={1.5} />
               ) : (
-                <Mic className="w-8 h-8" strokeWidth={1.5} />
+                <Mic className="w-5 h-5" strokeWidth={1.5} />
               )}
             </button>
           </div>
@@ -479,6 +557,16 @@ export function InterviewSessionPage() {
         accept="audio/mpeg,audio/wav,audio/webm"
         onChange={handleAudioSelected}
         className="hidden"
+      />
+
+      <ConfirmDialog
+        isOpen={isEndDialogOpen}
+        title="면접 종료"
+        description="면접을 종료하시겠습니까?"
+        confirmText="네"
+        cancelText="아니오"
+        onConfirm={handleConfirmEndDialog}
+        onClose={handleCancelEndDialog}
       />
     </div>
   );
