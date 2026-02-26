@@ -7,6 +7,7 @@ import { cn } from '@/app/lib/utils';
 /**
  * @typedef {Object} EvaluationCardProps
  * @property {EvaluationData} data
+ * @property {string} [metaLabel]
  * @property {string} [className]
  */
 
@@ -53,7 +54,7 @@ const BulletList = ({ items, bulletColor }) => (
 /**
  * @param {EvaluationCardProps} props
  */
-export const EvaluationCard = ({ data, className }) => {
+export const EvaluationCard = ({ data, metaLabel, className }) => {
   return (
     <div
       className={cn(
@@ -61,7 +62,10 @@ export const EvaluationCard = ({ data, className }) => {
         className
       )}
     >
-      <h3 className="mb-4">전체 평가</h3>
+      <h3 className="mb-4">
+        {metaLabel ? `${metaLabel} ` : ''}
+        전체 평가
+      </h3>
 
       <div className="space-y-4">
         <EvaluationSection title="총평" titleColor="text-gray-900">

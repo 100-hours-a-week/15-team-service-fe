@@ -3,7 +3,7 @@
  * React Query hooks for fetching resume data
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import {
   fetchResumes,
   fetchResumeById,
@@ -21,10 +21,33 @@ export const resumeKeys = {
   detail: (id) => [...resumeKeys.details(), id],
 };
 
-export function useResumes({ page = 0, size = 10 } = {}) {
-  return useQuery({
-    queryKey: ['resumes', { page, size }],
-    queryFn: () => fetchResumes({ page, size }),
+/**
+ * Fetch resumes with infinite scroll (cursor-based pagination)
+ * Supports search and sort functionality
+ * @param {Object} params
+ * @param {number} params.size - Page size (default: 10)
+ * @param {string} params.keyword - Search keyword (optional, 1-30 chars)
+ * @param {string} params.sortedBy - Sort order: UPDATED_DESC (default) | UPDATED_ASC
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult}
+ */
+export function useResumes({
+  size = 10,
+  keyword = '',
+  sortedBy = 'UPDATED_DESC',
+} = {}) {
+  return useInfiniteQuery({
+    queryKey: ['resumes', 'list', { size, keyword: keyword.trim(), sortedBy }],
+    queryFn: ({ pageParam = null }) =>
+      fetchResumes({
+        next: pageParam,
+        size,
+        keyword: keyword.trim() || undefined,
+        sortedBy,
+      }),
+    getNextPageParam: (lastPage) => lastPage.next || undefined,
+    initialPageParam: null,
+    staleTime: 0,
+    gcTime: 1000 * 60 * 5,
   });
 }
 

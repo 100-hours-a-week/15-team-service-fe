@@ -28,7 +28,7 @@ import {
 } from '@/app/lib/utils';
 import {
   useUserProfile,
-  // useUserSettings,
+  useUserSettings,
 } from '@/app/hooks/queries/useUserQuery';
 import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import {
@@ -39,15 +39,76 @@ import {
 import { useLogout } from '@/app/hooks/mutations/useAuthMutations';
 import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
 import { validateImageFile } from '@/app/lib/validators';
+import { useProfileImageUpload } from '@/app/hooks/useProfileImageUpload';
 import { toast } from '@/app/lib/toast';
 
 /**
  * @typedef {import('@/app/types').UserProfile} UserProfile
  */
 
+const PHONE_TERMS_JSX = (
+  <>
+    <p className="mt-3">
+      <strong>[수집·이용 목적]</strong>
+    </p>
+    <p className="mt-3">
+      회사는 다음 목적을 위하여 이용자의 휴대전화번호를 수집·이용합니다.
+    </p>
+    <ol className="mt-2 list-decimal space-y-1 pl-5">
+      <li className="mt-2">
+        <div>본인 인증 및 계정 보호</div>
+      </li>
+      <li className="mt-2">
+        <div>비밀번호 찾기 및 계정 복구</div>
+      </li>
+      <li className="mt-2">
+        <div>서비스 관련 주요 안내(정책 변경, 보안 알림 등)</div>
+      </li>
+      <li className="mt-2">
+        <div>부정 이용 방지 및 보안 강화</div>
+      </li>
+      <li className="mt-2">
+        <div>이용자 식별 및 주요 기능 제공 (이력서 인적사항 정보 추가)</div>
+      </li>
+    </ol>
+    <p className="mt-3">
+      <strong>[수집 항목]</strong>
+    </p>
+    <ul className="mt-2 list-disc space-y-1 pl-5">
+      <li>휴대전화번호(선택)</li>
+    </ul>
+    <p className="mt-3">
+      <strong>[보유·이용 기간]</strong>
+    </p>
+    <ul className="mt-2 list-disc space-y-1 pl-5">
+      <li>회원 탈퇴 시 즉시 파기</li>
+      <li>관계 법령에 따라 필요한 경우 법정 보관 기간 준수</li>
+    </ul>
+    <p className="mt-3">
+      <strong>[수신 동의 안내]</strong>
+    </p>
+    <ul className="mt-2 list-disc space-y-1 pl-5">
+      <li>
+        서비스 운영 관련 필수 안내는 동의 철회와 무관하게 발송될 수 있습니다.
+      </li>
+      <li>
+        마케팅 문자 수신은 별도 선택 동의를 받으며 언제든지 철회 가능합니다.
+      </li>
+    </ul>
+    <p className="mt-3">
+      <strong>[동의 거부 시 불이익]</strong>
+    </p>
+    <p className="mt-3">
+      휴대전화번호 제공을 거부할 경우 본인 인증이 불가하여 비밀번호 찾기 등의
+      서비스 이용이 제한될 수 있으나, 이력서 생성 등의 주요 기능은 전화번호 없이
+      생성 가능합니다.
+    </p>
+  </>
+);
+
 export function SettingsPage() {
   const { data: profileData } = useUserProfile();
-  // const { data: settingsData } = useUserSettings();
+  const { data: settingsData } = useUserSettings();
   const { data: positions = [] } = usePositions();
   const { mutateAsync: updateUserProfile, isPending: isSavingProfile } =
     useUpdateUser();
@@ -56,9 +117,13 @@ export function SettingsPage() {
   const { mutateAsync: withdrawUser } = useWithdrawUser();
   const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
 
-  const [profileFile, setProfileFile] = useState(null);
-  const [profilePreviewUrl, setProfilePreviewUrl] = useState(null);
-  const profileFileInputRef = useRef(null);
+  const {
+    file: profileFile,
+    previewUrl: profilePreviewUrl,
+    fileInputRef: profileFileInputRef,
+    handleChange: handleProfileImageChange,
+    reset: resetProfileImage,
+  } = useProfileImageUpload();
 
   const [isEditing, setIsEditing] = useState(false);
   /** @type {[UserProfile, React.Dispatch<React.SetStateAction<UserProfile>>]} */
@@ -78,7 +143,7 @@ export function SettingsPage() {
   const [isPhonePolicyAgreed, setIsPhonePolicyAgreed] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
-  const [_localSettings, _setLocalSettings] = useState({
+  const [localSettings, setLocalSettings] = useState({
     notificationEnabled: true,
     interviewResumeDefaultsEnabled: false,
   });
@@ -95,207 +160,6 @@ export function SettingsPage() {
 
   const shouldShowPhonePolicyAgreement =
     !!editData.phone && !profileData?.phonePolicyAgreed;
-
-  const phoneTermsContent = `**[수집·이용 목적]**
-
-회사는 다음 목적을 위하여 이용자의 휴대전화번호를 수집·이용합니다.
-
-1. 본인 인증 및 계정 보호
-2. 비밀번호 찾기 및 계정 복구
-3. 서비스 관련 주요 안내(정책 변경, 보안 알림 등)
-4. 부정 이용 방지 및 보안 강화
-5. 이용자 식별 및 주요 기능 제공 (이력서 인적사항 정보 추가)
-
-**[수집 항목]**
-
-- 휴대전화번호(선택)
-
-**[보유·이용 기간]**
-
-- 회원 탈퇴 시 즉시 파기
-- 관계 법령에 따라 필요한 경우 법정 보관 기간 준수
-
-**[수신 동의 안내]**
-
-- 서비스 운영 관련 필수 안내는 동의 철회와 무관하게 발송될 수 있습니다.
-- 마케팅 문자 수신은 별도 선택 동의를 받으며 언제든지 철회 가능합니다.
-
-**[동의 거부 시 불이익]**
-
-휴대전화번호 제공을 거부할 경우 본인 인증이 불가하여 비밀번호 찾기 등의 서비스 이용이 제한될 수 있으나, 이력서 생성 등의 주요 기능은 전화번호 없이 생성 가능합니다.`;
-
-  const renderInlineMarkdown = useCallback((text) => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={`md-bold-${index}`}>{part.slice(2, -2)}</strong>;
-      }
-      return <span key={`md-text-${index}`}>{part}</span>;
-    });
-  }, []);
-
-  const renderMarkdown = useCallback(
-    (content) => {
-      const lines = content.split('\n');
-      const blocks = [];
-      let index = 0;
-
-      while (index < lines.length) {
-        const line = lines[index];
-        const trimmed = line.trim();
-
-        if (!trimmed) {
-          index += 1;
-          continue;
-        }
-
-        if (trimmed === '---') {
-          blocks.push(<hr key={`md-hr-${index}`} className="my-4" />);
-          index += 1;
-          continue;
-        }
-
-        if (trimmed.startsWith('## ')) {
-          blocks.push(
-            <h2 key={`md-h2-${index}`} className="mt-5 text-base font-semibold">
-              {renderInlineMarkdown(trimmed.replace('## ', ''))}
-            </h2>
-          );
-          index += 1;
-          continue;
-        }
-
-        if (trimmed.startsWith('### ')) {
-          blocks.push(
-            <h3 key={`md-h3-${index}`} className="mt-4 text-sm font-semibold">
-              {renderInlineMarkdown(trimmed.replace('### ', ''))}
-            </h3>
-          );
-          index += 1;
-          continue;
-        }
-
-        if (trimmed.startsWith('- ')) {
-          const items = [];
-          while (index < lines.length && lines[index].trim().startsWith('- ')) {
-            items.push(lines[index].trim().replace('- ', ''));
-            index += 1;
-          }
-          blocks.push(
-            <ul
-              key={`md-ul-${index}`}
-              className="mt-2 list-disc space-y-1 pl-5"
-            >
-              {items.map((item, itemIndex) => (
-                <li key={`md-ul-item-${index}-${itemIndex}`}>
-                  {renderInlineMarkdown(item)}
-                </li>
-              ))}
-            </ul>
-          );
-          continue;
-        }
-
-        if (/^\d+\.\s/.test(trimmed)) {
-          const items = [];
-          while (index < lines.length) {
-            const currentLine = lines[index].trim();
-            if (!currentLine) {
-              index += 1;
-              continue;
-            }
-            if (!/^\d+\.\s/.test(currentLine)) {
-              break;
-            }
-
-            const item = {
-              title: currentLine.replace(/^\d+\.\s/, ''),
-              subItems: [],
-              extra: [],
-            };
-            index += 1;
-
-            while (index < lines.length) {
-              const nextLine = lines[index].trim();
-              if (!nextLine) {
-                index += 1;
-                continue;
-              }
-              if (/^\d+\.\s/.test(nextLine)) {
-                break;
-              }
-              if (nextLine.startsWith('- ')) {
-                item.subItems.push(nextLine.replace('- ', ''));
-                index += 1;
-                continue;
-              }
-              if (
-                nextLine.startsWith('## ') ||
-                nextLine.startsWith('### ') ||
-                nextLine === '---' ||
-                nextLine.startsWith('**[')
-              ) {
-                break;
-              }
-              item.extra.push(nextLine);
-              index += 1;
-            }
-
-            items.push(item);
-
-            if (index >= lines.length) {
-              break;
-            }
-            if (!/^\d+\.\s/.test(lines[index].trim())) {
-              break;
-            }
-          }
-
-          blocks.push(
-            <ol
-              key={`md-ol-${index}`}
-              className="mt-2 list-decimal space-y-1 pl-5"
-            >
-              {items.map((item, itemIndex) => (
-                <li key={`md-ol-item-${index}-${itemIndex}`} className="mt-2">
-                  <div>{renderInlineMarkdown(item.title)}</div>
-                  {item.extra.length > 0 &&
-                    item.extra.map((line, lineIndex) => (
-                      <p
-                        key={`md-ol-extra-${index}-${itemIndex}-${lineIndex}`}
-                        className="mt-2"
-                      >
-                        {renderInlineMarkdown(line)}
-                      </p>
-                    ))}
-                  {item.subItems.length > 0 && (
-                    <ul className="mt-2 list-disc space-y-1 pl-5">
-                      {item.subItems.map((subItem, subIndex) => (
-                        <li key={`md-ol-sub-${index}-${itemIndex}-${subIndex}`}>
-                          {renderInlineMarkdown(subItem)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ol>
-          );
-          continue;
-        }
-
-        blocks.push(
-          <p key={`md-p-${index}`} className="mt-3">
-            {renderInlineMarkdown(trimmed)}
-          </p>
-        );
-        index += 1;
-      }
-
-      return blocks;
-    },
-    [renderInlineMarkdown]
-  );
 
   useEffect(() => {
     if (!profileData || hasProfileSynced.current) return;
@@ -315,14 +179,14 @@ export function SettingsPage() {
     hasProfileSynced.current = true;
   }, [profileData, positions]);
 
-  // useEffect(() => {
-  //   if (!settingsData) return;
-  //   _setLocalSettings({
-  //     notificationEnabled: settingsData.notificationEnabled,
-  //     interviewResumeDefaultsEnabled:
-  //       settingsData.interviewResumeDefaultsEnabled,
-  //   });
-  // }, [settingsData]);
+  useEffect(() => {
+    if (!settingsData) return;
+    setLocalSettings({
+      notificationEnabled: settingsData.notificationEnabled,
+      interviewResumeDefaultsEnabled:
+        settingsData.interviewResumeDefaultsEnabled,
+    });
+  }, [settingsData]);
 
   useEffect(() => {
     return () => {
@@ -331,13 +195,6 @@ export function SettingsPage() {
       }
     };
   }, []);
-
-  // Cleanup preview URL on unmount
-  useEffect(() => {
-    return () => {
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-    };
-  }, [profilePreviewUrl]);
 
   // Debounced name validation: Check character count after 1 second of no typing
   useEffect(() => {
@@ -358,33 +215,11 @@ export function SettingsPage() {
     return () => clearTimeout(timeoutId);
   }, [editData.name, isEditing]);
 
-  const handleProfileImageChange = useCallback(
-    (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const validation = validateImageFile(file);
-      if (!validation.ok) {
-        if (validation.reason === 'type') {
-          toast.error('지원하지 않는 이미지 형식입니다.');
-        } else if (validation.reason === 'size') {
-          toast.error('이미지 용량이 너무 큽니다. 최대 5MB까지 가능합니다.');
-        }
-        e.target.value = '';
-        return;
-      }
-
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-
-      const previewUrl = URL.createObjectURL(file);
-      setProfileFile(file);
-      setProfilePreviewUrl(previewUrl);
-
-      // Reset so same file can be re-selected
-      e.target.value = '';
-    },
-    [profilePreviewUrl]
-  );
+  /** 선택한 이미지 + 서버 기존 이미지 모두 제거 */
+  const removeProfileImage = useCallback(() => {
+    resetProfileImage();
+    setEditData((prev) => ({ ...prev, profileImage: null }));
+  }, [resetProfileImage]);
 
   const handleEdit = useCallback(() => {
     if (!profileData) return;
@@ -399,13 +234,11 @@ export function SettingsPage() {
       profileImage: profileData.profileImageUrl ?? null,
     });
     // Reset any previously selected new file
-    setProfileFile(null);
-    if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-    setProfilePreviewUrl(null);
+    resetProfileImage();
     setIsPhonePolicyAgreed(false);
     setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
     setIsEditing(true);
-  }, [profileData, positions, profilePreviewUrl]);
+  }, [profileData, positions, resetProfileImage]);
 
   const handleSave = useCallback(async () => {
     const newErrors = {};
@@ -488,9 +321,7 @@ export function SettingsPage() {
       });
 
       // Clear new file state after successful save
-      setProfileFile(null);
-      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-      setProfilePreviewUrl(null);
+      resetProfileImage();
 
       setIsEditing(false);
       setErrors({
@@ -525,7 +356,7 @@ export function SettingsPage() {
     positions,
     updateUserProfile,
     profileFile,
-    profilePreviewUrl,
+    resetProfileImage,
     upload,
     isPhonePolicyAgreed,
     profileData?.phonePolicyAgreed,
@@ -546,9 +377,7 @@ export function SettingsPage() {
       });
     }
     // Reset profile file state on cancel
-    setProfileFile(null);
-    if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
-    setProfilePreviewUrl(null);
+    resetProfileImage();
     setIsEditing(false);
     setErrors({
       name: undefined,
@@ -557,7 +386,7 @@ export function SettingsPage() {
       phonePolicy: undefined,
     });
     setIsPhonePolicyAgreed(false);
-  }, [profileData, positions, profilePreviewUrl]);
+  }, [profileData, positions, resetProfileImage]);
 
   /**
    * Handle phone number input change with real-time validation
@@ -632,9 +461,9 @@ export function SettingsPage() {
     setIsWithdrawDialogOpen(false);
   }, []);
 
-  const _handleToggleSetting = useCallback(
+  const handleToggleSetting = useCallback(
     (field, value) => {
-      _setLocalSettings((prev) => ({ ...prev, [field]: value }));
+      setLocalSettings((prev) => ({ ...prev, [field]: value }));
 
       if (settingsDebounceRef.current) {
         clearTimeout(settingsDebounceRef.current);
@@ -700,6 +529,15 @@ export function SettingsPage() {
                   onClick={() => profileFileInputRef.current?.click()}
                 >
                   프로필 사진 변경
+                </button>
+              )}
+              {isEditing && (profilePreviewUrl || editData.profileImage) && (
+                <button
+                  type="button"
+                  className="text-sm text-gray-500"
+                  onClick={removeProfileImage}
+                >
+                  이미지 삭제
                 </button>
               )}
             </div>
@@ -849,7 +687,7 @@ export function SettingsPage() {
           </div>
 
           {/* Interview Settings */}
-          {/* <div className="bg-white rounded-2xl p-5 border border-gray-200">
+          <div className="bg-white rounded-2xl p-5 border border-gray-200">
             <h3 className="mb-4">알림 및 모의 면접 설정</h3>
 
             <label className="flex items-start justify-between py-3">
@@ -873,7 +711,7 @@ export function SettingsPage() {
               </div>
             </label>
 
-            <label className="flex items-start justify-between py-3 border-t border-gray-100">
+            {/* <label className="flex items-start justify-between py-3 border-t border-gray-100">
               <div className="flex-1 pr-4">
                 <p className="font-medium mb-1">이력서 정보 자동 사용</p>
                 <p className="text-sm text-gray-600">
@@ -896,8 +734,8 @@ export function SettingsPage() {
                 <div className="w-12 h-7 bg-gray-200 peer-checked:bg-primary rounded-full peer transition-colors cursor-pointer" />
                 <div className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
               </div>
-            </label>
-          </div> */}
+            </label> */}
+          </div>
 
           {/* Account */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -952,7 +790,7 @@ export function SettingsPage() {
             <DialogTitle>휴대전화번호 수집·이용 동의 (필수)</DialogTitle>
           </DialogHeader>
           <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
-            {renderMarkdown(phoneTermsContent)}
+            {PHONE_TERMS_JSX}
           </div>
           <DialogFooter className="mt-4">
             <Button

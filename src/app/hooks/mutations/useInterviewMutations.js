@@ -10,6 +10,7 @@ import {
   submitInterviewAnswer,
   completeInterview,
   deleteInterview,
+  renameInterview,
 } from '@/app/api/endpoints/interviews';
 import { interviewKeys } from '../queries/useInterviewQueries';
 
@@ -35,8 +36,13 @@ export function useStartInterview() {
  */
 export function useSubmitInterviewAnswer() {
   return useMutation({
-    mutationFn: ({ sessionId, answer, audioFile }) =>
-      submitInterviewAnswer(sessionId, { answer, audioFile }),
+    mutationFn: ({ interviewId, turnNo, answer, answerInputType, audioUrl }) =>
+      submitInterviewAnswer(interviewId, {
+        turnNo,
+        answer,
+        answerInputType,
+        audioUrl,
+      }),
     onError: () => {
       toast.error('답변 제출에 실패했습니다.');
     },
@@ -52,12 +58,8 @@ export function useCompleteInterview() {
 
   return useMutation({
     mutationFn: completeInterview,
-    onSuccess: (completedInterview) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
-      queryClient.setQueryData(
-        interviewKeys.detail(completedInterview.id),
-        completedInterview
-      );
       toast.success('면접이 완료되었습니다.');
     },
     onError: () => {
@@ -103,6 +105,57 @@ export function useDeleteInterview() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
+    },
+  });
+}
+
+/**
+ * Rename interview mutation
+ * @returns {UseMutationResult} Mutation result
+ */
+export function useRenameInterview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ interviewId, name }) => renameInterview(interviewId, name),
+    onSuccess: (updatedInterview) => {
+      if (updatedInterview?.id) {
+        queryClient.setQueriesData(
+          { queryKey: interviewKeys.lists() },
+          (old) => {
+            if (!old) return old;
+            if (Array.isArray(old)) {
+              return old.map((interview) =>
+                interview.id === updatedInterview.id
+                  ? { ...interview, name: updatedInterview.name }
+                  : interview
+              );
+            }
+            if (Array.isArray(old.interviews)) {
+              return {
+                ...old,
+                interviews: old.interviews.map((interview) =>
+                  interview.id === updatedInterview.id
+                    ? { ...interview, name: updatedInterview.name }
+                    : interview
+                ),
+              };
+            }
+            return old;
+          }
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: interviewKeys.lists() });
+      if (updatedInterview?.id) {
+        queryClient.setQueryData(
+          interviewKeys.detail(updatedInterview.id),
+          updatedInterview
+        );
+      }
+      toast.success('면접 이름이 변경되었습니다.');
+    },
+    onError: () => {
+      toast.error('면접 이름 변경에 실패했습니다.');
     },
   });
 }

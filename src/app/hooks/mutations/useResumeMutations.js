@@ -8,7 +8,6 @@ import {
   saveResumeVersion,
   deleteResume,
 } from '@/app/api/endpoints/resumes';
-// import { resumeKeys } from '../queries/useResumeQueries';
 
 export function useCreateResume() {
   const queryClient = useQueryClient();
@@ -87,7 +86,6 @@ export function useSaveResumeVersion() {
       queryClient.invalidateQueries({
         queryKey: ['resume', resumeId, 'version', versionNo],
       });
-      toast.success('저장되었습니다.');
     },
     onError: (error) => {
       const errorCode = error.response?.data?.code;

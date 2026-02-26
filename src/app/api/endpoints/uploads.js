@@ -15,7 +15,7 @@ export const UPLOAD_POLICIES = {
     maxSize: 5 * 1024 * 1024,
   },
   INTERVIEW_AUDIO: {
-    allowedTypes: ['audio/mpeg', 'audio/wav'],
+    allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/webm'],
     maxSize: 50 * 1024 * 1024,
   },
 };

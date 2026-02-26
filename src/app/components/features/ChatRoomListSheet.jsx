@@ -11,10 +11,9 @@ import {
   Loader2,
   ChevronLeft,
   X,
-  Send,
   ChevronDown,
-  Paperclip,
 } from 'lucide-react';
+import { ChatMessageInput } from './ChatMessageInput';
 import { Drawer } from 'vaul';
 import { useChats, useChatMessages } from '@/app/hooks/queries/useChatQueries';
 import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
@@ -76,8 +75,7 @@ export function ChatRoomListSheet() {
   const [isSending, setIsSending] = useState(false);
 
   const messages = useMemo(() => {
-    const rawMessages =
-      messagesData?.pages?.flatMap((page) => page.chats) || [];
+    const rawMessages = messagesData?.pages?.flatMap((page) => page.data) || [];
 
     // Deduplicate by message ID (defensive against backend pagination overlaps)
     const uniqueMessages = Array.from(
@@ -416,6 +414,13 @@ export function ChatRoomListSheet() {
     const prevDate = getLocalDate(messages[index - 1].sendAt);
     return currentDate !== prevDate;
   };
+
+  // Open sheet via custom event dispatched by NotificationSheet (CHAT notification click)
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener('open-chat-sheet', handler);
+    return () => window.removeEventListener('open-chat-sheet', handler);
+  }, []);
 
   // Reset to list view when sheet is closed
   useEffect(() => {
@@ -806,89 +811,20 @@ export function ChatRoomListSheet() {
                 </button>
               )}
 
-              {/* Input Area */}
-              <div className="border-t border-gray-200 px-5 py-4">
-                <input
-                  ref={attachFileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png"
-                  className="hidden"
-                  onChange={handleAttachImageChange}
-                />
-
-                {/* Attached image preview */}
-                {attachedImage &&
-                  isSafePreviewUrl(attachedImage.previewUrl) && (
-                    <div className="relative w-24 aspect-square mx-2 mb-3">
-                      <img
-                        src={getSafeImageSrc(attachedImage.previewUrl)}
-                        alt="첨부 이미지"
-                        className="w-full h-full object-cover"
-                        loading="eager"
-                      />
-                      <button
-                        type="button"
-                        onClick={removeAttachedImage}
-                        className="absolute top-1 right-1 bg-black/40 rounded-full p-0.5"
-                      >
-                        <X className="w-3 h-3 text-white" />
-                      </button>
-                    </div>
-                  )}
-
-                <div className="flex items-end gap-2">
-                  <textarea
-                    value={inputText}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      if (nextValue.length > MAX_INPUT_LENGTH) {
-                        toast.error('메시지 글자 수 제한을 초과했습니다.');
-                        return;
-                      }
-                      setInputText(nextValue);
-                    }}
-                    onKeyDown={handleKeyDown}
-                    placeholder={
-                      isConnected ? '메시지를 입력하세요...' : '연결 중...'
-                    }
-                    disabled={!isConnected}
-                    className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-                    rows={1}
-                    maxLength={MAX_INPUT_LENGTH}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => attachFileInputRef.current?.click()}
-                    disabled={
-                      !!attachedImage ||
-                      isSending ||
-                      isUploading ||
-                      !isConnected
-                    }
-                    className="p-2 text-gray-500 hover:text-primary disabled:opacity-40 transition-colors"
-                    aria-label="이미지 첨부"
-                  >
-                    <Paperclip className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSend}
-                    disabled={
-                      (!inputText.trim() && !attachedImage) ||
-                      isSending ||
-                      isUploading ||
-                      !isConnected
-                    }
-                    className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                  >
-                    {isSending || isUploading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
+              <ChatMessageInput
+                inputText={inputText}
+                onInputChange={(e) => setInputText(e.target.value)}
+                attachedImage={attachedImage}
+                attachFileInputRef={attachFileInputRef}
+                onAttachChange={handleAttachImageChange}
+                onRemoveAttachment={removeAttachedImage}
+                onSend={handleSend}
+                onKeyDown={handleKeyDown}
+                isSending={isSending}
+                isUploading={isUploading}
+                isConnected={isConnected}
+                maxLength={MAX_INPUT_LENGTH}
+              />
             </>
           )}
         </Drawer.Content>
