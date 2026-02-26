@@ -565,7 +565,9 @@ export function InterviewSessionPage() {
       <ConfirmDialog
         isOpen={isEndDialogOpen}
         title="면접 종료"
-        description={"면접을 종료하시겠습니까?\n종료하시면 면접을 다시 이어서 진행할 수 없습니다."}
+        description={
+          '면접을 종료하시겠습니까?\n종료하시면 면접을 다시 이어서 진행할 수 없습니다.'
+        }
         confirmText="네"
         cancelText="아니오"
         onConfirm={handleConfirmEndDialog}

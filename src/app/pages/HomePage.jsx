@@ -401,7 +401,10 @@ const ResumeCard = React.memo(({ resume }) => {
             onClick={handleViewResume}
           >
             <FileText className="w-4 h-4" strokeWidth={1.5} />
-            <span className="flex flex-col leading-tight"><span>프로젝트</span><span>요약 보기</span></span>
+            <span className="flex flex-col leading-tight">
+              <span>프로젝트</span>
+              <span>요약 보기</span>
+            </span>
           </Button>
           <Button
             variant="primary"
