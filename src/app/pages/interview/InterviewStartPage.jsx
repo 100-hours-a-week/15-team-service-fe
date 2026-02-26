@@ -272,7 +272,9 @@ export function InterviewStartPage() {
                   </p>
                   <p>
                     <span className="text-gray-600">이력서:</span>{' '}
-                    {preselectedResume?.resumeName || selectedResume?.name || '미지정'}
+                    {preselectedResume?.resumeName ||
+                      selectedResume?.name ||
+                      '미지정'}
                   </p>
                 </div>
               </div>
@@ -284,7 +286,9 @@ export function InterviewStartPage() {
                   onClick={handleStart}
                   disabled={startInterviewMutation.isPending}
                 >
-                  {startInterviewMutation.isPending ? '면접 준비 중...' : '면접 시작'}
+                  {startInterviewMutation.isPending
+                    ? '면접 준비 중...'
+                    : '면접 시작'}
                 </Button>
                 <Button
                   variant="ghost"

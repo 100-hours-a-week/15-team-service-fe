@@ -14,7 +14,13 @@ export function useInterviewSSE(interviewId, options = {}) {
   const { onOpen, onError, onQuestion, onFeedback, onEnd } = options;
 
   // 콜백들을 ref로 관리하여 변경 시 SSE 재연결 방지
-  const callbacksRef = useRef({ onOpen, onError, onQuestion, onFeedback, onEnd });
+  const callbacksRef = useRef({
+    onOpen,
+    onError,
+    onQuestion,
+    onFeedback,
+    onEnd,
+  });
   callbacksRef.current = { onOpen, onError, onQuestion, onFeedback, onEnd };
 
   const url = useMemo(() => {
