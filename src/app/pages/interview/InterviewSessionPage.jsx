@@ -93,7 +93,24 @@ export function InterviewSessionPage() {
     if (isEnding) return;
     setIsEnding(true);
     try {
-      await completeInterviewMutation.mutateAsync(numericInterviewId);
+      const response =
+        await completeInterviewMutation.mutateAsync(numericInterviewId);
+      let parsedFeedback = null;
+      if (response?.totalFeedback) {
+        try {
+          parsedFeedback = JSON.parse(response.totalFeedback);
+        } catch {
+          parsedFeedback = null;
+        }
+      }
+      navigate('/interview/summary', {
+        state: {
+          interviewId: numericInterviewId,
+          duration: elapsedTime,
+          messages: messagesRef.current,
+          feedback: parsedFeedback,
+        },
+      });
     } catch {
       setIsEnding(false);
     }
@@ -222,16 +239,12 @@ export function InterviewSessionPage() {
       stopRequestedRef.current = false;
 
       stream.getTracks().forEach((track) => {
-        console.debug('[interview] mic track state', {
-          readyState: track.readyState,
-          muted: track.muted,
-          enabled: track.enabled,
-          label: track.label,
-        });
         track.onended = () => {
           if (isRecording) {
             setIsRecording(false);
-            toast.error('마이크 입력이 중단되었습니다. 권한/장치를 확인해주세요.');
+            toast.error(
+              '마이크 입력이 중단되었습니다. 권한/장치를 확인해주세요.'
+            );
           }
         };
       });
@@ -241,31 +254,19 @@ export function InterviewSessionPage() {
         : undefined;
       const recorder = new MediaRecorder(stream, options);
       recorderRef.current = recorder;
-      console.debug('[interview] recorder created', {
-        state: recorder.state,
-        mimeType: recorder.mimeType,
-      });
 
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
       };
-      recorder.onerror = (event) => {
-        console.debug('[interview] recorder error', event?.error || event);
+      recorder.onerror = () => {
         toast.error('녹음 중 오류가 발생했습니다. 다시 시도해주세요.');
       };
       recorder.onstart = () => {
-        console.debug('[interview] recorder start', { state: recorder.state });
         autoRestartedRef.current = false;
       };
       recorder.onstop = async () => {
-        console.debug('[interview] recorder stop', {
-          state: recorder.state,
-          size: chunksRef.current.reduce((acc, cur) => acc + cur.size, 0),
-          durationMs: Date.now() - recordStartRef.current,
-          stopRequested: stopRequestedRef.current,
-        });
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const durationMs = Date.now() - recordStartRef.current;
         const hasEnoughData = durationMs >= 1000 && blob.size >= 10 * 1024;
@@ -279,7 +280,9 @@ export function InterviewSessionPage() {
             return;
           }
           setIsRecording(false);
-          toast.error('녹음이 중단되었습니다. 마이크 권한/장치를 확인해주세요.');
+          toast.error(
+            '녹음이 중단되었습니다. 마이크 권한/장치를 확인해주세요.'
+          );
           return;
         }
         if (!hasEnoughData) {
@@ -347,15 +350,7 @@ export function InterviewSessionPage() {
 
   const onEnd = useCallback(() => {
     setHasStarted(false);
-    navigate('/interview/summary', {
-      state: {
-        interviewId: numericInterviewId,
-        duration: elapsedTime,
-        messages: messagesRef.current,
-        feedback: feedbackRef.current,
-      },
-    });
-  }, [numericInterviewId, elapsedTime, navigate]);
+  }, []);
 
   useInterviewSSE(numericInterviewId, {
     onQuestion,
@@ -541,7 +536,9 @@ export function InterviewSessionPage() {
               disabled={isTranscribing}
               className={cn(
                 'p-3 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0 disabled:opacity-50',
-                isRecording ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'
+                isRecording
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-200 text-gray-600'
               )}
             >
               {isRecording ? (

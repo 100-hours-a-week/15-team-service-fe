@@ -82,7 +82,8 @@ export function InterviewSummaryPage() {
         }
       }
 
-      const answerText = msg.answer || (msg.type === 'answer' ? msg.text : null);
+      const answerText =
+        msg.answer || (msg.type === 'answer' ? msg.text : null);
       if (answerText) {
         answerByTurn.set(turnNo, {
           timestamp: msg.answeredAt || msg.timestamp,

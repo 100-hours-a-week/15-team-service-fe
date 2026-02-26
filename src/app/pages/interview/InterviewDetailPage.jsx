@@ -65,19 +65,16 @@ export function InterviewDetailPage() {
     };
   }, [parsedFeedback]);
 
-  useInterviewSSE(
-    parsedFeedback?.overallFeedback ? null : interviewId,
-    {
-      onFeedback: (data) => {
-        if (!data?.totalFeedback) return;
-        try {
-          setLiveFeedback(JSON.parse(data.totalFeedback));
-        } catch {
-          setLiveFeedback(null);
-        }
-      },
-    }
-  );
+  useInterviewSSE(parsedFeedback?.overallFeedback ? null : interviewId, {
+    onFeedback: (data) => {
+      if (!data?.totalFeedback) return;
+      try {
+        setLiveFeedback(JSON.parse(data.totalFeedback));
+      } catch {
+        setLiveFeedback(null);
+      }
+    },
+  });
 
   const scriptEntries = useMemo(() => {
     if (!messages || messages.length === 0) return EMPTY_SCRIPT;
