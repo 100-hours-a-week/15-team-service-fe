@@ -108,7 +108,22 @@ export function useNotificationSSE(enabled = true) {
 
     connect();
 
+    const handleLogout = () => {
+      destroyed = true;
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      setHasNew(false);
+    };
+    window.addEventListener('auth:logout', handleLogout);
+
     return () => {
+      window.removeEventListener('auth:logout', handleLogout);
       destroyed = true;
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);

@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchUser, fetchUserSettings } from '@/app/api/endpoints/user';
+import {
+  fetchAuthStatus,
+  fetchUser,
+  fetchUserSettings,
+} from '@/app/api/endpoints/user';
 
 /**
  * Fetch user profile
@@ -17,7 +21,7 @@ export function useUserProfile() {
 export function useAuthStatus() {
   return useQuery({
     queryKey: ['user', 'auth-status'],
-    queryFn: fetchUser,
+    queryFn: fetchAuthStatus,
     staleTime: 0,
     gcTime: 0,
     retry: false,

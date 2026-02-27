@@ -73,11 +73,13 @@ export function useLogout() {
   return useMutation({
     mutationFn: logout,
     onSuccess: () => {
+      window.dispatchEvent(new Event('auth:logout'));
       queryClient.clear();
       toast.success('로그아웃되었습니다.');
       window.location.href = '/login';
     },
     onError: () => {
+      window.dispatchEvent(new Event('auth:logout'));
       queryClient.clear();
       window.location.href = '/login';
     },

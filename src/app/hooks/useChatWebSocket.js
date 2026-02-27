@@ -66,7 +66,16 @@ export function useChatWebSocket(chatroomId) {
     client.activate();
     clientRef.current = client;
 
+    const handleLogout = () => {
+      subscription?.unsubscribe();
+      client.deactivate();
+      clientRef.current = null;
+      setIsConnected(false);
+    };
+    window.addEventListener('auth:logout', handleLogout);
+
     return () => {
+      window.removeEventListener('auth:logout', handleLogout);
       subscription?.unsubscribe();
       client.deactivate();
       clientRef.current = null;
