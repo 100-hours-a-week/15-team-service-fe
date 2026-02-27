@@ -240,7 +240,11 @@ export function CreateResumePage() {
               <p className="text-xs text-gray-400">
                 최대 5분이 소요될 수 있습니다.
               </p>
-              <Button variant="secondary" onClick={() => navigate('/')} className="mx-auto w-fit">
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/')}
+                className="mx-auto w-fit"
+              >
                 홈으로 이동
               </Button>
             </div>
