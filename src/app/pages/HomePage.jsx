@@ -81,7 +81,7 @@ export function HomePage() {
   // Flatten pages into single array
   const resumes = useMemo(() => {
     if (!resumesData?.pages) return [];
-    return resumesData.pages.flatMap((page) => page.data || []);
+    return resumesData.pages.flatMap((page) => page.chats || []);
   }, [resumesData]);
 
   const displayName = profileData?.name ?? '사용자';
