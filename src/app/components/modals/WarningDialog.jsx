@@ -11,11 +11,10 @@ import { cn } from '../../lib/utils';
  * - Any scenario where primary action cancels/prevents something
  *
  * Implementation Decision - Positioning:
- * - Uses absolute positioning scoped to app container
- * - Portal renders to #app-container (NOT document.body)
- * - Overlay covers only the app container area (absolute inset-0 bg-black/40)
+ * - Uses fixed positioning via document.body portal
+ * - Portal renders to document.body so overlay/content are fixed to viewport
+ * - Fixed position ensures modal stays centered even on scrollable pages
  * - Max-width: max-w-[350px] for comfortable padding within mobile viewport
- * - Gray background outside app container is NOT darkened
  *
  * Implementation Decision - Button Semantics:
  * - Primary button (top, blue): Cancels/prevents the action
@@ -47,20 +46,20 @@ export function WarningDialog({
 }) {
   return (
     <AlertDialog open={isOpen}>
-      <AlertDialogPortal container={document.getElementById('app-container')}>
-        {/* Overlay - absolute positioning to cover only app container */}
+      <AlertDialogPortal container={document.body}>
+        {/* Overlay - fixed to cover full viewport */}
         <AlertDialogPrimitive.Overlay
           className={cn(
-            'absolute inset-0 z-50 bg-black/40',
+            'fixed inset-0 z-50 bg-black/40',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
         />
 
-        {/* Modal Content - absolute positioning for app container center */}
+        {/* Modal Content - fixed at viewport center regardless of scroll */}
         <AlertDialogPrimitive.Content
           className={cn(
-            'absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]',
+            'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
             'z-50 grid w-full max-w-[350px] gap-4',
             'rounded-lg border p-6 shadow-lg bg-white',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
