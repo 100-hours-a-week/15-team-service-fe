@@ -82,6 +82,29 @@ export function useUpdateUserSettings() {
 }
 
 /**
+ * Update phone policy agreement mutation
+ * @returns {import('@tanstack/react-query').UseMutationResult}
+ */
+export function useUpdatePhonePolicyAgreement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (agreed) => updateUser({ phonePolicyAgreed: agreed }),
+    onSuccess: (updatedUser, agreed) => {
+      queryClient.setQueryData(['user', 'profile'], updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
+      toast.success(
+        agreed
+          ? '전화번호 수집·이용에 동의했습니다.'
+          : '전화번호 수집·이용 동의가 철회되었습니다.'
+      );
+    },
+    onError: () => {
+      toast.error('처리에 실패했습니다. 다시 시도해주세요.');
+    },
+  });
+}
+
+/**
  * Withdraw user mutation
  * @returns {import('@tanstack/react-query').UseMutationResult}
  */
