@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation, useBlocker } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -152,13 +152,6 @@ export function CreateResumePage() {
     return () => clearTimeout(timer);
   }, [createdResumeId, isGenerating]);
 
-  // 생성 중 라우터 이탈 차단 (단, 생성 완료 시에는 차단 해제)
-  const isBlocked =
-    (createResumeMutation.isPending || isGenerating) &&
-    !isGenerationSucceeded &&
-    !isRedirecting;
-  useBlocker(isBlocked);
-
   // 생성 중 브라우저 새로고침/탭 닫기 경고
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -247,6 +240,13 @@ export function CreateResumePage() {
               <p className="text-xs text-gray-400">
                 최대 5분이 소요될 수 있습니다.
               </p>
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/')}
+                className="mx-auto w-fit"
+              >
+                홈으로 이동
+              </Button>
             </div>
           </div>
         </div>

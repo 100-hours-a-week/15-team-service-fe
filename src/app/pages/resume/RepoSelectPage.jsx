@@ -323,34 +323,32 @@ export function RepoSelectPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-5 py-4">
-        <div className="max-w-[390px] mx-auto">
-          {selectedRepos.length > 0 && (
-            <p className="text-sm text-gray-600 text-center mb-2">
-              <span
-                className={
-                  selectedRepos.length >= MAX_REPO_SELECTION
-                    ? 'text-primary font-medium'
-                    : ''
-                }
-              >
-                {selectedRepos.length}/{MAX_REPO_SELECTION}
-              </span>
-              개 선택됨
-            </p>
-          )}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] bg-white border-t border-gray-200 px-5 py-4">
+        {selectedRepos.length > 0 && (
+          <p className="text-sm text-gray-600 text-center mb-2">
+            <span
+              className={
+                selectedRepos.length >= MAX_REPO_SELECTION
+                  ? 'text-primary font-medium'
+                  : ''
+              }
+            >
+              {selectedRepos.length}/{MAX_REPO_SELECTION}
+            </span>
+            개 선택됨
+          </p>
+        )}
 
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={handleContinue}
-            disabled={selectedRepos.length === 0}
-          >
-            {selectedRepos.length === 0
-              ? '레포지토리를 선택하세요'
-              : `${selectedRepos.length}개 레포로 계속`}
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          fullWidth
+          onClick={handleContinue}
+          disabled={selectedRepos.length === 0}
+        >
+          {selectedRepos.length === 0
+            ? '레포지토리를 선택하세요'
+            : `${selectedRepos.length}개 레포로 계속`}
+        </Button>
       </div>
     </div>
   );
