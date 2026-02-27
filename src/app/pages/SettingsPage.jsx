@@ -1,15 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Camera } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, ShieldCheck, UserCircle } from 'lucide-react';
 import { BottomNav } from '../components/layout/BottomNav';
 import { Button } from '../components/common/Button';
-import { Input } from '../components/common/Input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
+import { ConfirmDialog } from '../components/modals/ConfirmDialog';
 import {
   Dialog,
   DialogContent,
@@ -17,34 +11,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../components/ui/dialog';
-import { ConfirmDialog } from '../components/modals/ConfirmDialog';
-import {
-  formatPhoneNumber,
-  validatePhoneNumber,
-  getPhoneErrorMessage,
-  stripPhoneFormat,
-  validateName,
-  getNameErrorMessage,
-} from '@/app/lib/utils';
 import {
   useUserProfile,
   useUserSettings,
 } from '@/app/hooks/queries/useUserQuery';
-import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import {
-  useUpdateUser,
   useUpdateUserSettings,
+  useUpdatePhonePolicyAgreement,
   useWithdrawUser,
 } from '@/app/hooks/mutations/useUserMutations';
 import { useLogout } from '@/app/hooks/mutations/useAuthMutations';
-import { useUploadFile } from '@/app/hooks/mutations/useUploadMutations';
-import { validateImageFile } from '@/app/lib/validators';
-import { useProfileImageUpload } from '@/app/hooks/useProfileImageUpload';
-import { toast } from '@/app/lib/toast';
-
-/**
- * @typedef {import('@/app/types').UserProfile} UserProfile
- */
 
 const PHONE_TERMS_JSX = (
   <>
@@ -107,77 +83,23 @@ const PHONE_TERMS_JSX = (
 );
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const { data: profileData } = useUserProfile();
   const { data: settingsData } = useUserSettings();
-  const { data: positions = [] } = usePositions();
-  const { mutateAsync: updateUserProfile, isPending: isSavingProfile } =
-    useUpdateUser();
   const { mutate: updateSettings } = useUpdateUserSettings();
+  const { mutate: updatePhonePolicyAgreement } =
+    useUpdatePhonePolicyAgreement();
   const { mutateAsync: logout } = useLogout();
   const { mutateAsync: withdrawUser } = useWithdrawUser();
-  const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
 
-  const {
-    file: profileFile,
-    previewUrl: profilePreviewUrl,
-    fileInputRef: profileFileInputRef,
-    handleChange: handleProfileImageChange,
-    reset: resetProfileImage,
-  } = useProfileImageUpload();
-
-  const [isEditing, setIsEditing] = useState(false);
-  /** @type {[UserProfile, React.Dispatch<React.SetStateAction<UserProfile>>]} */
-  const [editData, setEditData] = useState({
-    name: '',
-    position: '',
-    phone: '',
-    profileImage: null,
-  });
-  const [errors, setErrors] = useState({
-    name: undefined,
-    position: undefined,
-    phone: undefined,
-    phonePolicy: undefined,
-  });
-  const [isPhonePolicyModalOpen, setIsPhonePolicyModalOpen] = useState(false);
-  const [isPhonePolicyAgreed, setIsPhonePolicyAgreed] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [isPhonePolicyModalOpen, setIsPhonePolicyModalOpen] = useState(false);
   const [localSettings, setLocalSettings] = useState({
     notificationEnabled: true,
     interviewResumeDefaultsEnabled: false,
   });
-  const hasProfileSynced = useRef(false);
   const settingsDebounceRef = useRef(null);
-  const displayName = profileData?.name ?? '';
-  const displayPosition = profileData
-    ? positions.find((position) => position.id === profileData.positionId)
-        ?.name || ''
-    : '';
-  const displayPhone = profileData?.phone
-    ? formatPhoneNumber(profileData.phone)
-    : '미등록';
-
-  const shouldShowPhonePolicyAgreement =
-    !!editData.phone && !profileData?.phonePolicyAgreed;
-
-  useEffect(() => {
-    if (!profileData || hasProfileSynced.current) return;
-    if (positions.length === 0) return;
-
-    const positionName =
-      positions.find((position) => position.id === profileData.positionId)
-        ?.name || '';
-
-    setEditData({
-      name: profileData.name,
-      position: positionName,
-      phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
-      profileImage: profileData.profileImageUrl ?? null,
-    });
-
-    hasProfileSynced.current = true;
-  }, [profileData, positions]);
 
   useEffect(() => {
     if (!settingsData) return;
@@ -195,243 +117,6 @@ export function SettingsPage() {
       }
     };
   }, []);
-
-  // Debounced name validation: Check character count after 1 second of no typing
-  useEffect(() => {
-    if (!isEditing) return;
-
-    const timeoutId = setTimeout(() => {
-      if (editData.name && editData.name.length > 10) {
-        setErrors((prev) => ({
-          ...prev,
-          name: '이름은 최대 10자까지 입력할 수 있습니다.',
-        }));
-      } else if (editData.name && editData.name.length > 0) {
-        // Clear error if valid
-        setErrors((prev) => ({ ...prev, name: undefined }));
-      }
-    }, 400);
-
-    return () => clearTimeout(timeoutId);
-  }, [editData.name, isEditing]);
-
-  /** 선택한 이미지 + 서버 기존 이미지 모두 제거 */
-  const removeProfileImage = useCallback(() => {
-    resetProfileImage();
-    setEditData((prev) => ({ ...prev, profileImage: null }));
-  }, [resetProfileImage]);
-
-  const handleEdit = useCallback(() => {
-    if (!profileData) return;
-    const positionName =
-      positions.find((position) => position.id === profileData.positionId)
-        ?.name || '';
-
-    setEditData({
-      name: profileData.name,
-      position: positionName,
-      phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
-      profileImage: profileData.profileImageUrl ?? null,
-    });
-    // Reset any previously selected new file
-    resetProfileImage();
-    setIsPhonePolicyAgreed(false);
-    setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
-    setIsEditing(true);
-  }, [profileData, positions, resetProfileImage]);
-
-  const handleSave = useCallback(async () => {
-    const newErrors = {};
-    const trimmedName = editData.name.trim();
-
-    // Validate name (2-10 chars, no spaces, no emoji)
-    if (!validateName(trimmedName)) {
-      newErrors.name = getNameErrorMessage(trimmedName);
-    }
-
-    // Validate position
-    const selectedPosition = positions.find(
-      (position) => position.name === editData.position
-    );
-
-    if (!selectedPosition) {
-      newErrors.position = '희망 포지션을 선택해주세요';
-    }
-
-    // Validate phone format
-    if (editData.phone && !validatePhoneNumber(editData.phone)) {
-      newErrors.phone = getPhoneErrorMessage(editData.phone);
-    }
-
-    if (shouldShowPhonePolicyAgreement && !isPhonePolicyAgreed) {
-      newErrors.phonePolicy = '전화번호 수집·이용에 동의해주세요';
-    }
-
-    // If any errors, show them inline and stop
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    // Normalize phone
-    const normalizedPhone = editData.phone
-      ? stripPhoneFormat(editData.phone)
-      : '';
-    const phoneValue = normalizedPhone ? normalizedPhone : null;
-
-    try {
-      // Upload new profile image if selected
-      let profileImageUrl = editData.profileImage ?? null;
-      if (profileFile) {
-        const validation = validateImageFile(profileFile);
-        if (!validation.ok) {
-          if (validation.reason === 'type') {
-            toast.error('지원하지 않는 이미지 형식입니다.');
-          } else if (validation.reason === 'size') {
-            toast.error('이미지 용량이 너무 큽니다. 최대 5MB까지 가능합니다.');
-          }
-          return;
-        }
-        const result = await upload(profileFile);
-        profileImageUrl = result.s3Key;
-      }
-
-      const updatedProfile = await updateUserProfile({
-        name: trimmedName,
-        positionId: selectedPosition.id,
-        phone: phoneValue,
-        profileImageUrl,
-        privacyAgreed: true,
-        phonePolicyAgreed: phoneValue
-          ? profileData?.phonePolicyAgreed || isPhonePolicyAgreed
-          : undefined,
-      });
-
-      const updatedPositionName =
-        positions.find((position) => position.id === updatedProfile.positionId)
-          ?.name || editData.position;
-
-      setEditData({
-        name: updatedProfile.name,
-        position: updatedPositionName,
-        phone: updatedProfile.phone
-          ? formatPhoneNumber(updatedProfile.phone)
-          : '',
-        profileImage: updatedProfile.profileImageUrl ?? null,
-      });
-
-      // Clear new file state after successful save
-      resetProfileImage();
-
-      setIsEditing(false);
-      setErrors({
-        name: undefined,
-        position: undefined,
-        phone: undefined,
-        phonePolicy: undefined,
-      });
-    } catch (error) {
-      // Handle field-specific backend errors
-      const errorCode = error.response?.data?.code;
-
-      if (errorCode === 'NAME_INVALID_INPUT') {
-        setErrors((prev) => ({
-          ...prev,
-          name: '이름은 2~10자로 입력해주세요 (공백/이모지 불가)',
-        }));
-      } else if (errorCode === 'PHONE_INVALID_FORMAT') {
-        setErrors((prev) => ({
-          ...prev,
-          phone: '올바른 전화번호 형식이 아닙니다',
-        }));
-      } else if (errorCode === 'POSITION_SELECTION_REQUIRED') {
-        setErrors((prev) => ({
-          ...prev,
-          position: '희망 포지션을 선택해주세요',
-        }));
-      }
-    }
-  }, [
-    editData,
-    positions,
-    updateUserProfile,
-    profileFile,
-    resetProfileImage,
-    upload,
-    isPhonePolicyAgreed,
-    profileData?.phonePolicyAgreed,
-    shouldShowPhonePolicyAgreement,
-  ]);
-
-  const handleCancel = useCallback(() => {
-    if (profileData) {
-      const positionName =
-        positions.find((position) => position.id === profileData.positionId)
-          ?.name || '';
-
-      setEditData({
-        name: profileData.name,
-        position: positionName,
-        phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
-        profileImage: profileData.profileImageUrl ?? null,
-      });
-    }
-    // Reset profile file state on cancel
-    resetProfileImage();
-    setIsEditing(false);
-    setErrors({
-      name: undefined,
-      position: undefined,
-      phone: undefined,
-      phonePolicy: undefined,
-    });
-    setIsPhonePolicyAgreed(false);
-  }, [profileData, positions, resetProfileImage]);
-
-  /**
-   * Handle phone number input change with real-time validation
-   *
-   * @implementation_decision
-   * Uses getPhoneErrorMessage utility for comprehensive validation:
-   * - 010 prefix check
-   * - Length validation (11 digits only)
-   * - Immediate feedback to prevent API errors
-   *
-   * @why
-   * Previous implementation only checked 010 prefix, allowing invalid
-   * lengths to reach the API, causing 400 Bad Request errors.
-   * Real-time validation provides better UX and prevents API errors.
-   */
-  const handlePhoneChange = useCallback(
-    (e) => {
-      const input = e.target.value;
-      const formatted = formatPhoneNumber(input);
-      const digits = input.replace(/\D/g, '');
-
-      setEditData((prev) => ({ ...prev, phone: formatted }));
-
-      // Real-time validation: check 010 start + length
-      if (digits.length > 0) {
-        const errorMessage = getPhoneErrorMessage(formatted);
-        if (errorMessage) {
-          setErrors((prev) => ({ ...prev, phone: errorMessage }));
-        } else {
-          setErrors((prev) => ({ ...prev, phone: undefined }));
-        }
-      } else {
-        setErrors((prev) => ({ ...prev, phone: undefined }));
-      }
-
-      // Clear phone policy error when phone is cleared
-      if (!formatted) {
-        if (errors.phonePolicy) {
-          setErrors((prev) => ({ ...prev, phonePolicy: undefined }));
-        }
-        setIsPhonePolicyAgreed(false);
-      }
-    },
-    [errors.phonePolicy]
-  );
 
   const handleLogout = useCallback(() => {
     setIsLogoutDialogOpen(true);
@@ -476,6 +161,19 @@ export function SettingsPage() {
     [updateSettings]
   );
 
+  const handlePhonePolicyToggle = useCallback(() => {
+    if (profileData?.phonePolicyAgreed) {
+      updatePhonePolicyAgreement(false);
+    } else {
+      setIsPhonePolicyModalOpen(true);
+    }
+  }, [profileData?.phonePolicyAgreed, updatePhonePolicyAgreement]);
+
+  const handleConfirmPhonePolicyAgreement = useCallback(() => {
+    setIsPhonePolicyModalOpen(false);
+    updatePhonePolicyAgreement(true);
+  }, [updatePhonePolicyAgreement]);
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <header className="bg-white border-b border-gray-200 px-5 py-4">
@@ -486,214 +184,95 @@ export function SettingsPage() {
 
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto space-y-6">
-          {/* Profile Section */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-200">
-            <h3 className="mb-4">프로필</h3>
-
-            {/* Profile Photo */}
-            <div className="flex flex-col items-center gap-3 mb-6">
-              <input
-                ref={profileFileInputRef}
-                type="file"
-                accept="image/jpeg,image/jpg,image/png"
-                className="hidden"
-                onChange={handleProfileImageChange}
-              />
-              <div
-                className={`w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${isEditing ? 'cursor-pointer' : ''}`}
-                onClick={() =>
-                  isEditing && profileFileInputRef.current?.click()
-                }
-              >
-                {/* Priority: new preview > existing API image > default icon */}
-                {profilePreviewUrl ? (
-                  <img
-                    src={profilePreviewUrl}
-                    alt="프로필 사진"
-                    className="w-full h-full object-cover"
-                  />
-                ) : editData.profileImage ? (
-                  <img
-                    src={editData.profileImage}
-                    alt="프로필 사진"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Camera className="w-8 h-8 text-gray-400" strokeWidth={1.5} />
-                )}
-              </div>
-              {isEditing && (
-                <button
-                  type="button"
-                  className="text-sm text-primary"
-                  onClick={() => profileFileInputRef.current?.click()}
-                >
-                  프로필 사진 변경
-                </button>
-              )}
-              {isEditing && (profilePreviewUrl || editData.profileImage) && (
-                <button
-                  type="button"
-                  className="text-sm text-gray-500"
-                  onClick={removeProfileImage}
-                >
-                  이미지 삭제
-                </button>
-              )}
-            </div>
-
-            {isEditing ? (
-              <div className="space-y-4">
-                <Input
-                  label="이름"
-                  name="name"
-                  value={editData.name}
-                  onChange={(e) => {
-                    const newName = e.target.value;
-                    setEditData({ ...editData, name: newName });
-
-                    // Clear error when user types (debounced validation will check later)
-                    if (errors.name) {
-                      setErrors((prev) => ({ ...prev, name: undefined }));
-                    }
-                  }}
-                  error={errors.name}
-                />
-
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    희망 포지션
-                  </label>
-                  <Select
-                    value={editData.position}
-                    onValueChange={(value) => {
-                      setEditData({ ...editData, position: value });
-                      if (errors.position) {
-                        setErrors((prev) => ({ ...prev, position: undefined }));
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="포지션을 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {positions.map((position) => (
-                        <SelectItem key={position.id} value={position.name}>
-                          {position.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.position && (
-                    <p className="mt-1 text-sm text-danger">
-                      {errors.position}
-                    </p>
+          {/* Resume Profile Link Section */}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <button
+              onClick={() => navigate('/settings/profile')}
+              className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+                  {profileData?.profileImageUrl ? (
+                    <img
+                      src={profileData.profileImageUrl}
+                      alt="프로필"
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle
+                      className="w-7 h-7 text-primary"
+                      strokeWidth={1.5}
+                    />
                   )}
                 </div>
+                <div>
+                  <h3 className="text-base font-semibold">
+                    {profileData?.name || '사용자'}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    이력서 기본 정보 및 기술 스택 관리
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
 
-                <Input
-                  label="전화번호"
-                  type="tel"
-                  placeholder="010-1234-5678"
-                  value={editData.phone}
-                  onChange={handlePhoneChange}
-                  error={errors.phone}
+          {/* Privacy Status Section */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-200">
+            <h3 className="mb-4 text-sm font-medium text-gray-500">
+              개인정보 보호
+            </h3>
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-success" />
+                <span className="text-sm font-medium">
+                  개인정보 수집 및 이용 동의
+                </span>
+              </div>
+              <span className="text-xs px-2 py-1 bg-green-50 text-success rounded-full font-medium border border-green-100">
+                {profileData?.privacyAgreed ? '동의함' : '미동의'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-1 mt-2">
+              <div className="flex items-center gap-3">
+                <ShieldCheck
+                  className={`w-5 h-5 ${profileData?.phonePolicyAgreed ? 'text-success' : 'text-gray-400'}`}
                 />
-
-                <div
-                  className={`overflow-hidden transition-all duration-300 ${
-                    shouldShowPhonePolicyAgreement
-                      ? 'max-h-40 opacity-100'
-                      : 'max-h-0 opacity-0 pointer-events-none'
-                  }`}
+                <button
+                  type="button"
+                  onClick={() => setIsPhonePolicyModalOpen(true)}
+                  className="text-sm font-medium text-left hover:underline"
                 >
-                  <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={isPhonePolicyAgreed}
-                        onChange={(e) => {
-                          setIsPhonePolicyAgreed(e.target.checked);
-                          if (errors.phonePolicy) {
-                            setErrors((prev) => ({
-                              ...prev,
-                              phonePolicy: undefined,
-                            }));
-                          }
-                        }}
-                        className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          전화번호 수집·이용에 동의합니다.{' '}
-                          <span className="text-primary">*</span>
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setIsPhonePolicyModalOpen(true)}
-                          className="mt-1 text-xs text-primary underline underline-offset-2"
-                        >
-                          자세히 보기
-                        </button>
-                      </div>
-                    </div>
-                    {errors.phonePolicy && (
-                      <p className="mt-2 text-sm text-danger">
-                        {errors.phonePolicy}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button variant="secondary" fullWidth onClick={handleCancel}>
-                    취소
-                  </Button>
-                  <Button
-                    variant="primary"
-                    fullWidth
-                    onClick={handleSave}
-                    disabled={
-                      isSavingProfile ||
-                      isUploading ||
-                      !!errors.name ||
-                      !!errors.phone
-                    }
-                  >
-                    저장
-                  </Button>
-                </div>
+                  전화번호 수집/이용 동의
+                </button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-600">이름</span>
-                  <span className="font-medium">{displayName}</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-600">희망 포지션</span>
-                  <span className="font-medium">{displayPosition}</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-600">전화번호</span>
-                  <span className="font-medium">{displayPhone}</span>
-                </div>
-
-                <Button variant="secondary" fullWidth onClick={handleEdit}>
-                  수정
-                </Button>
-              </div>
-            )}
+              <button
+                type="button"
+                onClick={handlePhonePolicyToggle}
+                className={`text-xs px-2 py-1 rounded-full font-medium border ${
+                  profileData?.phonePolicyAgreed
+                    ? 'bg-green-50 text-success border-green-100'
+                    : 'bg-gray-50 text-gray-400 border-gray-200'
+                }`}
+              >
+                {profileData?.phonePolicyAgreed ? '동의함' : '미동의'}
+              </button>
+            </div>
+            <p className="mt-3 text-[11px] text-gray-400 leading-relaxed">
+              사용자의 소중한 개인정보는 서비스 제공 목적 이외에는 사용되지
+              않으며, 암호화되어 안전하게 보관됩니다.
+            </p>
           </div>
 
           {/* Interview Settings */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200">
-            <h3 className="mb-4">알림 및 모의 면접 설정</h3>
+            <h3 className="mb-4 text-sm font-medium text-gray-500">앱 설정</h3>
 
             <label className="flex items-start justify-between py-3">
               <div className="flex-1 pr-4">
-                <p className="font-medium mb-1">알림 받기</p>
-                <p className="text-sm text-gray-600">
+                <p className="font-medium text-sm mb-1">알림 받기</p>
+                <p className="text-xs text-gray-600">
                   프로젝트 요약 생성 및 수정 알림을 받을 수 있습니다.
                 </p>
               </div>
@@ -710,43 +289,18 @@ export function SettingsPage() {
                 <div className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
               </div>
             </label>
-
-            {/* <label className="flex items-start justify-between py-3 border-t border-gray-100">
-              <div className="flex-1 pr-4">
-                <p className="font-medium mb-1">이력서 정보 자동 사용</p>
-                <p className="text-sm text-gray-600">
-                  모의 면접 시작 시 이력서 정보를 기본 값으로 사용할 수
-                  있습니다.
-                </p>
-              </div>
-              <div className="relative inline-block w-12 h-7 flex-shrink-0">
-                <input
-                  type="checkbox"
-                  checked={localSettings.interviewResumeDefaultsEnabled}
-                  onChange={(e) =>
-                    handleToggleSetting(
-                      'interviewResumeDefaultsEnabled',
-                      e.target.checked
-                    )
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-12 h-7 bg-gray-200 peer-checked:bg-primary rounded-full peer transition-colors cursor-pointer" />
-                <div className="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
-              </div>
-            </label> */}
           </div>
 
           {/* Account */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <button
-              className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-[#EF4444]"
+              className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-[#EF4444] text-sm font-medium"
               onClick={handleLogout}
             >
               <span>로그아웃</span>
             </button>
             <button
-              className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-[#EF4444]"
+              className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-gray-400 text-[13px]"
               onClick={handleWithdraw}
             >
               <span>회원탈퇴</span>
@@ -775,7 +329,6 @@ export function SettingsPage() {
         confirmText="탈퇴"
         cancelText="취소"
       />
-
       <Dialog
         open={isPhonePolicyModalOpen}
         onOpenChange={setIsPhonePolicyModalOpen}
@@ -787,12 +340,17 @@ export function SettingsPage() {
           className="w-[calc(100%-8px)] max-w-[382px] sm:max-w-[382px]"
         >
           <DialogHeader>
-            <DialogTitle>휴대전화번호 수집·이용 동의 (필수)</DialogTitle>
+            <DialogTitle>휴대전화번호 수집·이용 동의 (선택)</DialogTitle>
           </DialogHeader>
           <div className="mt-1 max-h-[50vh] min-h-[200px] overflow-y-auto pr-4 text-sm text-gray-700">
             {PHONE_TERMS_JSX}
           </div>
           <DialogFooter className="mt-4">
+            {!profileData?.phonePolicyAgreed && (
+              <Button type="button" onClick={handleConfirmPhonePolicyAgreement}>
+                동의
+              </Button>
+            )}
             <Button
               type="button"
               variant="secondary"
