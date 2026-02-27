@@ -10,6 +10,7 @@ export class SSEClient {
     this.eventListeners = new Map(); // event name -> callback
     this.onOpen = options.onOpen;
     this.onError = options.onError;
+    this.closeOnError = options.closeOnError ?? false;
     this.isConnected = false;
   }
 
@@ -23,6 +24,9 @@ export class SSEClient {
 
     this.eventSource.onerror = (error) => {
       this.isConnected = false;
+      if (this.closeOnError) {
+        this.close();
+      }
       this.onError?.(error);
     };
 

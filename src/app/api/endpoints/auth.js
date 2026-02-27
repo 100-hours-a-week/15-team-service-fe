@@ -15,7 +15,14 @@ export const getGithubLoginUrl = async () => {
  * Logout user
  */
 export const logout = async () => {
-  await mutatingClient.post(API_CONFIG.ENDPOINTS.LOGOUT);
+  await mutatingClient.post(
+    API_CONFIG.ENDPOINTS.LOGOUT,
+    {},
+    {
+      skipAuthRefresh: true,
+      skipAuthRedirect: true,
+    }
+  );
 };
 
 /**

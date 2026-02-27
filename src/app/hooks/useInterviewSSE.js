@@ -40,6 +40,7 @@ export function useInterviewSSE(interviewId, options = {}) {
         setIsConnected(false);
         callbacksRef.current.onError?.(error);
       },
+      closeOnError: true,
     });
 
     client.addEventListener('question', (data) => {
@@ -54,7 +55,16 @@ export function useInterviewSSE(interviewId, options = {}) {
 
     client.connect();
 
-    return () => client.close();
+    const handleLogout = () => {
+      client.close();
+      setIsConnected(false);
+    };
+    window.addEventListener('auth:logout', handleLogout);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+      client.close();
+    };
   }, [url]);
 
   return { isConnected };
