@@ -75,7 +75,8 @@ export function ChatRoomListSheet() {
   const [isSending, setIsSending] = useState(false);
 
   const messages = useMemo(() => {
-    const rawMessages = messagesData?.pages?.flatMap((page) => page.data) || [];
+    const rawMessages =
+      messagesData?.pages?.flatMap((page) => page.chats) || [];
 
     // Deduplicate by message ID (defensive against backend pagination overlaps)
     const uniqueMessages = Array.from(
