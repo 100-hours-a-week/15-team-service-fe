@@ -51,6 +51,7 @@ function RootLayout() {
           <NotificationToastBanner />
           <Toaster
             position="bottom-center"
+            expand={true}
             toastOptions={{
               style: {
                 backgroundColor: 'rgba(75, 85, 99, 0.8)',
@@ -60,8 +61,8 @@ function RootLayout() {
                 border: 'none',
                 width: '320px',
                 position: 'absolute',
-                bottom: '70px',
-                left: 'calc(47%)',
+                bottom: '0px',
+                left: 'calc(50%)',
                 transform: 'translateX(-50%)',
               },
               className: '!rounded-full !px-6',
