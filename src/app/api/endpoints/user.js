@@ -16,6 +16,19 @@ export const fetchUser = async () => {
 };
 
 /**
+ * Fetch auth status only (no refresh retry)
+ * @returns {Promise<Object>}
+ */
+export const fetchAuthStatus = async () => {
+  const response = await apiClient.get(API_CONFIG.ENDPOINTS.USER_INFO, {
+    skipErrorToast: true,
+    skipAuthRedirect: true,
+    skipAuthRefresh: true,
+  });
+  return response.data.data;
+};
+
+/**
  * Update user profile
  * @param {Object} updates - Profile updates
  * @param {string} updates.name - User name (2~10 chars, no spaces/emoji, required)

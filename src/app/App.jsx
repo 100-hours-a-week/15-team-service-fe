@@ -30,13 +30,17 @@ import { SettingsPage } from './pages/SettingsPage';
 import { useAuthStatus } from './hooks/queries/useUserQuery';
 
 function RootLayout() {
+  const { data: userProfile } = useAuthStatus();
+
   // Initialize CSRF token on app mount
   useEffect(() => {
-    ensureCsrfToken();
-  }, []);
+    if (userProfile) {
+      ensureCsrfToken();
+    }
+  }, [userProfile]);
 
   // Single SSE connection for the entire app — toast fires on any page
-  const notification = useNotificationSSE();
+  const notification = useNotificationSSE(Boolean(userProfile));
 
   return (
     <NotificationContext.Provider value={notification}>
