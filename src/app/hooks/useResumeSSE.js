@@ -38,6 +38,7 @@ export function useResumeSSE(resumeId, options = {}) {
       onError: () => {
         setIsConnected(false);
       },
+      closeOnError: true,
     });
 
     // Listen for resume-edit-complete events
@@ -52,8 +53,16 @@ export function useResumeSSE(resumeId, options = {}) {
     client.connect();
     clientRef.current = client;
 
+    const handleLogout = () => {
+      client.close();
+      clientRef.current = null;
+      setIsConnected(false);
+    };
+    window.addEventListener('auth:logout', handleLogout);
+
     // Cleanup on unmount or resumeId change
     return () => {
+      window.removeEventListener('auth:logout', handleLogout);
       client.close();
       clientRef.current = null;
       setIsConnected(false);
