@@ -14,10 +14,11 @@ const getTimestamp = () => new Date().toISOString();
  *
  * @param {Object} options
  * @param {number} options.resumeId - Resume ID to edit
+ * @param {boolean} [options.isEditing=false] - Server-side editing flag (blocks chat when true)
  * @returns {Object} Chatbot state and handlers
  */
 export const useChatbot = (options = {}) => {
-  const { resumeId } = options;
+  const { resumeId, isEditing = false } = options;
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -111,8 +112,8 @@ export const useChatbot = (options = {}) => {
   const handleSendMessage = useCallback(() => {
     const trimmed = chatInput.trim();
 
-    // Validation: must have message, not updating, and SSE connected
-    if (!trimmed || isUpdating || !isConnected) return;
+    // Validation: must have message, not updating (local or server-side), and SSE connected
+    if (!trimmed || isUpdating || isEditing || !isConnected) return;
 
     // Add user message to UI
     appendMessage('user', trimmed);
@@ -120,7 +121,14 @@ export const useChatbot = (options = {}) => {
 
     // Send edit request
     editMutation.mutate(trimmed);
-  }, [chatInput, isUpdating, isConnected, editMutation, appendMessage]);
+  }, [
+    chatInput,
+    isUpdating,
+    isEditing,
+    isConnected,
+    editMutation,
+    appendMessage,
+  ]);
 
   return {
     messages,

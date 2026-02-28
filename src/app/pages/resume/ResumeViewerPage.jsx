@@ -152,6 +152,8 @@ export function ResumeViewerPage() {
     }
   }, []);
 
+  const isEditing = resumeDetail?.isEditing ?? false;
+
   const {
     messages,
     chatInput,
@@ -159,7 +161,7 @@ export function ResumeViewerPage() {
     isConnected,
     onInputChange,
     onSendMessage,
-  } = useChatbot({ resumeId });
+  } = useChatbot({ resumeId, isEditing });
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -417,6 +419,7 @@ export function ResumeViewerPage() {
         onSendMessage={onSendMessage}
         isUpdating={isUpdating}
         isConnected={isConnected}
+        isEditing={isEditing}
       />
 
       {showPDFViewer && pdfUrl && (
