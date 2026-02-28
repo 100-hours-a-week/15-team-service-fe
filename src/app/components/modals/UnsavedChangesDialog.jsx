@@ -15,21 +15,21 @@ export function UnsavedChangesDialog({
 }) {
   return (
     <AlertDialog open={isOpen}>
-      <AlertDialogPortal>
-        {/* Overlay - fixed positioning to cover entire viewport */}
+      <AlertDialogPortal container={document.getElementById('app-container')}>
+        {/* Overlay - absolute positioning within #app-container */}
         <AlertDialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-50 bg-black/50',
+            'absolute inset-0 z-50 bg-black/40',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
         />
 
-        {/* Modal Content - fixed positioning for viewport center */}
+        {/* Modal Content - fixed at viewport center */}
         <AlertDialogPrimitive.Content
           className={cn(
             'fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]',
-            'z-50 grid w-full max-w-[calc(100%-2rem)] gap-4',
+            'z-50 grid w-full max-w-[350px] gap-4',
             'rounded-lg border p-6 shadow-lg bg-white',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',

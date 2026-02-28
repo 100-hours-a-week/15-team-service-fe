@@ -11,11 +11,10 @@ import { cn } from '../../lib/utils';
  * - Any scenario where primary action cancels/prevents something
  *
  * Implementation Decision - Positioning:
- * - Uses absolute positioning scoped to app container
- * - Portal renders to #app-container (NOT document.body)
- * - Overlay covers only the app container area (absolute inset-0 bg-black/40)
+ * - Uses absolute positioning via #app-container portal
+ * - Portal renders to #app-container so overlay/content are absolute within 390px container
+ * - Absolute position ensures modal stays centered within the mobile viewport container
  * - Max-width: max-w-[350px] for comfortable padding within mobile viewport
- * - Gray background outside app container is NOT darkened
  *
  * Implementation Decision - Button Semantics:
  * - Primary button (top, blue): Cancels/prevents the action
@@ -48,7 +47,7 @@ export function WarningDialog({
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogPortal container={document.getElementById('app-container')}>
-        {/* Overlay - absolute positioning to cover only app container */}
+        {/* Overlay - absolute within #app-container */}
         <AlertDialogPrimitive.Overlay
           className={cn(
             'absolute inset-0 z-50 bg-black/40',
@@ -57,10 +56,10 @@ export function WarningDialog({
           )}
         />
 
-        {/* Modal Content - absolute positioning for app container center */}
+        {/* Modal Content - fixed at viewport center */}
         <AlertDialogPrimitive.Content
           className={cn(
-            'absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]',
+            'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
             'z-50 grid w-full max-w-[350px] gap-4',
             'rounded-lg border p-6 shadow-lg bg-white',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',

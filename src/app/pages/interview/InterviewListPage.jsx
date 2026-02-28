@@ -133,7 +133,7 @@ export function InterviewListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header with Filter Button */}
       <header className="bg-white border-b border-gray-200 px-5 py-4">
         <div className="max-w-[390px] mx-auto flex items-center justify-between">
@@ -309,9 +309,29 @@ export function InterviewListPage() {
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto space-y-3">
           {isLoading ? (
-            <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
-              <p className="text-gray-500">면접 목록을 불러오는 중입니다.</p>
-            </div>
+            <>
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl p-4 border border-gray-200 animate-pulse"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gray-200 rounded" />
+                        <div className="h-3 bg-gray-200 rounded w-1/4" />
+                      </div>
+                    </div>
+                    <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 bg-gray-200 rounded-full w-12" />
+                    <div className="h-6 bg-gray-200 rounded-full w-16" />
+                  </div>
+                </div>
+              ))}
+            </>
           ) : isError ? (
             <div className="bg-white rounded-2xl p-8 text-center border border-gray-200">
               <p className="text-gray-500">면접 목록을 불러오지 못했습니다.</p>

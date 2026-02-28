@@ -477,7 +477,7 @@ export function SettingsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-24">
       <header className="bg-white border-b border-gray-200 px-5 py-4">
         <div className="max-w-[390px] mx-auto">
           <h1>설정</h1>

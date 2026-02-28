@@ -81,7 +81,7 @@ export function HomePage() {
   // Flatten pages into single array
   const resumes = useMemo(() => {
     if (!resumesData?.pages) return [];
-    return resumesData.pages.flatMap((page) => page.chats || []);
+    return resumesData.pages.flatMap((page) => page.data || []);
   }, [resumesData]);
 
   const displayName = profileData?.name ?? '사용자';
@@ -113,7 +113,7 @@ export function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-5 py-6 sticky top-0 z-20">
         <div className="max-w-[390px] mx-auto">
@@ -238,7 +238,7 @@ export function HomePage() {
               {/* Resume Cards */}
               <div className="space-y-3">
                 {resumes.map((resume) => (
-                  <ResumeCard key={resume.id} resume={resume} />
+                  <ResumeCard key={resume.resumeId} resume={resume} />
                 ))}
               </div>
 
@@ -285,13 +285,13 @@ const ResumeCard = React.memo(({ resume }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleViewResume = useCallback(() => {
-    navigate(`/resume/${resume.resumeId || resume.id}`);
+    navigate(`/resume/${resume.resumeId}`);
   }, [navigate, resume]);
 
   const handleStartInterview = useCallback(() => {
     navigate('/interview/start', {
       state: {
-        resumeId: resume.resumeId || resume.id,
+        resumeId: resume.resumeId,
         resumeVersionNo: resume.currentVersionNo,
         resumeName: resume.name,
       },
@@ -301,10 +301,10 @@ const ResumeCard = React.memo(({ resume }) => {
   const handleResumeNameEdit = useCallback(
     (e) => {
       e.stopPropagation();
-      setEditTarget({ id: resume.id, name: resume.name });
+      setEditTarget({ id: resume.resumeId, name: resume.name });
       setIsEditDialogOpen(true);
     },
-    [resume.id, resume.name]
+    [resume.resumeId, resume.name]
   );
 
   const handleConfirmEdit = useCallback(
@@ -331,10 +331,10 @@ const ResumeCard = React.memo(({ resume }) => {
   const handleDeleteClick = useCallback(
     (e) => {
       e.stopPropagation();
-      setDeleteTarget(resume.id);
+      setDeleteTarget(resume.resumeId);
       setIsDeleteDialogOpen(true);
     },
-    [resume.id]
+    [resume.resumeId]
   );
 
   const handleConfirmDelete = useCallback(() => {

@@ -102,6 +102,9 @@ export function ResumeViewerPage() {
   const [activeTab, setActiveTab] = useState('preview');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showChatbot, setShowChatbot] = useState(false);
+  // Tracks which version was already initialized so refetch after save
+  // doesn't override hasUnsavedChanges back to true
+  const initializedVersionRef = useRef(null);
 
   const {
     showPDFViewer,
@@ -127,9 +130,16 @@ export function ResumeViewerPage() {
       const parsed = parseResumeContent(versionData.content);
       setYamlContent(parsed);
       setRawContent(versionData.content);
-      setHasUnsavedChanges(versionData.committedAt === null);
+      // Only set initial unsaved state on first load of this version.
+      // Later refetches (e.g. after save cache invalidation) must not
+      // override the user's in-memory hasUnsavedChanges value.
+      const versionKey = `${resumeId}-${currentVersionNo}`;
+      if (initializedVersionRef.current !== versionKey) {
+        initializedVersionRef.current = versionKey;
+        setHasUnsavedChanges(versionData.committedAt === null);
+      }
     }
-  }, [versionData]);
+  }, [versionData, resumeId, currentVersionNo]);
 
   // 프로젝트 요약 생성 완료 메시지 표시
   useEffect(() => {
@@ -142,6 +152,8 @@ export function ResumeViewerPage() {
     }
   }, []);
 
+  const isEditing = resumeDetail?.isEditing ?? false;
+
   const {
     messages,
     chatInput,
@@ -149,21 +161,7 @@ export function ResumeViewerPage() {
     isConnected,
     onInputChange,
     onSendMessage,
-  } = useChatbot({
-    resumeId,
-    onUpdate: (resumeData) => {
-      // Handle SSE event data (resume object)
-      if (resumeData) {
-        const yamlString = yaml.dump(resumeData, {
-          noRefs: true,
-          sortKeys: false,
-        });
-        setYamlContent(yamlString);
-        setRawContent(JSON.stringify(resumeData));
-        setHasUnsavedChanges(true);
-      }
-    },
-  });
+  } = useChatbot({ resumeId, isEditing });
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
@@ -199,13 +197,19 @@ export function ResumeViewerPage() {
     );
   }, [resumeId, currentVersionNo, versionData?.status, saveVersionMutation]);
 
-  const handleSaveAndStay = useCallback(() => {
-    setHasUnsavedChanges(false);
-    toast.success('저장되었습니다.');
-    if (blocker.state === 'blocked') {
-      blocker.reset();
-    }
-  }, [blocker]);
+  const handleSaveAndLeave = useCallback(() => {
+    saveVersionMutation.mutate(
+      { resumeId, versionNo: currentVersionNo },
+      {
+        onSuccess: () => {
+          setHasUnsavedChanges(false);
+          if (blocker.state === 'blocked') {
+            blocker.proceed();
+          }
+        },
+      }
+    );
+  }, [resumeId, currentVersionNo, saveVersionMutation, blocker]);
 
   const handleDiscardAndLeave = useCallback(() => {
     setHasUnsavedChanges(false);
@@ -220,7 +224,7 @@ export function ResumeViewerPage() {
 
   if (isLoadingDetail || isLoadingVersion) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
         <div className="px-5 py-6">
           <div className="max-w-[390px] mx-auto">
@@ -237,7 +241,7 @@ export function ResumeViewerPage() {
 
   if (isDetailError) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
         <div className="px-5 py-9">
           <div className="max-w-[390px] mx-auto">
@@ -257,7 +261,7 @@ export function ResumeViewerPage() {
 
   if (isProcessing) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title={resumeDetail?.name || '이력서'} showBack />
         <div className="px-5 py-6">
           <div className="max-w-[390px] mx-auto">
@@ -283,7 +287,7 @@ export function ResumeViewerPage() {
 
   if (isFailed) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title={resumeDetail?.name || '이력서'} showBack />
         <div className="px-5 py-6">
           <div className="max-w-[390px] mx-auto">
@@ -317,7 +321,7 @@ export function ResumeViewerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 relative">
+    <div className="min-h-screen bg-gray-50 pb-24 relative">
       <TopAppBar
         title={resumeDetail?.name || '이력서'}
         showBack
@@ -415,6 +419,7 @@ export function ResumeViewerPage() {
         onSendMessage={onSendMessage}
         isUpdating={isUpdating}
         isConnected={isConnected}
+        isEditing={isEditing}
       />
 
       {showPDFViewer && pdfUrl && (
@@ -513,7 +518,7 @@ export function ResumeViewerPage() {
         description="저장하지 않고 나가면 이력서가 사라질 수 있습니다."
         primaryButtonText="저장하고 나가기"
         secondaryButtonText="저장하지 않고 나가기"
-        onPrimaryAction={handleSaveAndStay}
+        onPrimaryAction={handleSaveAndLeave}
         onSecondaryAction={handleDiscardAndLeave}
       />
 

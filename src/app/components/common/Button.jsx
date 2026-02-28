@@ -29,7 +29,7 @@ export const Button = forwardRef(
     ref
   ) => {
     const baseStyles =
-      'min-h-[44px] px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
+      'min-h-[44px] px-6 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
 
     const variants = {
       primary: 'bg-primary text-white hover:bg-[#2558CC]',

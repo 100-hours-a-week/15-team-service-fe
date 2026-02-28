@@ -114,6 +114,7 @@
  * @property {string} content - JSON string
  * @property {string} createdAt
  * @property {string} updatedAt
+ * @property {boolean} isEditing - 수정 진행 중 여부
  */
 
 /**
