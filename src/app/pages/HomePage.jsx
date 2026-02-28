@@ -238,7 +238,7 @@ export function HomePage() {
               {/* Resume Cards */}
               <div className="space-y-3">
                 {resumes.map((resume) => (
-                  <ResumeCard key={resume.id} resume={resume} />
+                  <ResumeCard key={resume.resumeId} resume={resume} />
                 ))}
               </div>
 
@@ -285,13 +285,13 @@ const ResumeCard = React.memo(({ resume }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleViewResume = useCallback(() => {
-    navigate(`/resume/${resume.resumeId || resume.id}`);
+    navigate(`/resume/${resume.resumeId}`);
   }, [navigate, resume]);
 
   const handleStartInterview = useCallback(() => {
     navigate('/interview/start', {
       state: {
-        resumeId: resume.resumeId || resume.id,
+        resumeId: resume.resumeId,
         resumeVersionNo: resume.currentVersionNo,
         resumeName: resume.name,
       },
@@ -301,10 +301,10 @@ const ResumeCard = React.memo(({ resume }) => {
   const handleResumeNameEdit = useCallback(
     (e) => {
       e.stopPropagation();
-      setEditTarget({ id: resume.id, name: resume.name });
+      setEditTarget({ id: resume.resumeId, name: resume.name });
       setIsEditDialogOpen(true);
     },
-    [resume.id, resume.name]
+    [resume.resumeId, resume.name]
   );
 
   const handleConfirmEdit = useCallback(

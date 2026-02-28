@@ -11,9 +11,9 @@ import { cn } from '../../lib/utils';
  * - Any scenario where primary action cancels/prevents something
  *
  * Implementation Decision - Positioning:
- * - Uses fixed positioning via document.body portal
- * - Portal renders to document.body so overlay/content are fixed to viewport
- * - Fixed position ensures modal stays centered even on scrollable pages
+ * - Uses absolute positioning via #app-container portal
+ * - Portal renders to #app-container so overlay/content are absolute within 390px container
+ * - Absolute position ensures modal stays centered within the mobile viewport container
  * - Max-width: max-w-[350px] for comfortable padding within mobile viewport
  *
  * Implementation Decision - Button Semantics:
@@ -46,17 +46,17 @@ export function WarningDialog({
 }) {
   return (
     <AlertDialog open={isOpen}>
-      <AlertDialogPortal container={document.body}>
-        {/* Overlay - fixed to cover full viewport */}
+      <AlertDialogPortal container={document.getElementById('app-container')}>
+        {/* Overlay - absolute within #app-container */}
         <AlertDialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-50 bg-black/40',
+            'absolute inset-0 z-50 bg-black/40',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
           )}
         />
 
-        {/* Modal Content - fixed at viewport center regardless of scroll */}
+        {/* Modal Content - fixed at viewport center */}
         <AlertDialogPrimitive.Content
           className={cn(
             'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
