@@ -81,7 +81,7 @@ export function HomePage() {
   // Flatten pages into single array
   const resumes = useMemo(() => {
     if (!resumesData?.pages) return [];
-    return resumesData.pages.flatMap((page) => page.chats || []);
+    return resumesData.pages.flatMap((page) => page.data || []);
   }, [resumesData]);
 
   const displayName = profileData?.name ?? '사용자';
@@ -331,10 +331,10 @@ const ResumeCard = React.memo(({ resume }) => {
   const handleDeleteClick = useCallback(
     (e) => {
       e.stopPropagation();
-      setDeleteTarget(resume.id);
+      setDeleteTarget(resume.resumeId);
       setIsDeleteDialogOpen(true);
     },
-    [resume.id]
+    [resume.resumeId]
   );
 
   const handleConfirmDelete = useCallback(() => {

@@ -159,21 +159,7 @@ export function ResumeViewerPage() {
     isConnected,
     onInputChange,
     onSendMessage,
-  } = useChatbot({
-    resumeId,
-    onUpdate: (resumeData) => {
-      // Handle SSE event data (resume object)
-      if (resumeData) {
-        const yamlString = yaml.dump(resumeData, {
-          noRefs: true,
-          sortKeys: false,
-        });
-        setYamlContent(yamlString);
-        setRawContent(JSON.stringify(resumeData));
-        setHasUnsavedChanges(true);
-      }
-    },
-  });
+  } = useChatbot({ resumeId });
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>

@@ -4,15 +4,16 @@ import { toast } from 'sonner';
 import { editResume } from '@/app/api/endpoints/resumes';
 import { useResumeSSE } from './useResumeSSE';
 
+const getTimestamp = () => new Date().toISOString();
+
 /**
  * Chatbot hook for resume editing with real SSE and API integration
  * @param {Object} options
  * @param {number} options.resumeId - Resume ID to edit
- * @param {Function} options.onUpdate - Callback when resume data is updated
  * @returns {Object} Chatbot state and handlers
  */
 export const useChatbot = (options = {}) => {
-  const { resumeId, onUpdate } = options;
+  const { resumeId } = options;
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -20,11 +21,6 @@ export const useChatbot = (options = {}) => {
 
   // Track active task ID to match PATCH response with SSE event
   const activeTaskIdRef = useRef(null);
-
-  /**
-   * Get ISO timestamp for message
-   */
-  const getTimestamp = () => new Date().toISOString();
 
   const appendMessage = useCallback((role, content) => {
     setMessages((prev) => [
@@ -40,32 +36,16 @@ export const useChatbot = (options = {}) => {
   // SSE subscription for resume edit events
   const { isConnected } = useResumeSSE(resumeId, {
     onEditComplete: (eventData) => {
-      // Only handle if it matches our active task
+      // Always invalidate to keep viewer in sync — covers initial generation
+      // completion and chatbot edits alike. Prefix match covers all version queries.
+      queryClient.invalidateQueries({ queryKey: ['resume', resumeId] });
+
+      // Only handle chatbot UI updates if this matches our active task
       if (eventData.taskId === activeTaskIdRef.current) {
-        // Add AI completion message
         appendMessage('assistant', '업데이트 내용을 반영했어요.');
-
-        // Trigger onUpdate callback with new resume data
-        if (typeof onUpdate === 'function') {
-          onUpdate(eventData.resume);
-        }
-
-        // Show success toast
         toast.success('이력서가 업데이트되었습니다');
-
-        // Invalidate React Query cache
-        queryClient.invalidateQueries({
-          queryKey: ['resume', resumeId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ['resume', resumeId, 'version', eventData.versionNo],
-        });
-
-        // Reset state
         setIsUpdating(false);
         activeTaskIdRef.current = null;
-      } else {
-        console.warn('[useChatbot] Task ID mismatch - ignoring event');
       }
     },
     onEditFailed: (eventData) => {

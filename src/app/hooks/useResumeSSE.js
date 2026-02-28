@@ -16,12 +16,12 @@ export function useResumeSSE(resumeId, options = {}) {
   const { onEditComplete, onEditFailed } = options;
 
   // Prevent stale closure - store latest callback in ref
+  // Direct assignment during render is safe: refs are mutable and always
+  // reflect the latest callback when the SSE event fires asynchronously.
   const onEditCompleteRef = useRef(onEditComplete);
   const onEditFailedRef = useRef(onEditFailed);
-  useEffect(() => {
-    onEditCompleteRef.current = onEditComplete;
-    onEditFailedRef.current = onEditFailed;
-  }, [onEditComplete, onEditFailed]);
+  onEditCompleteRef.current = onEditComplete;
+  onEditFailedRef.current = onEditFailed;
 
   useEffect(() => {
     if (!resumeId) {
