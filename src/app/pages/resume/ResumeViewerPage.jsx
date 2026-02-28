@@ -224,7 +224,7 @@ export function ResumeViewerPage() {
 
   if (isLoadingDetail || isLoadingVersion) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
         <div className="px-5 py-6">
           <div className="max-w-[390px] mx-auto">
@@ -241,7 +241,7 @@ export function ResumeViewerPage() {
 
   if (isDetailError) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
         <div className="px-5 py-9">
           <div className="max-w-[390px] mx-auto">
@@ -261,7 +261,7 @@ export function ResumeViewerPage() {
 
   if (isProcessing) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title={resumeDetail?.name || '이력서'} showBack />
         <div className="px-5 py-6">
           <div className="max-w-[390px] mx-auto">
@@ -287,7 +287,7 @@ export function ResumeViewerPage() {
 
   if (isFailed) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title={resumeDetail?.name || '이력서'} showBack />
         <div className="px-5 py-6">
           <div className="max-w-[390px] mx-auto">
@@ -321,7 +321,7 @@ export function ResumeViewerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 relative">
+    <div className="min-h-screen bg-gray-50 pb-24 relative">
       <TopAppBar
         title={resumeDetail?.name || '이력서'}
         showBack
