@@ -1,13 +1,17 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { editResume } from '@/app/api/endpoints/resumes';
-import { useResumeSSE } from './useResumeSSE';
+import { useNotificationContext } from './useNotificationSSE';
 
 const getTimestamp = () => new Date().toISOString();
 
 /**
- * Chatbot hook for resume editing with real SSE and API integration
+ * Chatbot hook for resume editing with real SSE and API integration.
+ *
+ * Resume refresh events come from the unified /notifications/stream SSE connection
+ * via the sse:resume-refresh-required custom window event dispatched by useNotificationSSE.
+ *
  * @param {Object} options
  * @param {number} options.resumeId - Resume ID to edit
  * @returns {Object} Chatbot state and handlers
@@ -19,8 +23,11 @@ export const useChatbot = (options = {}) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const queryClient = useQueryClient();
 
-  // Track active task ID to match PATCH response with SSE event
-  const activeTaskIdRef = useRef(null);
+  // isConnected comes from the single global SSE stream
+  const { isConnected } = useNotificationContext();
+
+  // Mirror isUpdating in a ref to prevent stale closures in the window event handler
+  const isUpdatingRef = useRef(false);
 
   const appendMessage = useCallback((role, content) => {
     setMessages((prev) => [
@@ -33,53 +40,44 @@ export const useChatbot = (options = {}) => {
     ]);
   }, []);
 
-  // SSE subscription for resume edit events
-  const { isConnected } = useResumeSSE(resumeId, {
-    onEditComplete: (eventData) => {
-      // Always invalidate to keep viewer in sync — covers initial generation
-      // completion and chatbot edits alike. Prefix match covers all version queries.
+  // Listen for resume-refresh-required events from the unified SSE stream
+  useEffect(() => {
+    const handler = (e) => {
+      const { resumeId: eventResumeId, status } = e.detail;
+      if (eventResumeId !== resumeId) return;
+
+      // Always invalidate to keep viewer and list in sync
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
       queryClient.invalidateQueries({ queryKey: ['resume', resumeId] });
 
-      // Only handle chatbot UI updates if this matches our active task
-      if (eventData.taskId === activeTaskIdRef.current) {
-        appendMessage('assistant', '업데이트 내용을 반영했어요.');
-        toast.success('이력서가 업데이트되었습니다');
+      // Only update chatbot UI if a chatbot edit is in flight
+      if (isUpdatingRef.current) {
+        if (status === 'SUCCEEDED') {
+          appendMessage('assistant', '업데이트 내용을 반영했어요.');
+          toast.success('이력서가 업데이트되었습니다');
+        } else {
+          appendMessage(
+            'assistant',
+            '죄송합니다. 수정 작업 중 문제가 발생했습니다. 재시도해주세요.'
+          );
+          toast.error('이력서 수정 실패');
+        }
         setIsUpdating(false);
-        activeTaskIdRef.current = null;
+        isUpdatingRef.current = false;
       }
-    },
-    onEditFailed: (eventData) => {
-      // Only handle if it matches our active task
-      if (eventData.taskId === activeTaskIdRef.current) {
-        // Extract error details from SSE payload
-        const errorMessage =
-          eventData.errorMessage || '알 수 없는 오류가 발생했습니다';
+    };
 
-        // Add AI error message to chat
-        appendMessage(
-          'assistant',
-          `죄송합니다. 수정 작업 중 문제가 발생했습니다. 재시도해주세요.\n${errorMessage}.`
-        );
-
-        // Show error toast
-        toast.error(`이력서 수정 실패: ${errorMessage}`);
-
-        // Reset state
-        setIsUpdating(false);
-        activeTaskIdRef.current = null;
-      } else {
-        console.warn('[useChatbot] Task ID mismatch - ignoring failed event');
-      }
-    },
-  });
+    window.addEventListener('sse:resume-refresh-required', handler);
+    return () =>
+      window.removeEventListener('sse:resume-refresh-required', handler);
+  }, [resumeId, queryClient, appendMessage]);
 
   // Edit resume mutation (PATCH /resumes/{id})
   const editMutation = useMutation({
     mutationFn: (message) => editResume(resumeId, message),
-    onSuccess: (data) => {
-      // Store task ID to match with SSE event
-      activeTaskIdRef.current = data.taskId;
+    onSuccess: () => {
       setIsUpdating(true);
+      isUpdatingRef.current = true;
 
       // Add AI acknowledgment message immediately
       appendMessage('assistant', '확인했습니다. 수정 시작하겠습니다.');
@@ -89,7 +87,6 @@ export const useChatbot = (options = {}) => {
       const errorCode = error.response?.data?.code;
       const errorMessage = error.response?.data?.message;
 
-      // Add error message to chat instead of toast
       if (errorCode === 'RESUME_EDIT_IN_PROGRESS') {
         appendMessage(
           'assistant',
@@ -103,7 +100,7 @@ export const useChatbot = (options = {}) => {
       }
 
       setIsUpdating(false);
-      activeTaskIdRef.current = null;
+      isUpdatingRef.current = false;
     },
   });
 
