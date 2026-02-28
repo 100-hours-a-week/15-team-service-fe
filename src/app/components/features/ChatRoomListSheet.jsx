@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Loader2,
   ChevronLeft,
+  ChevronRight,
   X,
   ChevronDown,
 } from 'lucide-react';
@@ -538,21 +539,33 @@ export function ChatRoomListSheet() {
                       key={room.id}
                       type="button"
                       onClick={() => handleRoomClick(room.id, room.name)}
-                      className="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                      className="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-gray-50 active:bg-gray-100 transition-colors flex items-center gap-3"
                     >
-                      <div className="flex items-start justify-between mb-1">
-                        <h4 className="font-semibold text-base">{room.name}</h4>
-                        {room.lastUpdatedAt && (
-                          <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
-                            {formatKoreanTimestamp(room.lastUpdatedAt)}
-                          </span>
-                        )}
+                      {/* Left: circular icon area */}
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <MessageSquare className="w-5 h-5 text-primary" />
                       </div>
-                      <p className="text-sm text-gray-600 truncate">
-                        {room.lastMessage === '' && room.lastUpdatedAt
-                          ? '(첨부파일)'
-                          : room.lastMessage || '첫 메시지를 보내보세요!'}
-                      </p>
+                      {/* Center: room name + last message */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-semibold text-base truncate">
+                            {room.name}
+                          </h4>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {room.lastUpdatedAt && (
+                              <span className="text-xs text-gray-500 whitespace-nowrap">
+                                {formatKoreanTimestamp(room.lastUpdatedAt)}
+                              </span>
+                            )}
+                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 truncate mt-0.5">
+                          {room.lastMessage === '' && room.lastUpdatedAt
+                            ? '(첨부파일)'
+                            : room.lastMessage || '첫 메시지를 보내보세요!'}
+                        </p>
+                      </div>
                     </button>
                   ))}
                 </div>

@@ -103,7 +103,7 @@ export function InterviewDetailPage() {
   }, [messages]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-24">
       <TopAppBar title={interview?.name || '면접 상세'} showBack />
 
       <div className="px-5 py-6">

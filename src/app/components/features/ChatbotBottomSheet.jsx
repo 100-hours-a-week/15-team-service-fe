@@ -28,6 +28,7 @@ import {
  * @property {() => void} onSendMessage
  * @property {boolean} isUpdating
  * @property {boolean} isConnected - SSE connection status
+ * @property {boolean} [isEditing] - Server-side editing flag (blocks chat when true)
  */
 
 /**
@@ -45,6 +46,7 @@ export const ChatbotBottomSheet = ({
   onSendMessage,
   isUpdating,
   isConnected,
+  isEditing = false,
 }) => {
   const scrollContainerRef = useRef(null);
   const contentRef = useRef(null); // ResizeObserver wrapper
@@ -175,7 +177,7 @@ export const ChatbotBottomSheet = ({
    * Handle send message with validation
    */
   const handleSend = useCallback(() => {
-    if (!chatInput.trim() || isUpdating) return;
+    if (!chatInput.trim() || isUpdating || isEditing) return;
 
     if (chatInput.length > MAX_INPUT_LENGTH) {
       toast.error(
@@ -185,7 +187,7 @@ export const ChatbotBottomSheet = ({
     }
 
     onSendMessage();
-  }, [chatInput, isUpdating, onSendMessage]);
+  }, [chatInput, isUpdating, isEditing, onSendMessage]);
 
   const handleKeyDown = (e) => {
     // 한국어 등 IME 조합 중일 때는 Enter 키 무시
@@ -223,6 +225,11 @@ export const ChatbotBottomSheet = ({
               </Drawer.Title>
               {!isConnected && (
                 <p className="text-xs text-gray-500 mt-1">연결 중...</p>
+              )}
+              {isConnected && isEditing && !isUpdating && (
+                <p className="text-xs text-primary animate-pulse mt-1">
+                  이력서 수정이 진행 중입니다...
+                </p>
               )}
               {isConnected && isUpdating && (
                 <p className="text-xs text-primary mt-1">
@@ -375,7 +382,13 @@ export const ChatbotBottomSheet = ({
           <div className="p-5 border-t border-gray-200 bg-white flex-shrink-0">
             <div className="flex items-end gap-2">
               <textarea
-                placeholder="수정하고 싶은 내용을 입력해주세요."
+                placeholder={
+                  isEditing && !isUpdating
+                    ? '수정 완료 후 이용 가능합니다'
+                    : !isConnected
+                      ? '연결 중...'
+                      : 'AI에게 수정 요청하기'
+                }
                 value={chatInput}
                 onChange={(e) => {
                   const nextValue = e.target.value;
@@ -388,7 +401,7 @@ export const ChatbotBottomSheet = ({
                   onInputChange(nextValue);
                 }}
                 onKeyDown={handleKeyDown}
-                disabled={isUpdating || !isConnected}
+                disabled={isEditing || isUpdating || !isConnected}
                 className="flex-1 min-h-[44px] max-h-[120px] p-3 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-sm"
                 rows={1}
                 maxLength={MAX_INPUT_LENGTH}
@@ -396,9 +409,11 @@ export const ChatbotBottomSheet = ({
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={!chatInput.trim() || isUpdating || !isConnected}
+                disabled={
+                  !chatInput.trim() || isEditing || isUpdating || !isConnected
+                }
                 className={`p-3 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0 transition-colors ${
-                  chatInput.trim() && !isUpdating && isConnected
+                  chatInput.trim() && !isEditing && !isUpdating && isConnected
                     ? 'bg-primary text-white hover:bg-blue-600'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}

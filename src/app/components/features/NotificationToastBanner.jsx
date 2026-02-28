@@ -18,7 +18,7 @@ const DEFAULT_CONFIG = {
   label: '알림',
 };
 
-const AUTO_DISMISS_MS = 4000;
+const AUTO_DISMISS_MS = 7000;
 
 /**
  * 알림 전용 상단 토스트 배너.
