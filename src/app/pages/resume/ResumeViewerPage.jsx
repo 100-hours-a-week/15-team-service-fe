@@ -79,6 +79,7 @@ export function ResumeViewerPage() {
     data: resumeDetail,
     isLoading: isLoadingDetail,
     isError: isDetailError,
+    error: detailError,
     refetch: refetchDetail,
   } = useResumeDetail(resumeId);
 
@@ -252,6 +253,7 @@ export function ResumeViewerPage() {
   }
 
   if (isDetailError) {
+    const is404 = detailError?.response?.status === 404;
     return (
       <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
@@ -259,10 +261,23 @@ export function ResumeViewerPage() {
           <div className="max-w-[390px] mx-auto">
             <div className="flex flex-col items-center bg-white rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
-              <p className="text-gray-500">이력서를 불러오지 못 했습니다.</p>
-              <Button variant="primary" onClick={() => refetchDetail()}>
-                재시도
-              </Button>
+              {is404 ? (
+                <>
+                  <p className="text-gray-500">존재하지 않는 이력서입니다.</p>
+                  <Button variant="primary" onClick={() => navigate('/')}>
+                    홈으로 이동
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500">
+                    이력서를 불러오지 못 했습니다.
+                  </p>
+                  <Button variant="primary" onClick={() => refetchDetail()}>
+                    재시도
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
