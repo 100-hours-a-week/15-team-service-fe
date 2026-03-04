@@ -5,12 +5,12 @@ import { cn } from '../../lib/utils';
 /**
  * @param {Object} props
  * @param {boolean} props.isOpen - Modal open state
- * @param {() => void} props.onSaveAndStay - "저장하고 나가기" callback (cancels navigation)
- * @param {() => void} props.onDiscardAndLeave - "저장하지 않고 나가기" callback (proceeds)
+ * @param {() => void} props.onSaveAndLeave - "저장하고 나가기" callback (saves then proceeds with navigation)
+ * @param {() => void} props.onDiscardAndLeave - "저장하지 않고 나가기" callback (proceeds without saving)
  */
 export function UnsavedChangesDialog({
   isOpen,
-  onSaveAndStay,
+  onSaveAndLeave,
   onDiscardAndLeave,
 }) {
   return (
@@ -49,9 +49,9 @@ export function UnsavedChangesDialog({
 
           {/* Action Buttons - Vertical Stack for Mobile */}
           <div className="flex flex-col gap-2">
-            {/* Primary action: Save and stay (cancels navigation) */}
+            {/* Primary action: Save then leave (proceeds with navigation after save) */}
             <button
-              onClick={onSaveAndStay}
+              onClick={onSaveAndLeave}
               autoFocus
               className={cn(
                 'min-h-[44px] px-4 py-2 rounded-lg font-medium',

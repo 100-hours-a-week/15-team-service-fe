@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Bell, FileText, MessageSquare } from 'lucide-react';
 
 const TYPE_CONFIG = {
@@ -32,9 +33,10 @@ const AUTO_DISMISS_MS = 7000;
  * - 배너 클릭으로 즉시 닫기 (X 버튼 없음 — 아이폰 스타일)
  */
 export function NotificationToastBanner() {
-  const [banner, setBanner] = useState(null); // { type, message }
+  const [banner, setBanner] = useState(null); // { type, message, payload }
   const [visible, setVisible] = useState(false);
   const timerRef = useRef(null);
+  const navigate = useNavigate();
 
   const dismiss = () => {
     setVisible(false);
@@ -44,12 +46,12 @@ export function NotificationToastBanner() {
 
   useEffect(() => {
     const handler = (event) => {
-      const { type, message } = event.detail ?? {};
+      const { type, message, payload } = event.detail ?? {};
 
       // 이전 타이머 취소
       if (timerRef.current) clearTimeout(timerRef.current);
 
-      setBanner({ type, message });
+      setBanner({ type, message, payload });
       // 다음 tick에 visible=true로 슬라이드-다운 시작
       requestAnimationFrame(() => setVisible(true));
 
@@ -85,7 +87,12 @@ export function NotificationToastBanner() {
           ? 'translate-y-0 opacity-100 duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]'
           : '-translate-y-full opacity-0 pointer-events-none duration-300 ease-in',
       ].join(' ')}
-      onClick={dismiss}
+      onClick={() => {
+        if (banner.type === 'RESUME' && banner.payload?.resumeId) {
+          navigate(`/resume/${banner.payload.resumeId}`);
+        }
+        dismiss();
+      }}
       role="alert"
     >
       {/* 앱 아이콘 박스 */}
