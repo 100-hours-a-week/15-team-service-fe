@@ -53,7 +53,6 @@ export function InterviewDetailPage() {
         summary: '피드백을 생성 중입니다.',
         strengths: [],
         improvements: [],
-        nextActions: [],
       };
     }
     const overall = parsedFeedback.overallFeedback;
@@ -61,7 +60,6 @@ export function InterviewDetailPage() {
       summary: overall.summary || '피드백이 생성되었습니다.',
       strengths: overall.keyStrengths || [],
       improvements: overall.keyImprovements || [],
-      nextActions: [],
     };
   }, [parsedFeedback]);
 

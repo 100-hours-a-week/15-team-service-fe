@@ -41,6 +41,7 @@ export function InterviewSessionPage() {
   const [feedback, setFeedback] = useState(null);
   const [isEnding, setIsEnding] = useState(false);
   const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [sseError, setSseError] = useState(false);
   const fileInputRef = useRef(null);
@@ -52,6 +53,7 @@ export function InterviewSessionPage() {
   const autoRestartedRef = useRef(false);
   const messagesRef = useRef(messages);
   const feedbackRef = useRef(feedback);
+  const messagesEndRef = useRef(null);
 
   const submitAnswerMutation = useSubmitInterviewAnswer();
   const completeInterviewMutation = useCompleteInterview();
@@ -355,6 +357,15 @@ export function InterviewSessionPage() {
     setHasStarted(false);
   }, []);
 
+  const onAllQuestionsComplete = useCallback(() => {
+    setIsCompleteDialogOpen(true);
+  }, []);
+
+  const handleConfirmCompleteDialog = async () => {
+    setIsCompleteDialogOpen(false);
+    await handleEnd();
+  };
+
   useInterviewSSE(numericInterviewId, {
     onQuestion,
     onFeedback,
@@ -363,6 +374,7 @@ export function InterviewSessionPage() {
       setSseError(true);
     },
     onEnd,
+    onAllQuestionsComplete,
   });
 
   useEffect(() => {
@@ -393,6 +405,10 @@ export function InterviewSessionPage() {
 
   useEffect(() => {
     messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
@@ -491,6 +507,7 @@ export function InterviewSessionPage() {
               </div>
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
@@ -572,6 +589,15 @@ export function InterviewSessionPage() {
         cancelText="아니오"
         onConfirm={handleConfirmEndDialog}
         onClose={handleCancelEndDialog}
+      />
+
+      <ConfirmDialog
+        isOpen={isCompleteDialogOpen}
+        title="면접 완료"
+        description={'모든 질문이 완료되었습니다.\n피드백을 확인하시겠습니까?'}
+        confirmText="피드백 보기"
+        onConfirm={handleConfirmCompleteDialog}
+        hideCancel
       />
     </div>
   );
