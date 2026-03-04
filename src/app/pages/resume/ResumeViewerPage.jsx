@@ -14,7 +14,7 @@ import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
 import { ParsedResumeViewer } from '../../components/features/ParsedResumeViewer';
-import { WarningDialog } from '../../components/modals/WarningDialog';
+import { UnsavedChangesDialog } from '../../components/modals/UnsavedChangesDialog';
 import { Button } from '../../components/common/Button';
 import { useChatbot } from '@/app/hooks/useChatbot';
 import {
@@ -512,14 +512,10 @@ export function ResumeViewerPage() {
         </>
       )}
 
-      <WarningDialog
+      <UnsavedChangesDialog
         isOpen={blocker.state === 'blocked'}
-        title="아직 저장하지 않았어요."
-        description="저장하지 않고 나가면 이력서가 사라질 수 있습니다."
-        primaryButtonText="저장하고 나가기"
-        secondaryButtonText="저장하지 않고 나가기"
-        onPrimaryAction={handleSaveAndLeave}
-        onSecondaryAction={handleDiscardAndLeave}
+        onSaveAndLeave={handleSaveAndLeave}
+        onDiscardAndLeave={handleDiscardAndLeave}
       />
 
       <BottomNav />
