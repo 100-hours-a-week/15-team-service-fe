@@ -45,11 +45,10 @@ export const useChatbot = (options = {}) => {
   useEffect(() => {
     const handler = (e) => {
       const { resumeId: eventResumeId, status } = e.detail;
-      if (eventResumeId !== resumeId) return;
+      if (Number(eventResumeId) !== resumeId) return;
 
-      // Always invalidate to keep viewer and list in sync
+      // 이력서 목록 캐시 갱신 (updatedAt 반영)
       queryClient.invalidateQueries({ queryKey: ['resumes'] });
-      queryClient.invalidateQueries({ queryKey: ['resume', resumeId] });
 
       // Only update chatbot UI if a chatbot edit is in flight
       if (isUpdatingRef.current) {

@@ -14,7 +14,7 @@ import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
 import { ParsedResumeViewer } from '../../components/features/ParsedResumeViewer';
-import { WarningDialog } from '../../components/modals/WarningDialog';
+import { UnsavedChangesDialog } from '../../components/modals/UnsavedChangesDialog';
 import { Button } from '../../components/common/Button';
 import { useChatbot } from '@/app/hooks/useChatbot';
 import {
@@ -79,6 +79,7 @@ export function ResumeViewerPage() {
     data: resumeDetail,
     isLoading: isLoadingDetail,
     isError: isDetailError,
+    error: detailError,
     refetch: refetchDetail,
   } = useResumeDetail(resumeId);
 
@@ -153,6 +154,18 @@ export function ResumeViewerPage() {
   }, []);
 
   const isEditing = resumeDetail?.isEditing ?? false;
+
+  // SSE resume-refresh-required 이벤트를 직접 감지해 최신 데이터로 즉시 갱신
+  useEffect(() => {
+    const handler = (e) => {
+      if (Number(e.detail.resumeId) !== resumeId) return;
+      refetchDetail();
+      refetchVersion();
+    };
+    window.addEventListener('sse:resume-refresh-required', handler);
+    return () =>
+      window.removeEventListener('sse:resume-refresh-required', handler);
+  }, [resumeId, refetchDetail, refetchVersion]);
 
   const {
     messages,
@@ -240,6 +253,7 @@ export function ResumeViewerPage() {
   }
 
   if (isDetailError) {
+    const is404 = detailError?.response?.status === 404;
     return (
       <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
@@ -247,10 +261,23 @@ export function ResumeViewerPage() {
           <div className="max-w-[390px] mx-auto">
             <div className="flex flex-col items-center bg-white rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
-              <p className="text-gray-500">이력서를 불러오지 못 했습니다.</p>
-              <Button variant="primary" onClick={() => refetchDetail()}>
-                재시도
-              </Button>
+              {is404 ? (
+                <>
+                  <p className="text-gray-500">존재하지 않는 이력서입니다.</p>
+                  <Button variant="primary" onClick={() => navigate('/')}>
+                    홈으로 이동
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500">
+                    이력서를 불러오지 못 했습니다.
+                  </p>
+                  <Button variant="primary" onClick={() => refetchDetail()}>
+                    재시도
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -512,14 +539,10 @@ export function ResumeViewerPage() {
         </>
       )}
 
-      <WarningDialog
+      <UnsavedChangesDialog
         isOpen={blocker.state === 'blocked'}
-        title="아직 저장하지 않았어요."
-        description="저장하지 않고 나가면 이력서가 사라질 수 있습니다."
-        primaryButtonText="저장하고 나가기"
-        secondaryButtonText="저장하지 않고 나가기"
-        onPrimaryAction={handleSaveAndLeave}
-        onSecondaryAction={handleDiscardAndLeave}
+        onSaveAndLeave={handleSaveAndLeave}
+        onDiscardAndLeave={handleDiscardAndLeave}
       />
 
       <BottomNav />

@@ -103,6 +103,7 @@ export function useNotificationSSE(enabled = true) {
               detail: {
                 type: data.type,
                 message: data.payload?.message ?? '새 알림이 도착했습니다.',
+                payload: data.payload,
               },
             })
           );

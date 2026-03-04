@@ -70,8 +70,8 @@ export function NotificationSheet() {
   const handleNotificationClick = (item) => {
     readMutation.mutate(item.id);
     setIsOpen(false);
-    if (item.type === 'RESUME' && item.payload?.link) {
-      navigate(item.payload.link);
+    if (item.type.startsWith('RESUME') && item.payload?.resumeId) {
+      navigate(`/resume/${item.payload.resumeId}`);
     } else if (item.type === 'CHAT') {
       window.dispatchEvent(new CustomEvent('open-chat-sheet'));
     }
@@ -148,8 +148,8 @@ export function NotificationSheet() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">
-                        {item.payload?.title ??
+                      <p className="font-medium text-sm line-clamp-2">
+                        {item.payload?.message ??
                           (item.type === 'RESUME'
                             ? '이력서 알림'
                             : '채팅 알림')}
