@@ -154,6 +154,18 @@ export function ResumeViewerPage() {
 
   const isEditing = resumeDetail?.isEditing ?? false;
 
+  // SSE resume-refresh-required 이벤트를 직접 감지해 최신 데이터로 즉시 갱신
+  useEffect(() => {
+    const handler = (e) => {
+      if (Number(e.detail.resumeId) !== resumeId) return;
+      refetchDetail();
+      refetchVersion();
+    };
+    window.addEventListener('sse:resume-refresh-required', handler);
+    return () =>
+      window.removeEventListener('sse:resume-refresh-required', handler);
+  }, [resumeId, refetchDetail, refetchVersion]);
+
   const {
     messages,
     chatInput,
