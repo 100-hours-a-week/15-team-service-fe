@@ -25,7 +25,6 @@
  * @property {string} summary
  * @property {string[]} strengths
  * @property {string[]} improvements
- * @property {string[]} nextActions
  */
 
 /**

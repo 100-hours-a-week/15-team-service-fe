@@ -79,10 +79,6 @@ export const EvaluationCard = ({ data, metaLabel, className }) => {
         <EvaluationSection title="개선점" titleColor="text-[#EF4444]">
           <BulletList items={data.improvements} bulletColor="text-[#EF4444]" />
         </EvaluationSection>
-
-        <EvaluationSection title="다음 액션" titleColor="text-primary">
-          <BulletList items={data.nextActions} bulletColor="text-primary" />
-        </EvaluationSection>
       </div>
     </div>
   );

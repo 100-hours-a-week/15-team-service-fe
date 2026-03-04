@@ -15,12 +15,13 @@ import { cn } from '../../lib/utils';
  * Generic confirmation modal with cancel + confirm buttons
  * @typedef {Object} ConfirmDialogProps
  * @property {boolean} isOpen
- * @property {() => void} onClose
+ * @property {() => void} [onClose]
  * @property {() => void} onConfirm
  * @property {string} title
  * @property {string} description
  * @property {string} confirmText
  * @property {string} [cancelText='취소']
+ * @property {boolean} [hideCancel=false]
  */
 
 /**
@@ -34,6 +35,7 @@ export function ConfirmDialog({
   description,
   confirmText,
   cancelText = '취소',
+  hideCancel = false,
 }) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -55,9 +57,11 @@ export function ConfirmDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={onClose}>
-              {cancelText}
-            </AlertDialogCancel>
+            {!hideCancel && (
+              <AlertDialogCancel onClick={onClose}>
+                {cancelText}
+              </AlertDialogCancel>
+            )}
             <AlertDialogAction onClick={onConfirm}>
               {confirmText}
             </AlertDialogAction>

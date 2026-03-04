@@ -8,10 +8,18 @@ import { API_CONFIG } from '@/app/api/config';
  * - question: { turnNo, question, askedAt }
  * - feedback: { totalFeedback }
  * - end: { message }
+ * - allQuestionsComplete: { message }
  */
 export function useInterviewSSE(interviewId, options = {}) {
   const [isConnected, setIsConnected] = useState(false);
-  const { onOpen, onError, onQuestion, onFeedback, onEnd } = options;
+  const {
+    onOpen,
+    onError,
+    onQuestion,
+    onFeedback,
+    onEnd,
+    onAllQuestionsComplete,
+  } = options;
 
   // 콜백들을 ref로 관리하여 변경 시 SSE 재연결 방지
   const callbacksRef = useRef({
@@ -20,8 +28,16 @@ export function useInterviewSSE(interviewId, options = {}) {
     onQuestion,
     onFeedback,
     onEnd,
+    onAllQuestionsComplete,
   });
-  callbacksRef.current = { onOpen, onError, onQuestion, onFeedback, onEnd };
+  callbacksRef.current = {
+    onOpen,
+    onError,
+    onQuestion,
+    onFeedback,
+    onEnd,
+    onAllQuestionsComplete,
+  };
 
   const url = useMemo(() => {
     if (!interviewId) return null;
@@ -51,6 +67,9 @@ export function useInterviewSSE(interviewId, options = {}) {
     });
     client.addEventListener('end', (data) => {
       callbacksRef.current.onEnd?.(data);
+    });
+    client.addEventListener('allQuestionsComplete', (data) => {
+      callbacksRef.current.onAllQuestionsComplete?.(data);
     });
 
     client.connect();
