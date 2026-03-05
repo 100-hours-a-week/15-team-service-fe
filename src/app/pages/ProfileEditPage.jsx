@@ -25,6 +25,7 @@ import { WarningDialog } from '../components/modals/WarningDialog';
 import { EditTextDialog } from '../components/modals/EditTextDialog';
 
 import { useMasterProfile } from '../hooks/queries/useMasterProfileQuery';
+import { useUserProfile } from '../hooks/queries/useUserQuery';
 import { useUpdateMasterProfile } from '../hooks/mutations/useMasterProfileMutations';
 import { useProfileImageUpload } from '../hooks/useProfileImageUpload';
 import { useUploadFile } from '../hooks/mutations/useUploadMutations';
@@ -42,6 +43,8 @@ export function ProfileEditPage() {
   const navigate = useNavigate();
   const { data: profileData, isLoading: isFetchingProfile } =
     useMasterProfile();
+  const { data: userProfile } = useUserProfile();
+  const phonePolicyAgreed = userProfile?.phonePolicyAgreed ?? true;
   const { mutateAsync: updateProfile, isPending: isSaving } =
     useUpdateMasterProfile();
   const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
@@ -232,6 +235,7 @@ export function ProfileEditPage() {
                       field.onChange(val);
                       setValue('phone', '');
                     }}
+                    disabled={!phonePolicyAgreed}
                   >
                     <SelectTrigger className="w-[120px] bg-white shrink-0">
                       <SelectValue />
@@ -272,11 +276,18 @@ export function ProfileEditPage() {
                       field.onChange(val);
                     }}
                     error={errors.phone?.message}
+                    disabled={!phonePolicyAgreed}
                     className="flex-1 bg-white hover:border-gray-300 transition-colors"
                   />
                 )}
               />
             </div>
+            {!phonePolicyAgreed && (
+              <p className="mt-1.5 text-[11px] text-gray-400 px-0.5">
+                설정 &gt; 개인정보 보호에서 전화번호 수집·이용에 동의하면 입력할
+                수 있습니다.
+              </p>
+            )}
           </div>
 
           <TextAreaWithCounter
