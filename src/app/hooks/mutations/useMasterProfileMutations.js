@@ -1,21 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterProfileKeys } from '../queries/useMasterProfileQuery';
+import { updateMasterProfile } from '@/app/api/endpoints/resumes';
 import { toast } from '@/app/lib/toast';
 
 /**
  * Hook to update the master resume profile.
- * Currently simulates API call for UI implementation.
+ * Calls PUT /resumes/profile
  */
 export function useUpdateMasterProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data) => {
-      // Mock delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log('Updating master profile with:', data);
-      return data;
-    },
+    mutationFn: updateMasterProfile,
     onSuccess: (data) => {
       queryClient.setQueryData(masterProfileKeys.all, data);
       toast.success('프로필 정보가 저장되었습니다.');

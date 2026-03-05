@@ -81,7 +81,7 @@ export function HomePage() {
   // Flatten pages into single array
   const resumes = useMemo(() => {
     if (!resumesData?.pages) return [];
-    return resumesData.pages.flatMap((page) => page.chats || []);
+    return resumesData.pages.flatMap((page) => page.data || []);
   }, [resumesData]);
 
   const displayName = profileData?.name ?? '사용자';
@@ -285,13 +285,13 @@ const ResumeCard = React.memo(({ resume }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleViewResume = useCallback(() => {
-    navigate(`/resume/${resume.resumeId || resume.id}`);
+    navigate(`/resume/${resume.resumeId}`);
   }, [navigate, resume]);
 
   const handleStartInterview = useCallback(() => {
     navigate('/interview/start', {
       state: {
-        resumeId: resume.resumeId || resume.id,
+        resumeId: resume.resumeId,
         resumeVersionNo: resume.currentVersionNo,
         resumeName: resume.name,
       },

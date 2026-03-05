@@ -123,8 +123,10 @@ export function TextAreaWithCounter({
   errors,
   rows = 4,
   required = false,
+  maxLength,
 }) {
   const value = watch(name) || '';
+  const isOverLimit = maxLength != null && value.length > maxLength;
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-end px-0.5">
@@ -132,37 +134,67 @@ export function TextAreaWithCounter({
           {label}
           {required && <span className="text-danger ml-1">*</span>}
         </label>
-        <span className="text-[11px] text-gray-400 font-normal">
-          {value.length}자
+        <span
+          className={cn(
+            'text-[11px] font-normal',
+            isOverLimit ? 'text-danger' : 'text-gray-400'
+          )}
+        >
+          {maxLength != null
+            ? `${value.length}/${maxLength}자`
+            : `${value.length}자`}
         </span>
       </div>
       <textarea
-        {...register(name)}
+        {...register(
+          name,
+          maxLength != null
+            ? {
+                maxLength: {
+                  value: maxLength,
+                  message: `최대 ${maxLength}자까지 입력 가능합니다`,
+                },
+              }
+            : {}
+        )}
         rows={rows}
         placeholder={placeholder}
         className={cn(
           'w-full px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none transition-all resize-none text-sm',
           'focus:border-primary focus:ring-2 focus:ring-primary/10',
-          errors && errors[name]
-            ? 'border-danger ring-danger/10'
+          isOverLimit || (errors && errors[name])
+            ? 'border-danger ring-2 ring-danger/10'
             : 'hover:border-gray-300'
         )}
       />
+      {isOverLimit && (
+        <p className="text-xs text-danger">
+          최대 {maxLength}자까지 입력 가능합니다
+        </p>
+      )}
     </div>
   );
 }
 
+/**
+ * Month picker input with optional validation rules and error display.
+ * Error text is rendered outside the `relative h-[44px]` container to avoid
+ * clipping issues with the absolutely-positioned overlay input.
+ */
 export function MonthPicker({
   control,
   name,
   placeholder = 'YYYY.MM',
   disabled = false,
   label,
+  rules,
+  error,
 }) {
   return (
     <Controller
       control={control}
       name={name}
+      rules={rules}
       render={({ field }) => (
         <div className="flex flex-col gap-2 flex-1 min-w-0">
           {label && (
@@ -176,7 +208,10 @@ export function MonthPicker({
               readOnly
               placeholder={placeholder}
               disabled={disabled}
-              className="bg-white pointer-events-none absolute inset-0 z-0"
+              className={cn(
+                'bg-white pointer-events-none absolute inset-0 z-0',
+                error && 'border-[#EF4444]'
+              )}
             />
             <input
               type="month"
@@ -187,6 +222,7 @@ export function MonthPicker({
               disabled={disabled}
             />
           </div>
+          {error && <p className="text-sm text-[#EF4444]">{error}</p>}
         </div>
       )}
     />
@@ -251,12 +287,14 @@ export function TechStackSection({
  * @param {object} props.control
  * @param {function} props.register
  * @param {function} props.watch
+ * @param {object} [props.errors]
  * @param {boolean} [props.defaultOpen=true]
  */
 export function ExperienceSection({
   control,
   register,
   watch,
+  errors,
   defaultOpen = true,
 }) {
   return (
@@ -280,20 +318,43 @@ export function ExperienceSection({
             <Input
               label="회사명"
               placeholder="회사명을 입력하세요"
-              {...register(`experiences.${index}.company`)}
+              {...register(`experiences.${index}.company`, {
+                validate: (val, formValues) => {
+                  const item = formValues.experiences?.[index];
+                  if (!item?.company && !item?.startDate) return true;
+                  return !!val || '회사명을 입력해주세요';
+                },
+                maxLength: {
+                  value: 50,
+                  message: '최대 50자까지 입력 가능합니다',
+                },
+              })}
+              error={errors?.experiences?.[index]?.company?.message}
               className="bg-white hover:border-gray-300 transition-colors"
             />
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="직책"
                 placeholder="예: 선임 연구원"
-                {...register(`experiences.${index}.position`)}
+                {...register(`experiences.${index}.position`, {
+                  maxLength: {
+                    value: 30,
+                    message: '최대 30자까지 입력 가능합니다',
+                  },
+                })}
+                error={errors?.experiences?.[index]?.position?.message}
                 className="bg-white hover:border-gray-300 transition-colors"
               />
               <Input
                 label="부서명"
                 placeholder="부서명"
-                {...register(`experiences.${index}.department`)}
+                {...register(`experiences.${index}.department`, {
+                  maxLength: {
+                    value: 30,
+                    message: '최대 30자까지 입력 가능합니다',
+                  },
+                })}
+                error={errors?.experiences?.[index]?.department?.message}
                 className="bg-white hover:border-gray-300 transition-colors"
               />
             </div>
@@ -307,6 +368,14 @@ export function ExperienceSection({
                   <MonthPicker
                     control={control}
                     name={`experiences.${index}.startDate`}
+                    rules={{
+                      validate: (val, formValues) => {
+                        const item = formValues.experiences?.[index];
+                        if (!item?.company && !item?.startDate) return true;
+                        return !!val || '재직 시작일을 선택해주세요';
+                      },
+                    }}
+                    error={errors?.experiences?.[index]?.startDate?.message}
                   />
                   <span className="text-gray-400 flex-shrink-0">~</span>
                   <MonthPicker
@@ -359,6 +428,7 @@ export function ExperienceSection({
               watch={watch}
               placeholder="주요 담당 업무를 구체적으로 입력하세요"
               rows={3}
+              maxLength={1000}
             />
           </>
         )}
@@ -371,9 +441,15 @@ export function ExperienceSection({
  * @param {Object} props
  * @param {object} props.control
  * @param {function} props.register
+ * @param {object} [props.errors]
  * @param {boolean} [props.defaultOpen=true]
  */
-export function EducationSection({ control, register, defaultOpen = true }) {
+export function EducationSection({
+  control,
+  register,
+  errors,
+  defaultOpen = true,
+}) {
   return (
     <FormSection title="교육" defaultOpen={defaultOpen}>
       <DynamicListField
@@ -398,19 +474,43 @@ export function EducationSection({ control, register, defaultOpen = true }) {
                 <Controller
                   name={`educations.${index}.type`}
                   control={control}
+                  rules={{
+                    validate: (val, formValues) => {
+                      const item = formValues.educations?.[index];
+                      if (!item?.institution && !item?.startDate) return true;
+                      return !!val || '교육 종류를 선택해주세요';
+                    },
+                  }}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="bg-white hover:border-gray-300 transition-colors">
-                        <SelectValue placeholder="종류 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EDUCATION_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            'bg-white hover:border-gray-300 transition-colors',
+                            errors?.educations?.[index]?.type &&
+                              'border-[#EF4444]'
+                          )}
+                          onBlur={field.onBlur}
+                        >
+                          <SelectValue placeholder="종류 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EDUCATION_TYPES.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors?.educations?.[index]?.type?.message && (
+                        <p className="text-sm text-[#EF4444] mt-1">
+                          {errors.educations[index].type.message}
+                        </p>
+                      )}
+                    </div>
                   )}
                 />
               </div>
@@ -421,19 +521,43 @@ export function EducationSection({ control, register, defaultOpen = true }) {
                 <Controller
                   name={`educations.${index}.status`}
                   control={control}
+                  rules={{
+                    validate: (val, formValues) => {
+                      const item = formValues.educations?.[index];
+                      if (!item?.institution && !item?.startDate) return true;
+                      return !!val || '재학 상태를 선택해주세요';
+                    },
+                  }}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="bg-white hover:border-gray-300 transition-colors">
-                        <SelectValue placeholder="상태 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EDUCATION_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            'bg-white hover:border-gray-300 transition-colors',
+                            errors?.educations?.[index]?.status &&
+                              'border-[#EF4444]'
+                          )}
+                          onBlur={field.onBlur}
+                        >
+                          <SelectValue placeholder="상태 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EDUCATION_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors?.educations?.[index]?.status?.message && (
+                        <p className="text-sm text-[#EF4444] mt-1">
+                          {errors.educations[index].status.message}
+                        </p>
+                      )}
+                    </div>
                   )}
                 />
               </div>
@@ -441,13 +565,30 @@ export function EducationSection({ control, register, defaultOpen = true }) {
             <Input
               label="소속/기관"
               placeholder="학교명 혹은 교육 기관명을 입력하세요"
-              {...register(`educations.${index}.institution`)}
+              {...register(`educations.${index}.institution`, {
+                validate: (val, formValues) => {
+                  const item = formValues.educations?.[index];
+                  if (!item?.institution && !item?.startDate) return true;
+                  return !!val || '소속/기관명을 입력해주세요';
+                },
+                maxLength: {
+                  value: 50,
+                  message: '최대 50자까지 입력 가능합니다',
+                },
+              })}
+              error={errors?.educations?.[index]?.institution?.message}
               className="bg-white hover:border-gray-300 transition-colors"
             />
             <Input
               label="전공명/전공 계열"
               placeholder="전공 혹은 교육 과정을 입력하세요"
-              {...register(`educations.${index}.major`)}
+              {...register(`educations.${index}.major`, {
+                maxLength: {
+                  value: 50,
+                  message: '최대 50자까지 입력 가능합니다',
+                },
+              })}
+              error={errors?.educations?.[index]?.major?.message}
               className="bg-white hover:border-gray-300 transition-colors"
             />
             <div className="space-y-2">
@@ -458,6 +599,14 @@ export function EducationSection({ control, register, defaultOpen = true }) {
                 <MonthPicker
                   control={control}
                   name={`educations.${index}.startDate`}
+                  rules={{
+                    validate: (val, formValues) => {
+                      const item = formValues.educations?.[index];
+                      if (!item?.institution && !item?.startDate) return true;
+                      return !!val || '재학 시작일을 선택해주세요';
+                    },
+                  }}
+                  error={errors?.educations?.[index]?.startDate?.message}
                 />
                 <span className="text-gray-400 flex-shrink-0">~</span>
                 <MonthPicker
@@ -478,12 +627,14 @@ export function EducationSection({ control, register, defaultOpen = true }) {
  * @param {object} props.control
  * @param {function} props.register
  * @param {function} props.watch
+ * @param {object} [props.errors]
  * @param {boolean} [props.defaultOpen=true]
  */
 export function ActivitiesCertificationsSection({
   control,
   register,
   watch,
+  errors,
   defaultOpen = true,
 }) {
   return (
@@ -506,20 +657,48 @@ export function ActivitiesCertificationsSection({
                 <Input
                   label="활동명"
                   placeholder="활동명을 입력하세요"
-                  {...register(`activities.${index}.name`)}
+                  {...register(`activities.${index}.name`, {
+                    validate: (val, formValues) => {
+                      const item = formValues.activities?.[index];
+                      if (!item?.name && !item?.year) return true;
+                      return !!val || '활동명을 입력해주세요';
+                    },
+                    maxLength: {
+                      value: 50,
+                      message: '최대 50자까지 입력 가능합니다',
+                    },
+                  })}
+                  error={errors?.activities?.[index]?.name?.message}
                   className="bg-white hover:border-gray-300 transition-colors"
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     label="소속/기관"
                     placeholder="주최 기관"
-                    {...register(`activities.${index}.organization`)}
+                    {...register(`activities.${index}.organization`, {
+                      maxLength: {
+                        value: 50,
+                        message: '최대 50자까지 입력 가능합니다',
+                      },
+                    })}
+                    error={errors?.activities?.[index]?.organization?.message}
                     className="bg-white hover:border-gray-300 transition-colors"
                   />
                   <Input
                     label="활동 연도"
                     placeholder="YYYY"
-                    {...register(`activities.${index}.year`)}
+                    {...register(`activities.${index}.year`, {
+                      validate: (val, formValues) => {
+                        const item = formValues.activities?.[index];
+                        if (!item?.name && !item?.year) return true;
+                        return !!val || '활동 연도를 입력해주세요';
+                      },
+                      maxLength: {
+                        value: 4,
+                        message: '연도는 4자리로 입력해주세요',
+                      },
+                    })}
+                    error={errors?.activities?.[index]?.year?.message}
                     className="bg-white hover:border-gray-300 transition-colors"
                   />
                 </div>
@@ -530,6 +709,7 @@ export function ActivitiesCertificationsSection({
                   watch={watch}
                   placeholder="활동에 대한 간략한 설명을 입력하세요"
                   rows={2}
+                  maxLength={1000}
                 />
               </>
             )}
@@ -550,20 +730,44 @@ export function ActivitiesCertificationsSection({
                 <Input
                   label="자격증/어학명"
                   placeholder="자격증 혹은 어학 시험명을 입력하세요"
-                  {...register(`certifications.${index}.name`)}
+                  {...register(`certifications.${index}.name`, {
+                    validate: (val) => !!val || '자격증명을 입력해주세요',
+                    maxLength: {
+                      value: 50,
+                      message: '최대 50자까지 입력 가능합니다',
+                    },
+                  })}
+                  error={errors?.certifications?.[index]?.name?.message}
                   className="bg-white hover:border-gray-300 transition-colors"
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     label="점수/급수"
                     placeholder="취득 점수 혹은 등급"
-                    {...register(`certifications.${index}.score`)}
+                    {...register(`certifications.${index}.score`, {
+                      validate: (val, formValues) => {
+                        const item = formValues.certifications?.[index];
+                        if (!item?.name) return true;
+                        return !!val || '점수/급수를 입력해주세요';
+                      },
+                      maxLength: {
+                        value: 20,
+                        message: '최대 20자까지 입력 가능합니다',
+                      },
+                    })}
+                    error={errors?.certifications?.[index]?.score?.message}
                     className="bg-white hover:border-gray-300 transition-colors"
                   />
                   <Input
                     label="발급 기관"
                     placeholder="인증 기관"
-                    {...register(`certifications.${index}.issuer`)}
+                    {...register(`certifications.${index}.issuer`, {
+                      maxLength: {
+                        value: 50,
+                        message: '최대 50자까지 입력 가능합니다',
+                      },
+                    })}
+                    error={errors?.certifications?.[index]?.issuer?.message}
                     className="bg-white hover:border-gray-300 transition-colors"
                   />
                 </div>
@@ -571,6 +775,14 @@ export function ActivitiesCertificationsSection({
                   label="취득월"
                   control={control}
                   name={`certifications.${index}.date`}
+                  rules={{
+                    validate: (val, formValues) => {
+                      const item = formValues.certifications?.[index];
+                      if (!item?.name) return true;
+                      return !!val || '취득월을 선택해주세요';
+                    },
+                  }}
+                  error={errors?.certifications?.[index]?.date?.message}
                 />
               </>
             )}

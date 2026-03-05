@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useBlocker } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { ArrowLeft, Camera } from 'lucide-react';
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { COUNTRY_CODES } from '../constants';
 import {
   FormSection,
   TextAreaWithCounter,
@@ -25,15 +26,14 @@ import { EditTextDialog } from '../components/modals/EditTextDialog';
 
 import { useMasterProfile } from '../hooks/queries/useMasterProfileQuery';
 import { useUpdateMasterProfile } from '../hooks/mutations/useMasterProfileMutations';
-import { usePositions } from '../hooks/queries/usePositionsQuery';
 import { useProfileImageUpload } from '../hooks/useProfileImageUpload';
 import { useUploadFile } from '../hooks/mutations/useUploadMutations';
 import {
   formatPhoneNumber,
-  stripPhoneFormat,
   validatePhoneNumber,
   getPhoneErrorMessage,
-  cn,
+  mapProfileDataToForm,
+  buildProfilePayload,
 } from '../lib/utils';
 import { validateImageFile } from '../lib/validators';
 import { toast } from '../lib/toast';
@@ -42,7 +42,6 @@ export function ProfileEditPage() {
   const navigate = useNavigate();
   const { data: profileData, isLoading: isFetchingProfile } =
     useMasterProfile();
-  const { data: positions = [] } = usePositions();
   const { mutateAsync: updateProfile, isPending: isSaving } =
     useUpdateMasterProfile();
   const { upload, isUploading } = useUploadFile('PROFILE_IMAGE');
@@ -65,10 +64,12 @@ export function ProfileEditPage() {
     reset,
     formState: { isDirty, errors },
   } = useForm({
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
     defaultValues: {
       name: '',
+      countryCode: '+82',
       phone: '',
-      positionId: '',
       bio: '',
       techStacks: [],
       experiences: [],
@@ -80,20 +81,20 @@ export function ProfileEditPage() {
   });
 
   const techStacks = watch('techStacks');
+  const countryCode = watch('countryCode');
+  const savedRef = useRef(false);
 
   useEffect(() => {
     if (profileData) {
-      reset({
-        ...profileData,
-        phone: profileData.phone ? formatPhoneNumber(profileData.phone) : '',
-        positionId: String(profileData.positionId),
-      });
+      reset(mapProfileDataToForm(profileData));
     }
   }, [profileData, reset]);
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      isDirty && currentLocation.pathname !== nextLocation.pathname
+      !savedRef.current &&
+      isDirty &&
+      currentLocation.pathname !== nextLocation.pathname
   );
 
   const onSubmit = async (data) => {
@@ -114,14 +115,9 @@ export function ProfileEditPage() {
         profileImageUrl = result.s3Key;
       }
 
-      await updateProfile({
-        ...data,
-        positionId: Number(data.positionId),
-        phone: stripPhoneFormat(data.phone),
-        profileImageUrl,
-      });
+      await updateProfile(buildProfilePayload(data, profileImageUrl));
 
-      reset(data);
+      savedRef.current = true;
       navigate('/settings');
     } catch (err) {
       console.error('Failed to save profile:', err);
@@ -209,80 +205,78 @@ export function ProfileEditPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-[2px] px-0.5">
-                이름 <span className="text-danger">*</span>
-              </label>
-              <Input
-                placeholder="이름을 입력하세요"
-                {...register('name', { required: '이름을 입력해주세요' })}
-                error={errors.name?.message}
-                className="bg-white hover:border-gray-300 transition-colors"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-[2px] px-0.5">
-                희망 포지션 <span className="text-danger">*</span>
-              </label>
-              <Controller
-                name="positionId"
-                control={control}
-                rules={{ required: '포지션을 선택해주세요' }}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger
-                      className={cn(
-                        'bg-white hover:border-gray-300 transition-colors',
-                        errors.positionId && 'border-danger'
-                      )}
-                    >
-                      <SelectValue placeholder="포지션 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {positions.map((pos) => (
-                        <SelectItem key={pos.id} value={String(pos.id)}>
-                          {pos.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.positionId && (
-                <p className="text-xs text-danger mt-1.5 px-0.5">
-                  {errors.positionId.message}
-                </p>
-              )}
-            </div>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-[2px] px-0.5">
+              이름 <span className="text-danger">*</span>
+            </label>
+            <Input
+              placeholder="이름을 입력하세요"
+              {...register('name', { required: '이름을 입력해주세요' })}
+              error={errors.name?.message}
+              className="bg-white hover:border-gray-300 transition-colors"
+            />
           </div>
 
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700 mb-[2px] px-0.5">
               휴대폰 번호
             </label>
-            <Controller
-              name="phone"
-              control={control}
-              rules={{
-                validate: (val) => {
-                  if (!val) return true;
-                  return validatePhoneNumber(val) || getPhoneErrorMessage(val);
-                },
-              }}
-              render={({ field }) => (
-                <Input
-                  placeholder="010-1234-5678"
-                  value={field.value}
-                  onChange={(e) =>
-                    field.onChange(formatPhoneNumber(e.target.value))
-                  }
-                  error={errors.phone?.message}
-                  className="bg-white hover:border-gray-300 transition-colors"
-                />
-              )}
-            />
+            <div className="flex gap-2 items-start">
+              <Controller
+                name="countryCode"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={(val) => {
+                      field.onChange(val);
+                      setValue('phone', '');
+                    }}
+                  >
+                    <SelectTrigger className="w-[120px] bg-white shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRY_CODES.map(({ code, label }) => (
+                        <SelectItem key={code} value={code}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <Controller
+                name="phone"
+                control={control}
+                rules={{
+                  validate: (val) => {
+                    if (!val) return true;
+                    return (
+                      validatePhoneNumber(val, countryCode) ||
+                      getPhoneErrorMessage(val, countryCode)
+                    );
+                  },
+                }}
+                render={({ field }) => (
+                  <Input
+                    placeholder={
+                      countryCode === '+82' ? '010-1234-5678' : '전화번호'
+                    }
+                    value={field.value}
+                    onChange={(e) => {
+                      const val =
+                        countryCode === '+82'
+                          ? formatPhoneNumber(e.target.value)
+                          : e.target.value.replace(/\D/g, '');
+                      field.onChange(val);
+                    }}
+                    error={errors.phone?.message}
+                    className="flex-1 bg-white hover:border-gray-300 transition-colors"
+                  />
+                )}
+              />
+            </div>
           </div>
 
           <TextAreaWithCounter
@@ -313,16 +307,22 @@ export function ProfileEditPage() {
           control={control}
           register={register}
           watch={watch}
+          errors={errors}
         />
 
         {/* 4. Education */}
-        <EducationSection control={control} register={register} />
+        <EducationSection
+          control={control}
+          register={register}
+          errors={errors}
+        />
 
         {/* 5. Activities & Certifications */}
         <ActivitiesCertificationsSection
           control={control}
           register={register}
           watch={watch}
+          errors={errors}
         />
       </form>
 

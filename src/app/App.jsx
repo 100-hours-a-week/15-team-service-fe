@@ -154,7 +154,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/resume-setup',
+        path: '/resume-setup/:id?',
         element: (
           <ProtectedRoute>
             <ResumeProfileSetupPage />

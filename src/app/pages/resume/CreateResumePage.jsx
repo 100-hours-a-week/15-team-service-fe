@@ -166,7 +166,7 @@ export function CreateResumePage() {
   const handleConfirmGenerate = useCallback(() => {
     setIsConfirmDialogOpen(false);
 
-    const repoUrls = selectedRepos.map(
+    const repoUrls = (location.state?.selectedRepos || []).map(
       (repo) => repo.htmlUrl || `https://github.com/${repo.owner}/${repo.name}`
     );
 
@@ -184,7 +184,12 @@ export function CreateResumePage() {
         },
       }
     );
-  }, [selectedRepos, formData.positionId, createResumeMutation, masterProfile]);
+  }, [
+    location.state?.selectedRepos,
+    formData.positionId,
+    createResumeMutation,
+    masterProfile,
+  ]);
 
   const handleRetryGeneration = useCallback(() => {
     setCreatedResumeId(null);
