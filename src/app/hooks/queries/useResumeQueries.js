@@ -8,6 +8,7 @@ import {
   fetchResumes,
   fetchResumeById,
   fetchResumeVersion,
+  fetchResumeProfile,
 } from '@/app/api/endpoints/resumes';
 
 /**
@@ -19,6 +20,8 @@ export const resumeKeys = {
   list: (filters) => [...resumeKeys.lists(), filters],
   details: () => [...resumeKeys.all, 'detail'],
   detail: (id) => [...resumeKeys.details(), id],
+  profiles: () => [...resumeKeys.all, 'profile'],
+  profile: (id) => [...resumeKeys.profiles(), id],
 };
 
 /**
@@ -69,5 +72,19 @@ export function useResumeVersion(
     queryFn: () => fetchResumeVersion(resumeId, versionNo),
     enabled: enabled && !!resumeId && !!versionNo,
     refetchInterval,
+  });
+}
+
+/**
+ * Hook to fetch profile data for a specific resume
+ * @param {number} resumeId - Resume ID
+ * @param {Object} options - Query options
+ * @returns {import('@tanstack/react-query').UseQueryResult}
+ */
+export function useResumeProfile(resumeId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: resumeKeys.profile(resumeId),
+    queryFn: () => fetchResumeProfile(resumeId),
+    enabled: enabled && !!resumeId,
   });
 }
