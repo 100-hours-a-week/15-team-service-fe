@@ -1,5 +1,9 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { fetchChats, fetchChatMessages } from '@/app/api/endpoints/chats';
+import {
+  fetchChats,
+  fetchChatMembers,
+  fetchChatMessages,
+} from '@/app/api/endpoints/chats';
 
 /**
  * Fetch all chatrooms
@@ -14,6 +18,20 @@ export function useChats(enabled = true) {
     gcTime: 1000 * 60 * 5, // 5분
     enabled,
     refetchInterval: enabled ? 3000 : false, // 리스트 뷰일 때만 polling
+  });
+}
+
+/**
+ * Fetch mentionable members for a chatroom
+ * @param {number | null} chatroomId - Chatroom ID
+ * @returns {import('@tanstack/react-query').UseQueryResult<Array<{ userId: number, senderNumber: number }>>}
+ */
+export function useChatMembers(chatroomId) {
+  return useQuery({
+    queryKey: ['chatMembers', chatroomId],
+    queryFn: () => fetchChatMembers(chatroomId),
+    enabled: !!chatroomId,
+    staleTime: 1000 * 60 * 5, // 5분
   });
 }
 
