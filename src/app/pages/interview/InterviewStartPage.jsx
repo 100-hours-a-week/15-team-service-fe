@@ -68,7 +68,7 @@ export function InterviewStartPage() {
       const response = await startInterviewMutation.mutateAsync({
         interviewType,
         positionId: formData.positionId,
-        companyId: null,
+        companyName: formData.company || null,
         resumeId: formData.resumeId,
         resumeVersionNo: formData.resumeVersionNo,
       });
