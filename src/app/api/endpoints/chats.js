@@ -8,7 +8,21 @@ import { API_CONFIG } from '../config';
  * @throws {Error} 401 if not authenticated (ROLE_ACTIVE required)
  */
 export const fetchChats = async () => {
-  const response = await apiClient.get(API_CONFIG.ENDPOINTS.CHATS);
+  const response = await apiClient.get(API_CONFIG.ENDPOINTS.CHATS, {
+    baseURL: API_CONFIG.CHAT_BASE_URL,
+  });
+  return response.data.data;
+};
+
+/**
+ * Fetch mentionable members for a chatroom (users who joined at least once, excludes self)
+ * @param {number} chatroomId - Chatroom ID
+ * @returns {Promise<Array<{ userId: number, senderNumber: number }>>}
+ */
+export const fetchChatMembers = async (chatroomId) => {
+  const response = await apiClient.get(`/chats/${chatroomId}/members`, {
+    baseURL: API_CONFIG.CHAT_BASE_URL,
+  });
   return response.data.data;
 };
 
@@ -36,6 +50,7 @@ export const fetchChatMessages = async (
     API_CONFIG.ENDPOINTS.CHAT_MESSAGES(chatroomId),
     {
       params,
+      baseURL: API_CONFIG.CHAT_BASE_URL,
     }
   );
   return response.data.data;

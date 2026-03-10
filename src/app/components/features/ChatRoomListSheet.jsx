@@ -16,7 +16,11 @@ import {
 } from 'lucide-react';
 import { ChatMessageInput } from './ChatMessageInput';
 import { Drawer } from 'vaul';
-import { useChats, useChatMessages } from '@/app/hooks/queries/useChatQueries';
+import {
+  useChats,
+  useChatMembers,
+  useChatMessages,
+} from '@/app/hooks/queries/useChatQueries';
 import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
 import { useChatWebSocket } from '@/app/hooks/useChatWebSocket';
 import {
@@ -39,7 +43,10 @@ export function ChatRoomListSheet() {
   const [attachedImage, setAttachedImage] = useState(null);
   const [failedMessages, setFailedMessages] = useState([]);
   const [expandedMessageIds, setExpandedMessageIds] = useState(() => new Set());
+  const [mentions, setMentions] = useState([]); // [{ userId, label }]
+  const [mentionQuery, setMentionQuery] = useState(null); // null = 비활성, string = 활성
   const attachFileInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const contentRef = useRef(null); // Wrapper for ResizeObserver
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -74,6 +81,14 @@ export function ChatRoomListSheet() {
     viewMode === 'messages' ? selectedRoomId : null
   );
   const [isSending, setIsSending] = useState(false);
+
+  const { data: chatMembersData = [] } = useChatMembers(
+    viewMode === 'messages' ? selectedRoomId : null
+  );
+  const participants = chatMembersData.map((m) => ({
+    userId: m.userId,
+    label: `익명${m.senderNumber}`,
+  }));
 
   const messages = useMemo(() => {
     const rawMessages =
@@ -186,6 +201,35 @@ export function ChatRoomListSheet() {
     };
   }, [viewMode, selectedRoomId, scrollToBottom, messages.length]); // Re-observe when switching rooms
 
+  const handleInputChange = (e) => {
+    const text = e.target.value;
+    setInputText(text);
+    const cursor = e.target.selectionStart ?? text.length;
+    const before = text.slice(0, cursor);
+    const match = before.match(/@([^\s@]*)$/);
+    setMentionQuery(match ? match[1] : null);
+  };
+
+  const handleMentionSelect = (participant) => {
+    const cursor = textareaRef.current?.selectionStart ?? inputText.length;
+    const before = inputText.slice(0, cursor);
+    const match = before.match(/@([^\s@]*)$/);
+    if (!match) return;
+    const atStart = cursor - match[0].length;
+    const newText =
+      inputText.slice(0, atStart) +
+      `@${participant.label} ` +
+      inputText.slice(cursor);
+    setInputText(newText);
+    setMentionQuery(null);
+    setMentions((prev) =>
+      prev.some((m) => m.userId === participant.userId)
+        ? prev
+        : [...prev, participant]
+    );
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
   /**
    * Handle back button click
    * Returns to chat room list view
@@ -195,6 +239,8 @@ export function ChatRoomListSheet() {
     setSelectedRoomId(null);
     setSelectedRoomName('');
     setInputText('');
+    setMentions([]);
+    setMentionQuery(null);
     didInitialScrollRef.current = false;
     if (attachedImage) {
       URL.revokeObjectURL(attachedImage.previewUrl);
@@ -297,6 +343,7 @@ export function ChatRoomListSheet() {
 
     const messageText = inputText;
     const imageData = attachedImage;
+    const mentionsToSend = mentions.map((m) => m.userId);
     if (imageData?.file) {
       const validation = validateImageFile(imageData.file);
       if (!validation.ok) return;
@@ -304,6 +351,8 @@ export function ChatRoomListSheet() {
 
     setInputText('');
     setAttachedImage(null);
+    setMentions([]);
+    setMentionQuery(null);
     setIsSending(true);
 
     let uploadId;
@@ -315,6 +364,7 @@ export function ChatRoomListSheet() {
 
       stompSend({
         message: messageText,
+        ...(mentionsToSend.length > 0 && { mentions: mentionsToSend }),
         ...(uploadId !== undefined && { attachmentUploadIds: [uploadId] }),
       });
 
@@ -431,6 +481,8 @@ export function ChatRoomListSheet() {
       setSelectedRoomId(null);
       setSelectedRoomName('');
       setInputText('');
+      setMentions([]);
+      setMentionQuery(null);
 
       // Cleanup using functional updates to avoid dependency issues
       setAttachedImage((prev) => {
@@ -827,7 +879,7 @@ export function ChatRoomListSheet() {
 
               <ChatMessageInput
                 inputText={inputText}
-                onInputChange={(e) => setInputText(e.target.value)}
+                onInputChange={handleInputChange}
                 attachedImage={attachedImage}
                 attachFileInputRef={attachFileInputRef}
                 onAttachChange={handleAttachImageChange}
@@ -838,6 +890,10 @@ export function ChatRoomListSheet() {
                 isUploading={isUploading}
                 isConnected={isConnected}
                 maxLength={MAX_INPUT_LENGTH}
+                textareaRef={textareaRef}
+                mentionQuery={mentionQuery}
+                participants={participants}
+                onMentionSelect={handleMentionSelect}
               />
             </>
           )}
