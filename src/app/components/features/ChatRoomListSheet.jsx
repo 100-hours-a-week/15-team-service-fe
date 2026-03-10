@@ -475,10 +475,18 @@ export function ChatRoomListSheet() {
 
           {/* Header - Conditional based on view mode */}
           {viewMode === 'list' ? (
-            <div className="px-8 py-2">
+            <div className="px-8 py-2 flex items-center justify-between">
               <Drawer.Title className="text-base font-semibold">
                 채팅방 목록
               </Drawer.Title>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors -mr-2"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5 text-gray-700" />
+              </button>
             </div>
           ) : (
             <div className="px-8 py-2 border-b border-gray-200 flex items-center justify-between">
@@ -491,14 +499,14 @@ export function ChatRoomListSheet() {
                 >
                   <ChevronLeft className="w-5 h-5 text-gray-700" />
                 </button>
-                <Drawer.Title className="text-base font-semibold">
+                <Drawer.Title className="text-base font-semibold truncate max-w-[200px]">
                   {selectedRoomName}
                 </Drawer.Title>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors -mr-2"
                 aria-label="닫기"
               >
                 <X className="w-5 h-5 text-gray-700" />
@@ -511,9 +519,8 @@ export function ChatRoomListSheet() {
             // Chat Room List View
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
-                  <p className="text-sm text-gray-500">채팅방 불러오는 중...</p>
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                 </div>
               ) : isError ? (
                 <div className="flex flex-col items-center justify-center py-12">
