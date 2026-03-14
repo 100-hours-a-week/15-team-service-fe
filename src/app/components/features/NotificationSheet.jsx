@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useChatSheetStore } from '@/app/store/useChatSheetStore';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Bell, FileText, MessageSquare, Loader2 } from 'lucide-react';
@@ -73,7 +74,7 @@ export function NotificationSheet() {
     if (item.type.startsWith('RESUME') && item.payload?.resumeId) {
       navigate(`/resume/${item.payload.resumeId}`);
     } else if (item.type === 'CHAT') {
-      window.dispatchEvent(new CustomEvent('open-chat-sheet'));
+      useChatSheetStore.getState().openSheet();
     }
   };
 

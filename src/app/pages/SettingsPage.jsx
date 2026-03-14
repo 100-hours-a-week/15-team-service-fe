@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useDialogStore } from '@/app/store/useDialogStore';
 import { Camera } from 'lucide-react';
 import { BottomNav } from '../components/layout/BottomNav';
 import { Button } from '../components/common/Button';
@@ -139,10 +140,12 @@ export function SettingsPage() {
     phone: undefined,
     phonePolicy: undefined,
   });
-  const [isPhonePolicyModalOpen, setIsPhonePolicyModalOpen] = useState(false);
   const [isPhonePolicyAgreed, setIsPhonePolicyAgreed] = useState(false);
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const isPhonePolicyModalOpen = useDialogStore(
+    (s) => s.openDialogs['phonePolicy']
+  );
+  const isLogoutDialogOpen = useDialogStore((s) => s.openDialogs['logout']);
+  const isWithdrawDialogOpen = useDialogStore((s) => s.openDialogs['withdraw']);
   const [localSettings, setLocalSettings] = useState({
     notificationEnabled: true,
     interviewResumeDefaultsEnabled: false,
@@ -193,6 +196,10 @@ export function SettingsPage() {
       if (settingsDebounceRef.current) {
         clearTimeout(settingsDebounceRef.current);
       }
+      const { closeDialog } = useDialogStore.getState();
+      closeDialog('logout');
+      closeDialog('withdraw');
+      closeDialog('phonePolicy');
     };
   }, []);
 
@@ -434,31 +441,31 @@ export function SettingsPage() {
   );
 
   const handleLogout = useCallback(() => {
-    setIsLogoutDialogOpen(true);
+    useDialogStore.getState().openDialog('logout');
   }, []);
 
   const handleConfirmLogout = useCallback(() => {
     logout().finally(() => {
-      setIsLogoutDialogOpen(false);
+      useDialogStore.getState().closeDialog('logout');
     });
   }, [logout]);
 
   const handleCancelLogout = useCallback(() => {
-    setIsLogoutDialogOpen(false);
+    useDialogStore.getState().closeDialog('logout');
   }, []);
 
   const handleWithdraw = useCallback(() => {
-    setIsWithdrawDialogOpen(true);
+    useDialogStore.getState().openDialog('withdraw');
   }, []);
 
   const handleConfirmWithdraw = useCallback(() => {
     withdrawUser().finally(() => {
-      setIsWithdrawDialogOpen(false);
+      useDialogStore.getState().closeDialog('withdraw');
     });
   }, [withdrawUser]);
 
   const handleCancelWithdraw = useCallback(() => {
-    setIsWithdrawDialogOpen(false);
+    useDialogStore.getState().closeDialog('withdraw');
   }, []);
 
   const handleToggleSetting = useCallback(
@@ -630,7 +637,9 @@ export function SettingsPage() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => setIsPhonePolicyModalOpen(true)}
+                          onClick={() =>
+                            useDialogStore.getState().openDialog('phonePolicy')
+                          }
                           className="mt-1 text-xs text-primary underline underline-offset-2"
                         >
                           자세히 보기
@@ -777,8 +786,10 @@ export function SettingsPage() {
       />
 
       <Dialog
-        open={isPhonePolicyModalOpen}
-        onOpenChange={setIsPhonePolicyModalOpen}
+        open={!!isPhonePolicyModalOpen}
+        onOpenChange={(open) => {
+          if (!open) useDialogStore.getState().closeDialog('phonePolicy');
+        }}
       >
         <DialogContent
           hideClose
@@ -796,7 +807,9 @@ export function SettingsPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setIsPhonePolicyModalOpen(false)}
+              onClick={() =>
+                useDialogStore.getState().closeDialog('phonePolicy')
+              }
             >
               닫기
             </Button>

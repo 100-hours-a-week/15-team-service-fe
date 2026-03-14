@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useDialogStore } from '@/app/store/useDialogStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -43,7 +44,9 @@ export function CreateResumePage() {
     positionId: null,
     // companyId: null, // v1: company selection disabled
   });
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const isConfirmDialogOpen = useDialogStore(
+    (s) => s.openDialogs['resumeCreateConfirm']
+  );
   const [createdResumeId, setCreatedResumeId] = useState(() => {
     // RepoSelectPage에서 네비게이션했을 때만 sessionStorage 무시
     const fromRepoSelect = location.state?.fromRepoSelect;
@@ -57,12 +60,18 @@ export function CreateResumePage() {
   const [isClientTimeout, setIsClientTimeout] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      useDialogStore.getState().closeDialog('resumeCreateConfirm');
+    };
+  }, []);
+
   const handleOpenConfirmDialog = useCallback(() => {
-    setIsConfirmDialogOpen(true);
+    useDialogStore.getState().openDialog('resumeCreateConfirm');
   }, []);
 
   const handleCloseConfirmDialog = useCallback(() => {
-    setIsConfirmDialogOpen(false);
+    useDialogStore.getState().closeDialog('resumeCreateConfirm');
   }, []);
 
   const { data: versionData, isError: isVersionError } = useResumeVersion(

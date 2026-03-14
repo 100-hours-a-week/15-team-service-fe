@@ -7,6 +7,7 @@ import { BottomNav } from '../components/layout/BottomNav';
 import { DropdownMenu } from '../components/common/DropdownMenu';
 import { ConfirmDialog } from '../components/modals/ConfirmDialog';
 import { EditTextDialog } from '../components/modals/EditTextDialog';
+import { useDialogStore } from '@/app/store/useDialogStore';
 import { ChatRoomListSheet } from '../components/features/ChatRoomListSheet';
 import { NotificationSheet } from '../components/features/NotificationSheet';
 import {
@@ -23,6 +24,7 @@ import {
   useRenameResume,
   useDeleteResume,
 } from '@/app/hooks/mutations/useResumeMutations';
+
 import { useDebounce } from '@/app/hooks/useDebounce';
 import { useInfiniteScroll } from '@/app/hooks/useInfiniteScroll';
 
@@ -43,6 +45,51 @@ export function HomePage() {
   const location = useLocation();
   const { data: profileData } = useUserProfile();
   const { data: positions = [] } = usePositions();
+
+  // Dialog state from global store
+  const isEditDialogOpen = useDialogStore((s) => s.openDialogs['resumeEdit']);
+  const editTarget = useDialogStore((s) => s.dialogData['resumeEdit']);
+  const isDeleteDialogOpen = useDialogStore(
+    (s) => s.openDialogs['resumeDelete']
+  );
+
+  // Resume mutations for dialogs lifted from ResumeCard
+  const renameResumeMutation = useRenameResume();
+  const deleteResumeMutation = useDeleteResume();
+
+  const handleConfirmEdit = useCallback(
+    (newValue) => {
+      const target = useDialogStore.getState().dialogData['resumeEdit'];
+      if (!target) return;
+      renameResumeMutation.mutate(
+        { resumeId: target.id, name: newValue },
+        {
+          onSuccess: () => {
+            useDialogStore.getState().closeDialog('resumeEdit');
+          },
+        }
+      );
+    },
+    [renameResumeMutation]
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    useDialogStore.getState().closeDialog('resumeEdit');
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    const resumeId = useDialogStore.getState().dialogData['resumeDelete'];
+    if (!resumeId) return;
+    deleteResumeMutation.mutate(resumeId, {
+      onSuccess: () => {
+        useDialogStore.getState().closeDialog('resumeDelete');
+      },
+    });
+  }, [deleteResumeMutation]);
+
+  const handleCancelDelete = useCallback(() => {
+    useDialogStore.getState().closeDialog('resumeDelete');
+  }, []);
 
   // Search and sort state
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -259,6 +306,27 @@ export function HomePage() {
       </div>
 
       <BottomNav />
+
+      <EditTextDialog
+        isOpen={!!isEditDialogOpen}
+        onClose={handleCancelEdit}
+        onConfirm={handleConfirmEdit}
+        initialValue={editTarget?.name || ''}
+        title="이력서명 수정"
+        label="이력서명"
+        placeholder="이력서명을 입력하세요"
+        errorMessage="이력서명을 입력해주세요"
+      />
+
+      <ConfirmDialog
+        isOpen={!!isDeleteDialogOpen}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="이력서 삭제"
+        description="정말 이력서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        confirmText="삭제"
+        cancelText="취소"
+      />
     </div>
   );
 }
@@ -273,16 +341,6 @@ export function HomePage() {
  */
 const ResumeCard = React.memo(({ resume }) => {
   const navigate = useNavigate();
-
-  // Mutations
-  const renameResumeMutation = useRenameResume();
-  const deleteResumeMutation = useDeleteResume();
-
-  // Dialog states
-  const [editTarget, setEditTarget] = useState(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleViewResume = useCallback(() => {
     navigate(`/resume/${resume.resumeId}`);
@@ -301,56 +359,20 @@ const ResumeCard = React.memo(({ resume }) => {
   const handleResumeNameEdit = useCallback(
     (e) => {
       e.stopPropagation();
-      setEditTarget({ id: resume.resumeId, name: resume.name });
-      setIsEditDialogOpen(true);
+      useDialogStore
+        .getState()
+        .openDialog('resumeEdit', { id: resume.resumeId, name: resume.name });
     },
     [resume.resumeId, resume.name]
   );
 
-  const handleConfirmEdit = useCallback(
-    (newValue) => {
-      if (!editTarget) return;
-      renameResumeMutation.mutate(
-        { resumeId: editTarget.id, name: newValue },
-        {
-          onSuccess: () => {
-            setIsEditDialogOpen(false);
-            setEditTarget(null);
-          },
-        }
-      );
-    },
-    [editTarget, renameResumeMutation]
-  );
-
-  const handleCancelEdit = useCallback(() => {
-    setIsEditDialogOpen(false);
-    setEditTarget(null);
-  }, []);
-
   const handleDeleteClick = useCallback(
     (e) => {
       e.stopPropagation();
-      setDeleteTarget(resume.resumeId);
-      setIsDeleteDialogOpen(true);
+      useDialogStore.getState().openDialog('resumeDelete', resume.resumeId);
     },
     [resume.resumeId]
   );
-
-  const handleConfirmDelete = useCallback(() => {
-    if (!deleteTarget) return;
-    deleteResumeMutation.mutate(deleteTarget, {
-      onSuccess: () => {
-        setIsDeleteDialogOpen(false);
-        setDeleteTarget(null);
-      },
-    });
-  }, [deleteTarget, deleteResumeMutation]);
-
-  const handleCancelDelete = useCallback(() => {
-    setIsDeleteDialogOpen(false);
-    setDeleteTarget(null);
-  }, []);
 
   const menuItems = [
     {
@@ -374,70 +396,47 @@ const ResumeCard = React.memo(({ resume }) => {
     : '';
 
   return (
-    <>
-      <div className="bg-white rounded-2xl p-4 border border-gray-200 relative">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h4 className="mb-1 truncate">{resume.name}</h4>
-            <p className="text-sm text-gray-500">{formattedDate}</p>
-          </div>
-
-          <DropdownMenu items={menuItems} />
+    <div className="bg-white rounded-2xl p-4 border border-gray-200 relative">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="mb-1 truncate">{resume.name}</h4>
+          <p className="text-sm text-gray-500">{formattedDate}</p>
         </div>
 
-        <div className="flex items-center gap-2 mb-3">
-          <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs">
-            {resume.positionName}
-          </span>
-          {/* <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-            {resume.companyName || '미지정'}
-          </span> */}
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={handleViewResume}
-          >
-            <FileText className="w-4 h-4" strokeWidth={1.5} />
-            <span className="flex flex-col leading-tight">
-              <span>프로젝트</span>
-              <span>요약 보기</span>
-            </span>
-          </Button>
-          <Button
-            variant="primary"
-            className="flex-1"
-            onClick={handleStartInterview}
-          >
-            <Mic className="w-4 h-4" strokeWidth={1.5} />
-            모의 면접
-          </Button>
-        </div>
+        <DropdownMenu items={menuItems} />
       </div>
 
-      <EditTextDialog
-        isOpen={isEditDialogOpen}
-        onClose={handleCancelEdit}
-        onConfirm={handleConfirmEdit}
-        initialValue={editTarget?.name || ''}
-        title="이력서명 수정"
-        label="이력서명"
-        placeholder="이력서명을 입력하세요"
-        errorMessage="이력서명을 입력해주세요"
-      />
+      <div className="flex items-center gap-2 mb-3">
+        <span className="px-3 py-1 bg-blue-50 text-primary rounded-full text-xs">
+          {resume.positionName}
+        </span>
+        {/* <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+            {resume.companyName || '미지정'}
+          </span> */}
+      </div>
 
-      <ConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-        title="이력서 삭제"
-        description="정말 이력서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
-        confirmText="삭제"
-        cancelText="취소"
-      />
-    </>
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={handleViewResume}
+        >
+          <FileText className="w-4 h-4" strokeWidth={1.5} />
+          <span className="flex flex-col leading-tight">
+            <span>프로젝트</span>
+            <span>요약 보기</span>
+          </span>
+        </Button>
+        <Button
+          variant="primary"
+          className="flex-1"
+          onClick={handleStartInterview}
+        >
+          <Mic className="w-4 h-4" strokeWidth={1.5} />
+          모의 면접
+        </Button>
+      </div>
+    </div>
   );
 });
 

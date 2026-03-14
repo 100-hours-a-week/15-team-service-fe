@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDialogStore } from '@/app/store/useDialogStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -40,8 +41,10 @@ export function InterviewSessionPage() {
   const [currentTurnNo, setCurrentTurnNo] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [isEnding, setIsEnding] = useState(false);
-  const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
-  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const isEndDialogOpen = useDialogStore((s) => s.openDialogs['interviewEnd']);
+  const isCompleteDialogOpen = useDialogStore(
+    (s) => s.openDialogs['interviewComplete']
+  );
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [sseError, setSseError] = useState(false);
   const fileInputRef = useRef(null);
@@ -57,6 +60,15 @@ export function InterviewSessionPage() {
 
   const submitAnswerMutation = useSubmitInterviewAnswer();
   const completeInterviewMutation = useCompleteInterview();
+
+  // Close dialogs on unmount to prevent stale-open state on navigation back
+  useEffect(() => {
+    return () => {
+      const { closeDialog } = useDialogStore.getState();
+      closeDialog('interviewEnd');
+      closeDialog('interviewComplete');
+    };
+  }, []);
 
   const handleAnswer = () => {
     if (isTranscribing) return;
@@ -117,10 +129,12 @@ export function InterviewSessionPage() {
       setIsEnding(false);
     }
   };
-  const handleOpenEndDialog = () => setIsEndDialogOpen(true);
-  const handleCancelEndDialog = () => setIsEndDialogOpen(false);
+  const handleOpenEndDialog = () =>
+    useDialogStore.getState().openDialog('interviewEnd');
+  const handleCancelEndDialog = () =>
+    useDialogStore.getState().closeDialog('interviewEnd');
   const handleConfirmEndDialog = async () => {
-    setIsEndDialogOpen(false);
+    useDialogStore.getState().closeDialog('interviewEnd');
     await handleEnd();
   };
   const handleTextChange = (event) => setTextInput(event.target.value);
@@ -358,11 +372,11 @@ export function InterviewSessionPage() {
   }, []);
 
   const onAllQuestionsComplete = useCallback(() => {
-    setIsCompleteDialogOpen(true);
+    useDialogStore.getState().openDialog('interviewComplete');
   }, []);
 
   const handleConfirmCompleteDialog = async () => {
-    setIsCompleteDialogOpen(false);
+    useDialogStore.getState().closeDialog('interviewComplete');
     await handleEnd();
   };
 
