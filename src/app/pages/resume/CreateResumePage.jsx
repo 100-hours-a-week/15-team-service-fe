@@ -3,7 +3,7 @@ import { useDialogStore } from '@/app/store/useDialogStore';
 import { useResumeCreationStore } from '@/app/store/useResumeCreationStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
@@ -15,6 +15,33 @@ import { useCreateResume } from '@/app/hooks/mutations/useResumeMutations';
 import { useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
 
 const GENERATION_TIMEOUT_MS = 5 * 60 * 1000 + 30 * 1000; // 5분 30초
+
+function StageStep({ label, isActive, isDone }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
+          isDone
+            ? 'bg-green-400'
+            : isActive
+              ? 'bg-primary animate-pulse'
+              : 'bg-gray-200'
+        }`}
+      />
+      <span
+        className={`text-[10px] transition-colors duration-300 ${
+          isDone
+            ? 'text-green-500'
+            : isActive
+              ? 'text-primary font-medium'
+              : 'text-gray-300'
+        }`}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export function CreateResumePage() {
   const navigate = useNavigate();
@@ -39,6 +66,7 @@ export function CreateResumePage() {
   const createResumeMutation = useCreateResume();
 
   const [formData, setFormData] = useState({ positionId: null });
+  const [progressValue, setProgressValue] = useState(0);
   const isConfirmDialogOpen = useDialogStore(
     (s) => s.openDialogs['resumeCreateConfirm']
   );
@@ -49,6 +77,41 @@ export function CreateResumePage() {
   );
   const [isClientTimeout, setIsClientTimeout] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // Manage progress bar value based on generation status
+  useEffect(() => {
+    if (createResumeMutation.isPending && !createdResumeId) {
+      setProgressValue(10);
+      return;
+    }
+    if (isRedirecting) {
+      setProgressValue(100);
+      return;
+    }
+    if (!normalizedStatus) {
+      setProgressValue(15);
+      return;
+    }
+    if (normalizedStatus === 'QUEUED') {
+      setProgressValue(20);
+      return;
+    }
+    if (normalizedStatus === 'PROCESSING') {
+      setProgressValue((prev) => Math.max(prev, 35));
+      const id = setInterval(() => {
+        setProgressValue((prev) => {
+          if (prev >= 85) return prev;
+          return prev + 0.4;
+        });
+      }, 3000);
+      return () => clearInterval(id);
+    }
+  }, [
+    createResumeMutation.isPending,
+    createdResumeId,
+    isRedirecting,
+    normalizedStatus,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -213,16 +276,71 @@ export function CreateResumePage() {
         <TopAppBar title="이력서 생성 중" />
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
-            <div className="bg-white rounded-2xl p-8 text-center space-y-4">
-              <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <h3>AI가 프로젝트 요약을 생성 중입니다</h3>
-              <p className="text-sm text-gray-500">{statusMessage}</p>
-              <p className="text-xs text-gray-400">
-                생성이 완료될 때까지 잠시만 기다려주세요.
-              </p>
-              <p className="text-xs text-gray-400">
-                최대 5분이 소요될 수 있습니다.
-              </p>
+            <div className="bg-white rounded-2xl p-8 text-center space-y-6">
+              {/* Animated icon */}
+              {isRedirecting ? (
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              )}
+
+              <h3>
+                {isRedirecting
+                  ? '생성이 완료되었습니다!'
+                  : 'AI가 프로젝트 요약을 생성 중입니다'}
+              </h3>
+
+              {/* Progress bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs text-gray-400">
+                  <span>{statusMessage}</span>
+                  <span>{Math.round(progressValue)}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                      isRedirecting ? 'bg-green-500' : 'bg-primary'
+                    }`}
+                    style={{ width: `${progressValue}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Stage indicators */}
+              <div className="flex items-center justify-center gap-1">
+                <StageStep
+                  label="요청"
+                  isActive={!createdResumeId && createResumeMutation.isPending}
+                  isDone={!!createdResumeId}
+                />
+                <div className="w-6 h-px bg-gray-200" />
+                <StageStep
+                  label="대기"
+                  isActive={normalizedStatus === 'QUEUED'}
+                  isDone={normalizedStatus === 'PROCESSING' || isRedirecting}
+                />
+                <div className="w-6 h-px bg-gray-200" />
+                <StageStep
+                  label="분석"
+                  isActive={normalizedStatus === 'PROCESSING'}
+                  isDone={isRedirecting}
+                />
+                <div className="w-6 h-px bg-gray-200" />
+                <StageStep
+                  label="완료"
+                  isActive={isRedirecting}
+                  isDone={false}
+                />
+              </div>
+
+              {!isRedirecting && (
+                <p className="text-xs text-gray-400">
+                  최대 5분이 소요될 수 있습니다.
+                </p>
+              )}
+
               <Button
                 variant="secondary"
                 onClick={() => navigate('/')}

@@ -341,11 +341,46 @@ export function ResumeViewerPage() {
     return (
       <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
-        <div className="px-5 py-6">
-          <div className="max-w-[390px] mx-auto">
-            <div className="bg-white rounded-2xl p-8 text-center">
-              <div className="w-12 h-12 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-gray-500">이력서를 불러오는 중...</p>
+        <div className="px-5 py-2">
+          <div className="max-w-[390px] mx-auto space-y-4">
+            {/* Tab skeleton */}
+            <div className="flex border-b border-gray-200 gap-4 pb-0">
+              <div className="h-11 w-20 bg-gray-200 rounded-t animate-pulse" />
+              <div className="h-11 w-20 bg-gray-200 rounded-t animate-pulse" />
+            </div>
+            {/* Tech stack skeleton */}
+            <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
+              <div className="flex gap-2 flex-wrap">
+                {[80, 64, 96, 72, 56].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-7 bg-gray-200 rounded-full animate-pulse"
+                    style={{ width: `${w}px` }}
+                  />
+                ))}
+              </div>
+            </div>
+            {/* Projects skeleton */}
+            <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-32 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-3 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-5/6 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-2/3 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-4/5 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+              </div>
+            </div>
+            {/* Second section skeleton */}
+            <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-28 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-3 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-5/6 animate-pulse" />
+              </div>
             </div>
           </div>
         </div>

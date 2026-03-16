@@ -50,7 +50,7 @@ export function FormSection({ title, children, defaultOpen = true }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            transition={{ duration: 0.35, ease: 'easeInOut' }}
           >
             <div className="px-5 pb-6 space-y-6">{children}</div>
           </motion.div>
@@ -167,11 +167,19 @@ export function TextAreaWithCounter({
             : 'hover:border-gray-300'
         )}
       />
-      {isOverLimit && (
-        <p className="text-xs text-danger">
-          최대 {maxLength}자까지 입력 가능합니다
-        </p>
-      )}
+      <AnimatePresence>
+        {isOverLimit && (
+          <motion.p
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+            className="text-xs text-danger"
+          >
+            최대 {maxLength}자까지 입력 가능합니다
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { cn, formatKoreanTimestamp } from '@/app/lib/utils';
 
 /**
@@ -73,7 +74,14 @@ export const InterviewScript = ({
       <h3 className="mb-4">면접 스크립트</h3>
       <div className="space-y-3 overflow-y-auto" style={{ maxHeight }}>
         {entries.map((entry, idx) => (
-          <ScriptEntryItem key={`${entry.timestamp}-${idx}`} entry={entry} />
+          <motion.div
+            key={`${entry.timestamp}-${idx}`}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: Math.min(idx * 0.05, 0.5) }}
+          >
+            <ScriptEntryItem entry={entry} />
+          </motion.div>
         ))}
       </div>
     </div>

@@ -32,11 +32,12 @@ export const Button = forwardRef(
       'min-h-[44px] px-6 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
 
     const variants = {
-      primary: 'bg-primary text-white hover:bg-[#2558CC]',
+      primary: 'bg-primary text-white hover:bg-[#2558CC] active:bg-[#1E47B6]',
       secondary:
-        'bg-white text-gray-900 border border-gray-200 hover:bg-gray-50',
-      ghost: 'bg-transparent text-gray-700 hover:bg-gray-100',
-      danger: 'bg-[#EF4444] text-white hover:bg-[#DC2626]',
+        'bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 active:bg-gray-100',
+      ghost:
+        'bg-transparent text-gray-700 hover:bg-gray-100 active:bg-gray-200',
+      danger: 'bg-[#EF4444] text-white hover:bg-[#DC2626] active:bg-[#B91C1C]',
     };
 
     return (
