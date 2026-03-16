@@ -59,7 +59,9 @@ function RootLayout() {
           <Toaster
             position="bottom-center"
             expand={true}
+            duration={4000}
             toastOptions={{
+              duration: 4000,
               style: {
                 backgroundColor: 'rgba(75, 85, 99, 0.8)',
                 backdropFilter: 'blur(8px)',
