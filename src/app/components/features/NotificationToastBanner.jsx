@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Bell, FileText, MessageSquare } from 'lucide-react';
+import { useNotificationContext } from '@/app/hooks/useNotificationSSE';
 
 const TYPE_CONFIG = {
   RESUME: {
@@ -37,6 +38,7 @@ export function NotificationToastBanner() {
   const [visible, setVisible] = useState(false);
   const timerRef = useRef(null);
   const navigate = useNavigate();
+  const { subscribeNotification } = useNotificationContext();
 
   const dismiss = () => {
     setVisible(false);
@@ -45,9 +47,7 @@ export function NotificationToastBanner() {
   };
 
   useEffect(() => {
-    const handler = (event) => {
-      const { type, message, payload } = event.detail ?? {};
-
+    const unsubscribe = subscribeNotification(({ type, message, payload }) => {
       // 이전 타이머 취소
       if (timerRef.current) clearTimeout(timerRef.current);
 
@@ -56,14 +56,13 @@ export function NotificationToastBanner() {
       requestAnimationFrame(() => setVisible(true));
 
       timerRef.current = setTimeout(dismiss, AUTO_DISMISS_MS);
-    };
+    });
 
-    window.addEventListener('notification-toast', handler);
     return () => {
-      window.removeEventListener('notification-toast', handler);
+      unsubscribe();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, []);
+  }, [subscribeNotification]);
 
   if (!banner) return null;
 

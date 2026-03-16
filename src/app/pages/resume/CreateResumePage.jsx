@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDialogStore } from '@/app/store/useDialogStore';
+import { useResumeCreationStore } from '@/app/store/useResumeCreationStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -23,6 +24,8 @@ export function CreateResumePage() {
 
   useEffect(() => {
     if (location.state?.fromResumeSetup) {
+      // Coming from ResumeProfileSetupPage — discard any persisted generation state
+      useResumeCreationStore.getState().cancelGeneration();
       navigate(location.pathname, {
         replace: true,
         state: { selectedRepos, masterProfile },
@@ -39,15 +42,11 @@ export function CreateResumePage() {
   const isConfirmDialogOpen = useDialogStore(
     (s) => s.openDialogs['resumeCreateConfirm']
   );
-  const [createdResumeId, setCreatedResumeId] = useState(() => {
-    // ResumeProfileSetupPage에서 네비게이션했을 때만 sessionStorage 무시
-    const fromResumeSetup = location.state?.fromResumeSetup;
-    if (fromResumeSetup) {
-      return null;
-    }
-    // 브라우저 새로고침 - sessionStorage에서 복구
-    return sessionStorage.getItem('generatingResumeId') || null;
-  });
+  // Restored from sessionStorage on browser refresh via Zustand persist
+  const createdResumeId = useResumeCreationStore((s) => s.generatingResumeId);
+  const generatingStartedAt = useResumeCreationStore(
+    (s) => s.generatingStartedAt
+  );
   const [isClientTimeout, setIsClientTimeout] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -64,7 +63,6 @@ export function CreateResumePage() {
   const handleCloseConfirmDialog = useCallback(() => {
     useDialogStore.getState().closeDialog('resumeCreateConfirm');
   }, []);
-
 
   const { data: versionData, isError: isVersionError } = useResumeVersion(
     createdResumeId,
@@ -97,12 +95,9 @@ export function CreateResumePage() {
   useEffect(() => {
     if (isGenerationSucceeded && !isRedirecting) {
       setIsRedirecting(true);
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
-      sessionStorage.setItem(
-        'resumeCreatedMessage',
-        '프로젝트 요약이 생성되었습니다'
-      );
+      useResumeCreationStore
+        .getState()
+        .completeGeneration('프로젝트 요약이 생성되었습니다');
       setTimeout(() => {
         window.location.href = `/resume/${createdResumeId}`;
       }, 500);
@@ -111,8 +106,7 @@ export function CreateResumePage() {
 
   useEffect(() => {
     if (isGenerationFailed) {
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
+      useResumeCreationStore.getState().cancelGeneration();
     }
   }, [isGenerationFailed]);
 
@@ -124,32 +118,25 @@ export function CreateResumePage() {
 
   useEffect(() => {
     if (!createdResumeId || !isGenerating) return;
+    if (!generatingStartedAt) return;
 
-    const startedAt = sessionStorage.getItem('generatingStartedAt');
-    if (!startedAt) return;
-
-    const elapsed = Date.now() - parseInt(startedAt, 10);
+    const elapsed = Date.now() - generatingStartedAt;
     const remaining = GENERATION_TIMEOUT_MS - elapsed;
 
-    if (remaining <= 0) {
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
-      setCreatedResumeId(null);
+    const timeout = () => {
+      useResumeCreationStore.getState().cancelGeneration();
       setIsClientTimeout(true);
       toast.error('프로젝트 요약 생성 시간이 초과되었습니다');
+    };
+
+    if (remaining <= 0) {
+      timeout();
       return;
     }
 
-    const timer = setTimeout(() => {
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
-      setCreatedResumeId(null);
-      setIsClientTimeout(true);
-      toast.error('프로젝트 요약 생성 시간이 초과되었습니다');
-    }, remaining);
-
+    const timer = setTimeout(timeout, remaining);
     return () => clearTimeout(timer);
-  }, [createdResumeId, isGenerating]);
+  }, [createdResumeId, isGenerating, generatingStartedAt]);
 
   // 생성 중 브라우저 새로고침/탭 닫기 경고
   useEffect(() => {
@@ -163,12 +150,11 @@ export function CreateResumePage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [createResumeMutation.isPending, isGenerating]);
 
-  // 컴포넌트 unmount 시 sessionStorage 정리 (뒤로가기 등)
+  // 컴포넌트 unmount 시 진행 중 상태 정리 (뒤로가기 등)
   useEffect(() => {
     return () => {
       if (!isGenerating && !createResumeMutation.isPending) {
-        sessionStorage.removeItem('generatingResumeId');
-        sessionStorage.removeItem('generatingStartedAt');
+        useResumeCreationStore.getState().cancelGeneration();
       }
     };
   }, [isGenerating, createResumeMutation.isPending]);
@@ -196,9 +182,7 @@ export function CreateResumePage() {
       },
       {
         onSuccess: (data) => {
-          setCreatedResumeId(data);
-          sessionStorage.setItem('generatingResumeId', data);
-          sessionStorage.setItem('generatingStartedAt', Date.now().toString());
+          useResumeCreationStore.getState().startGeneration(data);
         },
       }
     );
@@ -211,7 +195,7 @@ export function CreateResumePage() {
   ]);
 
   const handleRetryGeneration = useCallback(() => {
-    setCreatedResumeId(null);
+    useResumeCreationStore.getState().cancelGeneration();
     setIsClientTimeout(false);
   }, []);
 

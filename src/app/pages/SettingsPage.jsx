@@ -336,7 +336,7 @@ export function SettingsPage() {
   }, [profileData?.phonePolicyAgreed, updatePhonePolicyAgreement]);
 
   const handleConfirmPhonePolicyAgreement = useCallback(() => {
-    setIsPhonePolicyModalOpen(false);
+    useDialogStore.getState().closeDialog('phonePolicy');
     updatePhonePolicyAgreement(true);
   }, [updatePhonePolicyAgreement]);
 

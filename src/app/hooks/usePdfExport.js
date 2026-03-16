@@ -41,7 +41,6 @@ const EDUCATION_STATUS_LABELS = {
 export function usePdfExport({
   yamlContent,
   userProfile,
-  positions,
   resumeName,
   resumeProfile,
 }) {
@@ -578,7 +577,6 @@ export function usePdfExport({
     yamlContent,
     pdfUrl,
     userProfile,
-    positions,
     resumeProfile,
   ]);
 

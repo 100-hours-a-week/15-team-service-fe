@@ -20,6 +20,8 @@ import { UnsavedChangesDialog } from '../../components/modals/UnsavedChangesDial
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import { Button } from '../../components/common/Button';
 import { useChatbot } from '@/app/hooks/useChatbot';
+import { useNotificationContext } from '@/app/hooks/useNotificationSSE';
+import { useResumeCreationStore } from '@/app/store/useResumeCreationStore';
 import {
   useResumeDetail,
   useResumeVersion,
@@ -206,6 +208,7 @@ export function ResumeViewerPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const resumeId = parseInt(id, 10);
+  const { subscribeResumeRefresh } = useNotificationContext();
   const resumeViewerRef = useRef(null);
 
   const {
@@ -280,9 +283,9 @@ export function ResumeViewerPage() {
 
   // 프로젝트 요약 생성 완료 메시지 표시
   useEffect(() => {
-    const message = sessionStorage.getItem('resumeCreatedMessage');
+    const message = useResumeCreationStore.getState().resumeCreatedMessage;
     if (message) {
-      sessionStorage.removeItem('resumeCreatedMessage');
+      useResumeCreationStore.getState().clearMessage();
       setTimeout(() => {
         toast.success(message);
       }, 300);
@@ -293,15 +296,12 @@ export function ResumeViewerPage() {
 
   // SSE resume-refresh-required 이벤트를 직접 감지해 최신 데이터로 즉시 갱신
   useEffect(() => {
-    const handler = (e) => {
-      if (Number(e.detail.resumeId) !== resumeId) return;
+    return subscribeResumeRefresh((data) => {
+      if (Number(data.resumeId) !== resumeId) return;
       refetchDetail();
       refetchVersion();
-    };
-    window.addEventListener('sse:resume-refresh-required', handler);
-    return () =>
-      window.removeEventListener('sse:resume-refresh-required', handler);
-  }, [resumeId, refetchDetail, refetchVersion]);
+    });
+  }, [resumeId, refetchDetail, refetchVersion, subscribeResumeRefresh]);
 
   const {
     messages,
