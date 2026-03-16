@@ -42,6 +42,7 @@ export function SelectGrid({
             onClick={() => onSelect(value)}
             className={cn(
               'p-4 rounded-xl border-2 transition-all min-h-[56px]',
+              'hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:shadow-none',
               isSelected
                 ? 'border-primary bg-blue-50 text-primary'
                 : 'border-gray-200 bg-white hover:border-gray-300'

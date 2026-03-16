@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useDialogStore } from '@/app/store/useDialogStore';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ShieldCheck, UserCircle } from 'lucide-react';
 import { BottomNav } from '../components/layout/BottomNav';
@@ -250,10 +251,12 @@ export function SettingsPage() {
   const { mutateAsync: logout } = useLogout();
   const { mutateAsync: withdrawUser } = useWithdrawUser();
 
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  const [isPhonePolicyModalOpen, setIsPhonePolicyModalOpen] = useState(false);
+  const isPhonePolicyModalOpen = useDialogStore(
+    (s) => s.openDialogs['phonePolicy']
+  );
+  const isLogoutDialogOpen = useDialogStore((s) => s.openDialogs['logout']);
+  const isWithdrawDialogOpen = useDialogStore((s) => s.openDialogs['withdraw']);
   const [localSettings, setLocalSettings] = useState({
     notificationEnabled: true,
     interviewResumeDefaultsEnabled: false,
@@ -274,35 +277,39 @@ export function SettingsPage() {
       if (settingsDebounceRef.current) {
         clearTimeout(settingsDebounceRef.current);
       }
+      const { closeDialog } = useDialogStore.getState();
+      closeDialog('logout');
+      closeDialog('withdraw');
+      closeDialog('phonePolicy');
     };
   }, []);
 
   const handleLogout = useCallback(() => {
-    setIsLogoutDialogOpen(true);
+    useDialogStore.getState().openDialog('logout');
   }, []);
 
   const handleConfirmLogout = useCallback(() => {
     logout().finally(() => {
-      setIsLogoutDialogOpen(false);
+      useDialogStore.getState().closeDialog('logout');
     });
   }, [logout]);
 
   const handleCancelLogout = useCallback(() => {
-    setIsLogoutDialogOpen(false);
+    useDialogStore.getState().closeDialog('logout');
   }, []);
 
   const handleWithdraw = useCallback(() => {
-    setIsWithdrawDialogOpen(true);
+    useDialogStore.getState().openDialog('withdraw');
   }, []);
 
   const handleConfirmWithdraw = useCallback(() => {
     withdrawUser().finally(() => {
-      setIsWithdrawDialogOpen(false);
+      useDialogStore.getState().closeDialog('withdraw');
     });
   }, [withdrawUser]);
 
   const handleCancelWithdraw = useCallback(() => {
-    setIsWithdrawDialogOpen(false);
+    useDialogStore.getState().closeDialog('withdraw');
   }, []);
 
   const handleToggleSetting = useCallback(
@@ -324,12 +331,12 @@ export function SettingsPage() {
     if (profileData?.phonePolicyAgreed) {
       updatePhonePolicyAgreement(false);
     } else {
-      setIsPhonePolicyModalOpen(true);
+      useDialogStore.getState().openDialog('phonePolicy');
     }
   }, [profileData?.phonePolicyAgreed, updatePhonePolicyAgreement]);
 
   const handleConfirmPhonePolicyAgreement = useCallback(() => {
-    setIsPhonePolicyModalOpen(false);
+    useDialogStore.getState().closeDialog('phonePolicy');
     updatePhonePolicyAgreement(true);
   }, [updatePhonePolicyAgreement]);
 
@@ -404,7 +411,9 @@ export function SettingsPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setIsPhonePolicyModalOpen(true)}
+                  onClick={() =>
+                    useDialogStore.getState().openDialog('phonePolicy')
+                  }
                   className="text-sm font-medium text-left hover:underline"
                 >
                   전화번호 수집/이용 동의
@@ -436,7 +445,7 @@ export function SettingsPage() {
               <div className="flex-1 pr-4">
                 <p className="font-medium text-sm mb-1">알림 받기</p>
                 <p className="text-xs text-gray-600">
-                  프로젝트 요약 생성 및 수정 알림을 받을 수 있습니다.
+                  이력서 생성 및 수정 알림을 받을 수 있습니다.
                 </p>
               </div>
               <div className="relative inline-block w-12 h-7 flex-shrink-0">
@@ -520,8 +529,10 @@ export function SettingsPage() {
         </DialogContent>
       </Dialog>
       <Dialog
-        open={isPhonePolicyModalOpen}
-        onOpenChange={setIsPhonePolicyModalOpen}
+        open={!!isPhonePolicyModalOpen}
+        onOpenChange={(open) => {
+          if (!open) useDialogStore.getState().closeDialog('phonePolicy');
+        }}
       >
         <DialogContent
           hideClose
@@ -544,7 +555,9 @@ export function SettingsPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setIsPhonePolicyModalOpen(false)}
+              onClick={() =>
+                useDialogStore.getState().closeDialog('phonePolicy')
+              }
             >
               닫기
             </Button>

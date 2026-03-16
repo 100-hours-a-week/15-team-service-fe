@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { CheckCircle2 } from 'lucide-react';
@@ -156,49 +157,84 @@ export function InterviewSummaryPage() {
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto space-y-6">
           {/* Success Message */}
-          <div className="bg-white rounded-2xl p-6 text-center border border-gray-200">
-            <CheckCircle2
-              className="w-16 h-16 text-[#16A34A] mx-auto mb-4"
-              strokeWidth={1.5}
-            />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white rounded-2xl p-6 text-center border border-gray-200"
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{
+                type: 'spring',
+                damping: 12,
+                stiffness: 200,
+                delay: 0.15,
+              }}
+              className="inline-block mb-4"
+            >
+              <CheckCircle2
+                className="w-16 h-16 text-[#16A34A]"
+                strokeWidth={1.5}
+              />
+            </motion.div>
             <h2 className="mb-2">면접이 종료되었습니다</h2>
             <p className="text-gray-600">진행 시간: {formatTime(duration)}</p>
-          </div>
+          </motion.div>
 
           {/* Interview Script */}
-          {scriptEntries.length > 0 ? (
-            <InterviewScript entries={scriptEntries} />
-          ) : (
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 text-center text-sm text-gray-600">
-              면접 대화 내역을 불러오는 중입니다.
-            </div>
-          )}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+          >
+            {scriptEntries.length > 0 ? (
+              <InterviewScript entries={scriptEntries} />
+            ) : (
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 text-center text-sm text-gray-600">
+                면접 대화 내역을 불러오는 중입니다.
+              </div>
+            )}
+          </motion.div>
 
           {/* AI Overall Evaluation */}
-          {resolvedFeedback?.overallFeedback ? (
-            <EvaluationCard
-              data={evaluationData}
-              metaLabel={interviewMetaLabel}
-            />
-          ) : (
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
-                <p className="text-sm text-gray-700">
-                  AI 피드백을 생성 중입니다. 잠시만 기다려주세요.
-                </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            {resolvedFeedback?.overallFeedback ? (
+              <EvaluationCard
+                data={evaluationData}
+                metaLabel={interviewMetaLabel}
+              />
+            ) : (
+              <div className="bg-white rounded-2xl p-6 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
+                  <p className="text-sm text-gray-700">
+                    AI 피드백을 생성 중입니다. 잠시만 기다려주세요.
+                  </p>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="h-3 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-3 bg-gray-100 rounded animate-pulse w-5/6" />
+                  <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+                </div>
               </div>
-              <div className="mt-4 space-y-2">
-                <div className="h-3 bg-gray-100 rounded animate-pulse" />
-                <div className="h-3 bg-gray-100 rounded animate-pulse w-5/6" />
-                <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
-              </div>
-            </div>
-          )}
+            )}
+          </motion.div>
 
-          <Button variant="primary" fullWidth onClick={() => navigate('/')}>
-            홈으로
-          </Button>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.45 }}
+          >
+            <Button variant="primary" fullWidth onClick={() => navigate('/')}>
+              홈으로
+            </Button>
+          </motion.div>
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useDialogStore } from '@/app/store/useDialogStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
-import { cn } from '../../lib/utils';
+import { cn, formatKoreanTimestamp } from '../../lib/utils';
 import { useInterviewSSE } from '@/app/hooks/useInterviewSSE';
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import {
@@ -25,25 +26,98 @@ import { transcribeAudio } from '@/app/api/endpoints/stt';
  * @property {string} timestamp
  */
 
+const initialState = {
+  hasMic: true,
+  isRecording: false,
+  messages: [],
+  elapsedTime: 0,
+  isLoading: true,
+  textInput: '',
+  hasStarted: false,
+  currentTurnNo: null,
+  feedback: null,
+  isEnding: false,
+  isTranscribing: false,
+  sseError: false,
+};
+
+function interviewReducer(state, action) {
+  switch (action.type) {
+    case 'QUESTION_RECEIVED': {
+      const { turnNo, question, askedAt } = action.payload;
+      const exists = state.messages.some(
+        (msg) => msg.type === 'question' && msg.turnNo === turnNo
+      );
+      return {
+        ...state,
+        isLoading: false,
+        hasStarted: true,
+        currentTurnNo: turnNo,
+        messages: exists
+          ? state.messages
+          : [
+              ...state.messages,
+              { type: 'question', text: question, timestamp: askedAt, turnNo },
+            ],
+      };
+    }
+    case 'FEEDBACK_RECEIVED':
+      return { ...state, feedback: action.payload };
+    case 'SESSION_ENDED':
+      return { ...state, hasStarted: false };
+    case 'ADD_MESSAGE':
+      return { ...state, messages: [...state.messages, action.payload] };
+    case 'SUBMIT_TEXT_ANSWER':
+      return {
+        ...state,
+        textInput: '',
+        messages: [...state.messages, action.payload],
+      };
+    case 'SET_TEXT_INPUT':
+      return { ...state, textInput: action.payload };
+    case 'SET_RECORDING':
+      return { ...state, isRecording: action.payload };
+    case 'SET_TRANSCRIBING':
+      return { ...state, isTranscribing: action.payload };
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+    case 'SET_HAS_MIC':
+      return { ...state, hasMic: action.payload };
+    case 'SET_ENDING':
+      return { ...state, isEnding: action.payload };
+    case 'SET_SSE_ERROR':
+      return { ...state, sseError: true, isLoading: false };
+    case 'TICK':
+      return { ...state, elapsedTime: state.elapsedTime + 1 };
+    default:
+      return state;
+  }
+}
+
 export function InterviewSessionPage() {
   const navigate = useNavigate();
   const { interviewId } = useParams();
   const numericInterviewId = interviewId ? Number(interviewId) : null;
 
-  const [hasMic, setHasMic] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [textInput, setTextInput] = useState('');
-  const [hasStarted, setHasStarted] = useState(false);
-  const [currentTurnNo, setCurrentTurnNo] = useState(null);
-  const [feedback, setFeedback] = useState(null);
-  const [isEnding, setIsEnding] = useState(false);
-  const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
-  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [sseError, setSseError] = useState(false);
+  const [state, dispatch] = useReducer(interviewReducer, initialState);
+  const {
+    hasMic,
+    isRecording,
+    messages,
+    elapsedTime,
+    isLoading,
+    textInput,
+    hasStarted,
+    currentTurnNo,
+    isEnding,
+    isTranscribing,
+    sseError,
+  } = state;
+
+  const isEndDialogOpen = useDialogStore((s) => s.openDialogs['interviewEnd']);
+  const isCompleteDialogOpen = useDialogStore(
+    (s) => s.openDialogs['interviewComplete']
+  );
   const fileInputRef = useRef(null);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -51,12 +125,21 @@ export function InterviewSessionPage() {
   const recordStartRef = useRef(0);
   const stopRequestedRef = useRef(false);
   const autoRestartedRef = useRef(false);
+  // Ref to access latest messages in async handlers without stale closure
   const messagesRef = useRef(messages);
-  const feedbackRef = useRef(feedback);
   const messagesEndRef = useRef(null);
 
   const submitAnswerMutation = useSubmitInterviewAnswer();
   const completeInterviewMutation = useCompleteInterview();
+
+  // Close dialogs on unmount to prevent stale-open state on navigation back
+  useEffect(() => {
+    return () => {
+      const { closeDialog } = useDialogStore.getState();
+      closeDialog('interviewEnd');
+      closeDialog('interviewComplete');
+    };
+  }, []);
 
   const handleAnswer = () => {
     if (isTranscribing) return;
@@ -72,7 +155,7 @@ export function InterviewSessionPage() {
       } else {
         // Recorder already inactive but UI says recording - force cleanup
         stopStream();
-        setIsRecording(false);
+        dispatch({ type: 'SET_RECORDING', payload: false });
       }
       return;
     }
@@ -85,7 +168,7 @@ export function InterviewSessionPage() {
       return;
     }
     if (!window.MediaRecorder) {
-      setHasMic(false);
+      dispatch({ type: 'SET_HAS_MIC', payload: false });
       fileInputRef.current?.click();
       return;
     }
@@ -93,7 +176,7 @@ export function InterviewSessionPage() {
   };
   const handleEnd = async () => {
     if (isEnding) return;
-    setIsEnding(true);
+    dispatch({ type: 'SET_ENDING', payload: true });
     try {
       const response =
         await completeInterviewMutation.mutateAsync(numericInterviewId);
@@ -114,16 +197,19 @@ export function InterviewSessionPage() {
         },
       });
     } catch {
-      setIsEnding(false);
+      dispatch({ type: 'SET_ENDING', payload: false });
     }
   };
-  const handleOpenEndDialog = () => setIsEndDialogOpen(true);
-  const handleCancelEndDialog = () => setIsEndDialogOpen(false);
+  const handleOpenEndDialog = () =>
+    useDialogStore.getState().openDialog('interviewEnd');
+  const handleCancelEndDialog = () =>
+    useDialogStore.getState().closeDialog('interviewEnd');
   const handleConfirmEndDialog = async () => {
-    setIsEndDialogOpen(false);
+    useDialogStore.getState().closeDialog('interviewEnd');
     await handleEnd();
   };
-  const handleTextChange = (event) => setTextInput(event.target.value);
+  const handleTextChange = (event) =>
+    dispatch({ type: 'SET_TEXT_INPUT', payload: event.target.value });
   const handleKeyDown = (event) => {
     // 한글 IME 조합 중일 때는 무시 (조합 완료 후 전송)
     if (event.nativeEvent.isComposing) return;
@@ -137,16 +223,15 @@ export function InterviewSessionPage() {
       return;
     }
     const answerText = textInput.trim();
-    setTextInput('');
-    setMessages((prev) => [
-      ...prev,
-      {
+    dispatch({
+      type: 'SUBMIT_TEXT_ANSWER',
+      payload: {
         type: 'answer',
         text: answerText,
         timestamp: new Date().toISOString(),
         turnNo: currentTurnNo,
       },
-    ]);
+    });
 
     try {
       await submitAnswerMutation.mutateAsync({
@@ -179,7 +264,7 @@ export function InterviewSessionPage() {
       return;
     }
 
-    setIsTranscribing(true);
+    dispatch({ type: 'SET_TRANSCRIBING', payload: true });
     try {
       const uploadInfo = await requestUploadUrl({
         purpose: 'INTERVIEW_AUDIO',
@@ -202,18 +287,18 @@ export function InterviewSessionPage() {
       }
 
       // STT 완료 후 바로 변환 상태 해제
-      setIsTranscribing(false);
+      dispatch({ type: 'SET_TRANSCRIBING', payload: false });
 
       const answerText = sttResult.text.trim();
-      setMessages((prev) => [
-        ...prev,
-        {
+      dispatch({
+        type: 'ADD_MESSAGE',
+        payload: {
           type: 'answer',
           text: answerText,
           timestamp: new Date().toISOString(),
           turnNo: currentTurnNo,
         },
-      ]);
+      });
 
       await submitAnswerMutation.mutateAsync({
         interviewId: numericInterviewId,
@@ -225,7 +310,7 @@ export function InterviewSessionPage() {
     } catch {
       toast.error('음성 처리에 실패했습니다.');
     } finally {
-      setIsTranscribing(false);
+      dispatch({ type: 'SET_TRANSCRIBING', payload: false });
     }
   };
 
@@ -246,7 +331,7 @@ export function InterviewSessionPage() {
       stream.getTracks().forEach((track) => {
         track.onended = () => {
           if (isRecording) {
-            setIsRecording(false);
+            dispatch({ type: 'SET_RECORDING', payload: false });
             toast.error(
               '마이크 입력이 중단되었습니다. 권한/장치를 확인해주세요.'
             );
@@ -284,7 +369,7 @@ export function InterviewSessionPage() {
             }, 300);
             return;
           }
-          setIsRecording(false);
+          dispatch({ type: 'SET_RECORDING', payload: false });
           toast.error(
             '녹음이 중단되었습니다. 마이크 권한/장치를 확인해주세요.'
           );
@@ -292,11 +377,11 @@ export function InterviewSessionPage() {
         }
         if (!hasEnoughData) {
           stopStream();
-          setIsRecording(false);
+          dispatch({ type: 'SET_RECORDING', payload: false });
           toast.error('1초 이상 녹음해 주세요.');
           return;
         }
-        setIsRecording(false);
+        dispatch({ type: 'SET_RECORDING', payload: false });
         const file = new File([blob], `interview-${Date.now()}.webm`, {
           type: 'audio/webm',
         });
@@ -305,9 +390,9 @@ export function InterviewSessionPage() {
       };
 
       recorder.start();
-      setIsRecording(true);
+      dispatch({ type: 'SET_RECORDING', payload: true });
     } catch {
-      setHasMic(false);
+      dispatch({ type: 'SET_HAS_MIC', payload: false });
       toast.error('마이크 권한을 확인해주세요.');
     }
   };
@@ -320,49 +405,30 @@ export function InterviewSessionPage() {
   };
 
   const onQuestion = useCallback((data) => {
-    setIsLoading(false);
-    setHasStarted(true);
-    setCurrentTurnNo(data.turnNo);
-    setMessages((prev) => {
-      // 같은 turnNo의 질문이 이미 있으면 중복 추가하지 않음
-      const exists = prev.some(
-        (msg) => msg.type === 'question' && msg.turnNo === data.turnNo
-      );
-      if (exists) return prev;
-      return [
-        ...prev,
-        {
-          type: 'question',
-          text: data.question,
-          timestamp: data.askedAt,
-          turnNo: data.turnNo,
-        },
-      ];
-    });
+    dispatch({ type: 'QUESTION_RECEIVED', payload: data });
   }, []);
 
   const onFeedback = useCallback((data) => {
     if (data?.totalFeedback) {
       try {
         const parsed = JSON.parse(data.totalFeedback);
-        feedbackRef.current = parsed;
-        setFeedback(parsed);
+        dispatch({ type: 'FEEDBACK_RECEIVED', payload: parsed });
       } catch {
-        setFeedback(null);
+        dispatch({ type: 'FEEDBACK_RECEIVED', payload: null });
       }
     }
   }, []);
 
   const onEnd = useCallback(() => {
-    setHasStarted(false);
+    dispatch({ type: 'SESSION_ENDED' });
   }, []);
 
   const onAllQuestionsComplete = useCallback(() => {
-    setIsCompleteDialogOpen(true);
+    useDialogStore.getState().openDialog('interviewComplete');
   }, []);
 
   const handleConfirmCompleteDialog = async () => {
-    setIsCompleteDialogOpen(false);
+    useDialogStore.getState().closeDialog('interviewComplete');
     await handleEnd();
   };
 
@@ -370,8 +436,7 @@ export function InterviewSessionPage() {
     onQuestion,
     onFeedback,
     onError: () => {
-      setIsLoading(false);
-      setSseError(true);
+      dispatch({ type: 'SET_SSE_ERROR' });
     },
     onEnd,
     onAllQuestionsComplete,
@@ -380,20 +445,20 @@ export function InterviewSessionPage() {
   useEffect(() => {
     if (!hasStarted) return undefined;
     const timer = setInterval(() => {
-      setElapsedTime((prev) => prev + 1);
+      dispatch({ type: 'TICK' });
     }, 1000);
     return () => clearInterval(timer);
   }, [hasStarted]);
 
   useEffect(() => {
     if (!numericInterviewId) {
-      setIsLoading(false);
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, [numericInterviewId]);
 
   useEffect(() => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      setHasMic(false);
+      dispatch({ type: 'SET_HAS_MIC', payload: false });
     }
     return () => {
       if (recorderRef.current && isRecording) {
@@ -410,10 +475,6 @@ export function InterviewSessionPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    feedbackRef.current = feedback;
-  }, [feedback]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -502,7 +563,7 @@ export function InterviewSessionPage() {
                 <p
                   className={`text-xs ${msg.type === 'question' ? 'text-gray-500' : 'text-blue-100'}`}
                 >
-                  {msg.timestamp}
+                  {formatKoreanTimestamp(msg.timestamp)}
                 </p>
               </div>
             </div>

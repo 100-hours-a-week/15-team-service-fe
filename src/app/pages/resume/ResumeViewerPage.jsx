@@ -20,6 +20,8 @@ import { UnsavedChangesDialog } from '../../components/modals/UnsavedChangesDial
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import { Button } from '../../components/common/Button';
 import { useChatbot } from '@/app/hooks/useChatbot';
+import { useNotificationContext } from '@/app/hooks/useNotificationSSE';
+import { useResumeCreationStore } from '@/app/store/useResumeCreationStore';
 import {
   useResumeDetail,
   useResumeVersion,
@@ -79,65 +81,6 @@ function formatVersionDate(isoStr) {
   if (diffDays === 1) return '어제';
   return `${diffDays}일 전`;
 }
-
-/**
- * Mock resume profile data — replace with useResumeProfile(resumeId) when API is ready.
- * API: GET /resumes/{id}/profile
- */
-const MOCK_RESUME_PROFILE = {
-  name: '홍길동',
-  profileImageUrl: null,
-  phoneCountryCode: '+82',
-  phoneNumber: '010-1234-5678',
-  introduction:
-    '사용자 경험을 최우선으로 생각하는 프론트엔드 개발자입니다. React 생태계를 기반으로 확장 가능하고 유지보수하기 쉬운 웹 애플리케이션을 개발합니다.',
-  techStacks: [
-    { name: 'React' },
-    { name: 'TypeScript' },
-    { name: 'Next.js' },
-    { name: 'Tailwind CSS' },
-    { name: 'Node.js' },
-  ],
-  experiences: [
-    {
-      companyName: '카카오',
-      position: '프론트엔드 개발자',
-      department: '서비스개발팀',
-      startAt: '2022.03',
-      endAt: null,
-      isCurrentlyWorking: true,
-      employmentType: 'FULL_TIME',
-      responsibilities:
-        '카카오톡 웹 클라이언트 개발 및 유지보수\nReact 기반 컴포넌트 라이브러리 설계 및 구현\n성능 최적화로 LCP 40% 개선',
-    },
-  ],
-  educations: [
-    {
-      educationType: 'BACHELOR',
-      institution: '한국대학교',
-      major: '컴퓨터공학과',
-      status: 'GRADUATED',
-      startAt: '2018.03',
-      endAt: '2022.02',
-    },
-  ],
-  activities: [
-    {
-      title: '카카오테크 부트캠프',
-      organization: '카카오',
-      year: 2024,
-      description: '클라우드 트랙 수료',
-    },
-  ],
-  certificates: [
-    {
-      name: '정보처리기사',
-      score: null,
-      issuer: '한국산업인력공단',
-      issuedAt: '2022.11',
-    },
-  ],
-};
 
 const MOCK_VERSIONS = [
   {
@@ -206,6 +149,7 @@ export function ResumeViewerPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const resumeId = parseInt(id, 10);
+  const { subscribeResumeRefresh } = useNotificationContext();
   const resumeViewerRef = useRef(null);
 
   const {
@@ -243,7 +187,7 @@ export function ResumeViewerPage() {
   // doesn't override hasUnsavedChanges back to true
   const initializedVersionRef = useRef(null);
 
-  const resumeProfile = MOCK_RESUME_PROFILE;
+  const resumeProfile = resumeDetail?.profile;
 
   const {
     showPDFViewer,
@@ -278,11 +222,11 @@ export function ResumeViewerPage() {
     }
   }, [versionData, resumeId, currentVersionNo]);
 
-  // 프로젝트 요약 생성 완료 메시지 표시
+  // 이력서 생성 완료 메시지 표시
   useEffect(() => {
-    const message = sessionStorage.getItem('resumeCreatedMessage');
+    const message = useResumeCreationStore.getState().resumeCreatedMessage;
     if (message) {
-      sessionStorage.removeItem('resumeCreatedMessage');
+      useResumeCreationStore.getState().clearMessage();
       setTimeout(() => {
         toast.success(message);
       }, 300);
@@ -293,15 +237,12 @@ export function ResumeViewerPage() {
 
   // SSE resume-refresh-required 이벤트를 직접 감지해 최신 데이터로 즉시 갱신
   useEffect(() => {
-    const handler = (e) => {
-      if (Number(e.detail.resumeId) !== resumeId) return;
+    return subscribeResumeRefresh((data) => {
+      if (Number(data.resumeId) !== resumeId) return;
       refetchDetail();
       refetchVersion();
-    };
-    window.addEventListener('sse:resume-refresh-required', handler);
-    return () =>
-      window.removeEventListener('sse:resume-refresh-required', handler);
-  }, [resumeId, refetchDetail, refetchVersion]);
+    });
+  }, [resumeId, refetchDetail, refetchVersion, subscribeResumeRefresh]);
 
   const {
     messages,
@@ -400,11 +341,46 @@ export function ResumeViewerPage() {
     return (
       <div className="min-h-screen bg-gray-50 pb-24">
         <TopAppBar title="이력서" showBack />
-        <div className="px-5 py-6">
-          <div className="max-w-[390px] mx-auto">
-            <div className="bg-white rounded-2xl p-8 text-center">
-              <div className="w-12 h-12 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-gray-500">이력서를 불러오는 중...</p>
+        <div className="px-5 py-2">
+          <div className="max-w-[390px] mx-auto space-y-4">
+            {/* Tab skeleton */}
+            <div className="flex border-b border-gray-200 gap-4 pb-0">
+              <div className="h-11 w-20 bg-gray-200 rounded-t animate-pulse" />
+              <div className="h-11 w-20 bg-gray-200 rounded-t animate-pulse" />
+            </div>
+            {/* Tech stack skeleton */}
+            <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
+              <div className="flex gap-2 flex-wrap">
+                {[80, 64, 96, 72, 56].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-7 bg-gray-200 rounded-full animate-pulse"
+                    style={{ width: `${w}px` }}
+                  />
+                ))}
+              </div>
+            </div>
+            {/* Projects skeleton */}
+            <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-32 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-3 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-5/6 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-2/3 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-4/5 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+              </div>
+            </div>
+            {/* Second section skeleton */}
+            <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-28 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-3 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse" />
+                <div className="h-3 bg-gray-200 rounded w-5/6 animate-pulse" />
+              </div>
             </div>
           </div>
         </div>
@@ -481,7 +457,7 @@ export function ResumeViewerPage() {
           <div className="max-w-[390px] mx-auto">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
-              <h3>프로젝트 요약 생성에 실패했습니다.</h3>
+              <h3>이력서 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">
                 {versionData?.errorLog || '알 수 없는 오류가 발생했습니다'}
               </p>

@@ -6,6 +6,7 @@ import {
   useMemo,
   useLayoutEffect,
 } from 'react';
+import { useChatSheetStore } from '@/app/store/useChatSheetStore';
 import {
   MessageSquare,
   Loader2,
@@ -34,10 +35,10 @@ import { validateImageFile } from '@/app/lib/validators';
 import { toast } from '@/app/lib/toast';
 
 export function ChatRoomListSheet() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'messages'
-  const [selectedRoomId, setSelectedRoomId] = useState(null);
-  const [selectedRoomName, setSelectedRoomName] = useState('');
+  const isOpen = useChatSheetStore((s) => s.isOpen);
+  const viewMode = useChatSheetStore((s) => s.viewMode);
+  const selectedRoomId = useChatSheetStore((s) => s.selectedRoomId);
+  const selectedRoomName = useChatSheetStore((s) => s.selectedRoomName);
 
   const [inputText, setInputText] = useState('');
   const [attachedImage, setAttachedImage] = useState(null);
@@ -148,9 +149,7 @@ export function ChatRoomListSheet() {
    * @param {string} roomName - Chat room name
    */
   const handleRoomClick = (roomId, roomName) => {
-    setSelectedRoomId(roomId);
-    setSelectedRoomName(roomName);
-    setViewMode('messages');
+    useChatSheetStore.getState().goToRoom(roomId, roomName);
   };
 
   // Sync isNearBottom state with ref for stable access in callbacks
@@ -235,9 +234,7 @@ export function ChatRoomListSheet() {
    * Returns to chat room list view
    */
   const handleBackToList = () => {
-    setViewMode('list');
-    setSelectedRoomId(null);
-    setSelectedRoomName('');
+    useChatSheetStore.getState().backToList();
     setInputText('');
     setMentions([]);
     setMentionQuery(null);
@@ -467,24 +464,13 @@ export function ChatRoomListSheet() {
     return currentDate !== prevDate;
   };
 
-  // Open sheet via custom event dispatched by NotificationSheet (CHAT notification click)
-  useEffect(() => {
-    const handler = () => setIsOpen(true);
-    window.addEventListener('open-chat-sheet', handler);
-    return () => window.removeEventListener('open-chat-sheet', handler);
-  }, []);
-
-  // Reset to list view when sheet is closed
+  // Cleanup local state when sheet is closed
   useEffect(() => {
     if (!isOpen) {
-      setViewMode('list');
-      setSelectedRoomId(null);
-      setSelectedRoomName('');
       setInputText('');
       setMentions([]);
       setMentionQuery(null);
 
-      // Cleanup using functional updates to avoid dependency issues
       setAttachedImage((prev) => {
         if (prev?.previewUrl) {
           URL.revokeObjectURL(prev.previewUrl);
@@ -505,7 +491,14 @@ export function ChatRoomListSheet() {
   }, [isOpen]);
 
   return (
-    <Drawer.Root open={isOpen} onOpenChange={setIsOpen} dismissible={true}>
+    <Drawer.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (open) useChatSheetStore.getState().openSheet();
+        else useChatSheetStore.getState().closeSheet();
+      }}
+      dismissible={true}
+    >
       <Drawer.Trigger asChild>
         <button
           type="button"
@@ -533,7 +526,7 @@ export function ChatRoomListSheet() {
               </Drawer.Title>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => useChatSheetStore.getState().closeSheet()}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors -mr-2"
                 aria-label="닫기"
               >
@@ -557,8 +550,8 @@ export function ChatRoomListSheet() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors -mr-2"
+                onClick={() => useChatSheetStore.getState().closeSheet()}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                 aria-label="닫기"
               >
                 <X className="w-5 h-5 text-gray-700" />

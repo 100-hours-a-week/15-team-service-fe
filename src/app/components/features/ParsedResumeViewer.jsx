@@ -24,11 +24,16 @@ const EMPLOYMENT_TYPE_LABELS = {
 };
 
 const EDUCATION_TYPE_LABELS = {
-  BACHELOR: '학사',
+  PRIVATE: '사설교육',
+  HIGH_SCHOOL: '고등학교',
+  COLLEGE_ASSOCIATE: '전문학사',
+  COLLEGE_BACHELOR: '학사',
   MASTER: '석사',
+  PHD: '박사',
+  // legacy keys
+  BACHELOR: '학사',
   DOCTOR: '박사',
   ASSOCIATE: '전문학사',
-  HIGH_SCHOOL: '고졸',
 };
 
 const EDUCATION_STATUS_LABELS = {
@@ -112,11 +117,16 @@ export const ParsedResumeViewer = forwardRef(
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mb-1">
-                        {exp.position}
-                        {exp.department ? ` · ${exp.department}` : ''}
-                        {exp.employmentType
-                          ? ` · ${EMPLOYMENT_TYPE_LABELS[exp.employmentType] || exp.employmentType}`
-                          : ''}
+                        {[
+                          exp.position,
+                          exp.department,
+                          exp.employmentType
+                            ? EMPLOYMENT_TYPE_LABELS[exp.employmentType] ||
+                              exp.employmentType
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                       {exp.responsibilities && (
                         <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
@@ -145,13 +155,18 @@ export const ParsedResumeViewer = forwardRef(
                         </span>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {edu.major}
-                        {edu.educationType
-                          ? ` · ${EDUCATION_TYPE_LABELS[edu.educationType] || edu.educationType}`
-                          : ''}
-                        {edu.status
-                          ? ` · ${EDUCATION_STATUS_LABELS[edu.status] || edu.status}`
-                          : ''}
+                        {[
+                          edu.major,
+                          edu.educationType
+                            ? EDUCATION_TYPE_LABELS[edu.educationType] ||
+                              edu.educationType
+                            : null,
+                          edu.status
+                            ? EDUCATION_STATUS_LABELS[edu.status] || edu.status
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                     </div>
                   ))}
@@ -210,8 +225,9 @@ export const ParsedResumeViewer = forwardRef(
                         )}
                       </div>
                       <p className="text-sm text-gray-600">
-                        {cert.issuer}
-                        {cert.score ? ` · ${cert.score}점` : ''}
+                        {[cert.issuer, cert.score ? `${cert.score}점` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                     </div>
                   ))}

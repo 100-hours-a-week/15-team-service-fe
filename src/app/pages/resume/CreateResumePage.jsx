@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useDialogStore } from '@/app/store/useDialogStore';
+import { useResumeCreationStore } from '@/app/store/useResumeCreationStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
@@ -14,6 +16,33 @@ import { useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
 
 const GENERATION_TIMEOUT_MS = 5 * 60 * 1000 + 30 * 1000; // 5분 30초
 
+function StageStep({ label, isActive, isDone }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
+          isDone
+            ? 'bg-green-400'
+            : isActive
+              ? 'bg-primary animate-pulse'
+              : 'bg-gray-200'
+        }`}
+      />
+      <span
+        className={`text-[10px] transition-colors duration-300 ${
+          isDone
+            ? 'text-green-500'
+            : isActive
+              ? 'text-primary font-medium'
+              : 'text-gray-300'
+        }`}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export function CreateResumePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,6 +51,8 @@ export function CreateResumePage() {
 
   useEffect(() => {
     if (location.state?.fromResumeSetup) {
+      // Coming from ResumeProfileSetupPage — discard any persisted generation state
+      useResumeCreationStore.getState().cancelGeneration();
       navigate(location.pathname, {
         replace: true,
         state: { selectedRepos, masterProfile },
@@ -35,18 +66,66 @@ export function CreateResumePage() {
   const createResumeMutation = useCreateResume();
 
   const [formData, setFormData] = useState({ positionId: null });
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [createdResumeId, setCreatedResumeId] = useState(() => {
-    // ResumeProfileSetupPage에서 네비게이션했을 때만 sessionStorage 무시
-    const fromResumeSetup = location.state?.fromResumeSetup;
-    if (fromResumeSetup) {
-      return null;
-    }
-    // 브라우저 새로고침 - sessionStorage에서 복구
-    return sessionStorage.getItem('generatingResumeId') || null;
-  });
+  const [progressValue, setProgressValue] = useState(0);
+  const isConfirmDialogOpen = useDialogStore(
+    (s) => s.openDialogs['resumeCreateConfirm']
+  );
+  // Restored from sessionStorage on browser refresh via Zustand persist
+  const createdResumeId = useResumeCreationStore((s) => s.generatingResumeId);
+  const generatingStartedAt = useResumeCreationStore(
+    (s) => s.generatingStartedAt
+  );
   const [isClientTimeout, setIsClientTimeout] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // Manage progress bar value based on generation status
+  useEffect(() => {
+    if (createResumeMutation.isPending && !createdResumeId) {
+      setProgressValue(10);
+      return;
+    }
+    if (isRedirecting) {
+      setProgressValue(100);
+      return;
+    }
+    if (!normalizedStatus) {
+      setProgressValue(15);
+      return;
+    }
+    if (normalizedStatus === 'QUEUED') {
+      setProgressValue(20);
+      return;
+    }
+    if (normalizedStatus === 'PROCESSING') {
+      setProgressValue((prev) => Math.max(prev, 35));
+      const id = setInterval(() => {
+        setProgressValue((prev) => {
+          if (prev >= 85) return prev;
+          return prev + 0.4;
+        });
+      }, 3000);
+      return () => clearInterval(id);
+    }
+  }, [
+    createResumeMutation.isPending,
+    createdResumeId,
+    isRedirecting,
+    normalizedStatus,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      useDialogStore.getState().closeDialog('resumeCreateConfirm');
+    };
+  }, []);
+
+  const handleOpenConfirmDialog = useCallback(() => {
+    useDialogStore.getState().openDialog('resumeCreateConfirm');
+  }, []);
+
+  const handleCloseConfirmDialog = useCallback(() => {
+    useDialogStore.getState().closeDialog('resumeCreateConfirm');
+  }, []);
 
   const { data: versionData, isError: isVersionError } = useResumeVersion(
     createdResumeId,
@@ -63,7 +142,6 @@ export function CreateResumePage() {
       retry: 2,
     }
   );
-
   const generationStatus = versionData?.status;
   const normalizedStatus = generationStatus?.toUpperCase();
   const isGenerating =
@@ -79,12 +157,9 @@ export function CreateResumePage() {
   useEffect(() => {
     if (isGenerationSucceeded && !isRedirecting) {
       setIsRedirecting(true);
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
-      sessionStorage.setItem(
-        'resumeCreatedMessage',
-        '프로젝트 요약이 생성되었습니다'
-      );
+      useResumeCreationStore
+        .getState()
+        .completeGeneration('프로젝트 요약이 생성되었습니다');
       setTimeout(() => {
         window.location.href = `/resume/${createdResumeId}`;
       }, 500);
@@ -93,45 +168,37 @@ export function CreateResumePage() {
 
   useEffect(() => {
     if (isGenerationFailed) {
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
+      useResumeCreationStore.getState().cancelGeneration();
     }
   }, [isGenerationFailed]);
 
   useEffect(() => {
     if (isVersionError && createdResumeId) {
-      toast.error('프로젝트 요약 상태를 확인할 수 없습니다');
+      toast.error('이력서 상태를 확인할 수 없습니다');
     }
   }, [isVersionError, createdResumeId]);
 
   useEffect(() => {
     if (!createdResumeId || !isGenerating) return;
+    if (!generatingStartedAt) return;
 
-    const startedAt = sessionStorage.getItem('generatingStartedAt');
-    if (!startedAt) return;
-
-    const elapsed = Date.now() - parseInt(startedAt, 10);
+    const elapsed = Date.now() - generatingStartedAt;
     const remaining = GENERATION_TIMEOUT_MS - elapsed;
 
-    if (remaining <= 0) {
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
-      setCreatedResumeId(null);
+    const timeout = () => {
+      useResumeCreationStore.getState().cancelGeneration();
       setIsClientTimeout(true);
-      toast.error('프로젝트 요약 생성 시간이 초과되었습니다');
+      toast.error('이력서 생성 시간이 초과되었습니다');
+    };
+
+    if (remaining <= 0) {
+      timeout();
       return;
     }
 
-    const timer = setTimeout(() => {
-      sessionStorage.removeItem('generatingResumeId');
-      sessionStorage.removeItem('generatingStartedAt');
-      setCreatedResumeId(null);
-      setIsClientTimeout(true);
-      toast.error('프로젝트 요약 생성 시간이 초과되었습니다');
-    }, remaining);
-
+    const timer = setTimeout(timeout, remaining);
     return () => clearTimeout(timer);
-  }, [createdResumeId, isGenerating]);
+  }, [createdResumeId, isGenerating, generatingStartedAt]);
 
   // 생성 중 브라우저 새로고침/탭 닫기 경고
   useEffect(() => {
@@ -145,12 +212,11 @@ export function CreateResumePage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [createResumeMutation.isPending, isGenerating]);
 
-  // 컴포넌트 unmount 시 sessionStorage 정리 (뒤로가기 등)
+  // 컴포넌트 unmount 시 진행 중 상태 정리 (뒤로가기 등)
   useEffect(() => {
     return () => {
       if (!isGenerating && !createResumeMutation.isPending) {
-        sessionStorage.removeItem('generatingResumeId');
-        sessionStorage.removeItem('generatingStartedAt');
+        useResumeCreationStore.getState().cancelGeneration();
       }
     };
   }, [isGenerating, createResumeMutation.isPending]);
@@ -160,11 +226,11 @@ export function CreateResumePage() {
       toast.error('희망 포지션을 선택해주세요');
       return;
     }
-    setIsConfirmDialogOpen(true);
-  }, [formData.positionId]);
+    handleOpenConfirmDialog();
+  }, [formData.positionId, handleOpenConfirmDialog]);
 
   const handleConfirmGenerate = useCallback(() => {
-    setIsConfirmDialogOpen(false);
+    handleCloseConfirmDialog();
 
     const repoUrls = (location.state?.selectedRepos || []).map(
       (repo) => repo.htmlUrl || `https://github.com/${repo.owner}/${repo.name}`
@@ -178,9 +244,7 @@ export function CreateResumePage() {
       },
       {
         onSuccess: (data) => {
-          setCreatedResumeId(data);
-          sessionStorage.setItem('generatingResumeId', data);
-          sessionStorage.setItem('generatingStartedAt', Date.now().toString());
+          useResumeCreationStore.getState().startGeneration(data);
         },
       }
     );
@@ -189,10 +253,11 @@ export function CreateResumePage() {
     formData.positionId,
     createResumeMutation,
     masterProfile,
+    handleCloseConfirmDialog,
   ]);
 
   const handleRetryGeneration = useCallback(() => {
-    setCreatedResumeId(null);
+    useResumeCreationStore.getState().cancelGeneration();
     setIsClientTimeout(false);
   }, []);
 
@@ -207,19 +272,74 @@ export function CreateResumePage() {
 
     return (
       <div className="min-h-screen flex flex-col">
-        <TopAppBar title="프로젝트 요약 생성 중" />
+        <TopAppBar title="이력서 생성 중" />
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
-            <div className="bg-white rounded-2xl p-8 text-center space-y-4">
-              <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <h3>AI가 프로젝트 요약을 생성 중입니다</h3>
-              <p className="text-sm text-gray-500">{statusMessage}</p>
-              <p className="text-xs text-gray-400">
-                생성이 완료될 때까지 잠시만 기다려주세요.
-              </p>
-              <p className="text-xs text-gray-400">
-                최대 5분이 소요될 수 있습니다.
-              </p>
+            <div className="bg-white rounded-2xl p-8 text-center space-y-6">
+              {/* Animated icon */}
+              {isRedirecting ? (
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              )}
+
+              <h3>
+                {isRedirecting
+                  ? '생성이 완료되었습니다!'
+                  : 'AI가 프로젝트 요약을 생성 중입니다'}
+              </h3>
+
+              {/* Progress bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs text-gray-400">
+                  <span>{statusMessage}</span>
+                  <span>{Math.round(progressValue)}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                      isRedirecting ? 'bg-green-500' : 'bg-primary'
+                    }`}
+                    style={{ width: `${progressValue}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Stage indicators */}
+              <div className="flex items-center justify-center gap-1">
+                <StageStep
+                  label="요청"
+                  isActive={!createdResumeId && createResumeMutation.isPending}
+                  isDone={!!createdResumeId}
+                />
+                <div className="w-6 h-px bg-gray-200" />
+                <StageStep
+                  label="대기"
+                  isActive={normalizedStatus === 'QUEUED'}
+                  isDone={normalizedStatus === 'PROCESSING' || isRedirecting}
+                />
+                <div className="w-6 h-px bg-gray-200" />
+                <StageStep
+                  label="분석"
+                  isActive={normalizedStatus === 'PROCESSING'}
+                  isDone={isRedirecting}
+                />
+                <div className="w-6 h-px bg-gray-200" />
+                <StageStep
+                  label="완료"
+                  isActive={isRedirecting}
+                  isDone={false}
+                />
+              </div>
+
+              {!isRedirecting && (
+                <p className="text-xs text-gray-400">
+                  최대 5분이 소요될 수 있습니다.
+                </p>
+              )}
+
               <Button
                 variant="secondary"
                 onClick={() => navigate('/')}
@@ -236,13 +356,13 @@ export function CreateResumePage() {
 
   if (isGenerationFailed || isClientTimeout) {
     const errorMessage = isClientTimeout
-      ? '프로젝트 요약 생성 시간이 초과되었습니다'
+      ? '이력서 생성 시간이 초과되었습니다'
       : versionData?.errorLog || '알 수 없는 오류가 발생했습니다';
 
     return (
       <div className="min-h-screen flex flex-col">
         <TopAppBar
-          title="프로젝트 요약 생성 실패"
+          title="이력서 생성 실패"
           showBack
           onBack={() => navigate('/')}
           noTruncate
@@ -251,7 +371,7 @@ export function CreateResumePage() {
           <div className="max-w-[390px] w-full">
             <div className="rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
-              <h3>프로젝트 요약 생성에 실패했습니다.</h3>
+              <h3>이력서 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">{errorMessage}</p>
               <div className="flex justify-center">
                 <Button variant="primary" onClick={handleRetryGeneration}>
@@ -273,7 +393,7 @@ export function CreateResumePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <TopAppBar title="프로젝트 요약 생성" showBack />
+      <TopAppBar title="이력서 생성" showBack />
 
       <StepProgress current={1} total={1} />
 
@@ -331,7 +451,7 @@ export function CreateResumePage() {
               onClick={handleNext}
               disabled={!formData.positionId}
             >
-              AI로 프로젝트 요약 생성
+              AI로 이력서 생성
             </Button>
           </div>
         </div>
@@ -341,7 +461,7 @@ export function CreateResumePage() {
 
       <ConfirmDialog
         isOpen={isConfirmDialogOpen}
-        onClose={() => setIsConfirmDialogOpen(false)}
+        onClose={handleCloseConfirmDialog}
         onConfirm={handleConfirmGenerate}
         title="프로젝트 요약을 생성하시겠어요?"
         description="선택한 리포지토리를 분석하여 AI가 프로젝트 요약을 생성합니다."

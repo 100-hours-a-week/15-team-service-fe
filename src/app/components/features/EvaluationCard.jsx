@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import { cn } from '@/app/lib/utils';
 
 /**
@@ -68,17 +69,38 @@ export const EvaluationCard = ({ data, metaLabel, className }) => {
       </h3>
 
       <div className="space-y-4">
-        <EvaluationSection title="총평" titleColor="text-gray-900">
-          <p className="text-sm text-gray-700">{data.summary}</p>
-        </EvaluationSection>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.1 }}
+        >
+          <EvaluationSection title="총평" titleColor="text-gray-900">
+            <p className="text-sm text-gray-700">{data.summary}</p>
+          </EvaluationSection>
+        </motion.div>
 
-        <EvaluationSection title="잘한 점" titleColor="text-[#16A34A]">
-          <BulletList items={data.strengths} bulletColor="text-[#16A34A]" />
-        </EvaluationSection>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.2 }}
+        >
+          <EvaluationSection title="잘한 점" titleColor="text-[#16A34A]">
+            <BulletList items={data.strengths} bulletColor="text-[#16A34A]" />
+          </EvaluationSection>
+        </motion.div>
 
-        <EvaluationSection title="개선점" titleColor="text-[#EF4444]">
-          <BulletList items={data.improvements} bulletColor="text-[#EF4444]" />
-        </EvaluationSection>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.3 }}
+        >
+          <EvaluationSection title="개선점" titleColor="text-[#EF4444]">
+            <BulletList
+              items={data.improvements}
+              bulletColor="text-[#EF4444]"
+            />
+          </EvaluationSection>
+        </motion.div>
       </div>
     </div>
   );

@@ -15,11 +15,16 @@ const EMPLOYMENT_TYPE_LABELS = {
 };
 
 const EDUCATION_TYPE_LABELS = {
-  BACHELOR: '학사',
+  PRIVATE: '사설교육',
+  HIGH_SCHOOL: '고등학교',
+  COLLEGE_ASSOCIATE: '전문학사',
+  COLLEGE_BACHELOR: '학사',
   MASTER: '석사',
+  PHD: '박사',
+  // legacy keys
+  BACHELOR: '학사',
   DOCTOR: '박사',
   ASSOCIATE: '전문학사',
-  HIGH_SCHOOL: '고졸',
 };
 
 const EDUCATION_STATUS_LABELS = {
@@ -41,7 +46,6 @@ const EDUCATION_STATUS_LABELS = {
 export function usePdfExport({
   yamlContent,
   userProfile,
-  positions,
   resumeName,
   resumeProfile,
 }) {
@@ -578,7 +582,6 @@ export function usePdfExport({
     yamlContent,
     pdfUrl,
     userProfile,
-    positions,
     resumeProfile,
   ]);
 

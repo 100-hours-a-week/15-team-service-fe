@@ -70,7 +70,7 @@ function RootLayout() {
                 border: 'none',
                 width: '320px',
                 position: 'absolute',
-                bottom: '20px',
+                bottom: '0px',
                 left: 'calc(47%)',
                 transform: 'translateX(-50%)',
               },

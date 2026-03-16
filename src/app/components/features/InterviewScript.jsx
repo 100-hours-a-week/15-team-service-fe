@@ -1,5 +1,6 @@
 import React from 'react';
-import { cn } from '@/app/lib/utils';
+import { motion } from 'motion/react';
+import { cn, formatKoreanTimestamp } from '@/app/lib/utils';
 
 /**
  * @typedef {import('@/app/types').ScriptEntry} ScriptEntry
@@ -22,7 +23,7 @@ const getSpeakerColor = (speaker) => {
     case '면접관':
       return 'text-gray-900';
     case '유저':
-      return 'text-blue-600';
+      return 'text-gray-900';
     case 'AI':
       return 'text-green-600';
     default:
@@ -36,7 +37,9 @@ const getSpeakerColor = (speaker) => {
 const ScriptEntryItem = React.memo(({ entry }) => (
   <div className="text-sm">
     <p className="text-gray-900">
-      <span className="text-primary font-medium">[{entry.timestamp}]</span>{' '}
+      <span className="text-primary font-medium">
+        [{formatKoreanTimestamp(entry.timestamp)}]
+      </span>{' '}
       <span className={`font-medium ${getSpeakerColor(entry.speaker)}`}>
         {entry.speaker}:
       </span>{' '}
@@ -71,7 +74,14 @@ export const InterviewScript = ({
       <h3 className="mb-4">면접 스크립트</h3>
       <div className="space-y-3 overflow-y-auto" style={{ maxHeight }}>
         {entries.map((entry, idx) => (
-          <ScriptEntryItem key={`${entry.timestamp}-${idx}`} entry={entry} />
+          <motion.div
+            key={`${entry.timestamp}-${idx}`}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: Math.min(idx * 0.05, 0.5) }}
+          >
+            <ScriptEntryItem entry={entry} />
+          </motion.div>
         ))}
       </div>
     </div>
