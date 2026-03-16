@@ -81,6 +81,65 @@ function formatVersionDate(isoStr) {
   return `${diffDays}일 전`;
 }
 
+/**
+ * Mock resume profile data — replace with useResumeProfile(resumeId) when API is ready.
+ * API: GET /resumes/{id}/profile
+ */
+const MOCK_RESUME_PROFILE = {
+  name: '홍길동',
+  profileImageUrl: null,
+  phoneCountryCode: '+82',
+  phoneNumber: '010-1234-5678',
+  introduction:
+    '사용자 경험을 최우선으로 생각하는 프론트엔드 개발자입니다. React 생태계를 기반으로 확장 가능하고 유지보수하기 쉬운 웹 애플리케이션을 개발합니다.',
+  techStacks: [
+    { name: 'React' },
+    { name: 'TypeScript' },
+    { name: 'Next.js' },
+    { name: 'Tailwind CSS' },
+    { name: 'Node.js' },
+  ],
+  experiences: [
+    {
+      companyName: '카카오',
+      position: '프론트엔드 개발자',
+      department: '서비스개발팀',
+      startAt: '2022.03',
+      endAt: null,
+      isCurrentlyWorking: true,
+      employmentType: 'FULL_TIME',
+      responsibilities:
+        '카카오톡 웹 클라이언트 개발 및 유지보수\nReact 기반 컴포넌트 라이브러리 설계 및 구현\n성능 최적화로 LCP 40% 개선',
+    },
+  ],
+  educations: [
+    {
+      educationType: 'BACHELOR',
+      institution: '한국대학교',
+      major: '컴퓨터공학과',
+      status: 'GRADUATED',
+      startAt: '2018.03',
+      endAt: '2022.02',
+    },
+  ],
+  activities: [
+    {
+      title: '카카오테크 부트캠프',
+      organization: '카카오',
+      year: 2024,
+      description: '클라우드 트랙 수료',
+    },
+  ],
+  certificates: [
+    {
+      name: '정보처리기사',
+      score: null,
+      issuer: '한국산업인력공단',
+      issuedAt: '2022.11',
+    },
+  ],
+};
+
 const MOCK_VERSIONS = [
   {
     versionNo: 5,
@@ -186,6 +245,8 @@ export function ResumeViewerPage() {
   // doesn't override hasUnsavedChanges back to true
   const initializedVersionRef = useRef(null);
 
+  const resumeProfile = MOCK_RESUME_PROFILE;
+
   const {
     showPDFViewer,
     pdfPage,
@@ -203,6 +264,7 @@ export function ResumeViewerPage() {
     userProfile,
     positions,
     resumeName: resumeDetail?.name,
+    resumeProfile,
   });
 
   useEffect(() => {
@@ -523,6 +585,7 @@ export function ResumeViewerPage() {
               <ParsedResumeViewer
                 ref={resumeViewerRef}
                 yamlContent={rawContent || yamlContent}
+                resumeProfile={resumeProfile}
               />
             ) : (
               <div className="bg-gray-900 rounded-2xl p-4 overflow-auto max-w-[390px] mx-auto">

@@ -7,10 +7,33 @@ import yaml from 'js-yaml';
 import { toast } from '@/app/lib/toast';
 import { formatPhoneNumber } from '@/app/lib/utils';
 
+const EMPLOYMENT_TYPE_LABELS = {
+  FULL_TIME: '정규직',
+  CONTRACT: '계약직',
+  INTERN: '인턴',
+  FREELANCE: '프리랜서',
+};
+
+const EDUCATION_TYPE_LABELS = {
+  BACHELOR: '학사',
+  MASTER: '석사',
+  DOCTOR: '박사',
+  ASSOCIATE: '전문학사',
+  HIGH_SCHOOL: '고졸',
+};
+
+const EDUCATION_STATUS_LABELS = {
+  GRADUATED: '졸업',
+  ENROLLING: '재학중',
+  DROPPED_OUT: '중퇴',
+  COMPLETED: '수료',
+  GRADUATION_POSTPONED: '졸업유예',
+};
+
 /**
  * Manages all PDF export state and logic for ResumeViewerPage.
  *
- * @param {{ yamlContent: string, userProfile: object, positions: Array, resumeName: string }} params
+ * @param {{ yamlContent: string, userProfile: object, positions: Array, resumeName: string, resumeProfile: object }} params
  * @returns {{ showPDFViewer, pdfPage, pdfNumPages, pdfCanvasEl, isPdfRendering,
  *             pdfRenderError, pdfUrl, handleExportPDF, handleClosePDF,
  *             handleConfirmDownload, setPdfPage }}
@@ -20,6 +43,7 @@ export function usePdfExport({
   userProfile,
   positions,
   resumeName,
+  resumeProfile,
 }) {
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -155,135 +179,203 @@ export function usePdfExport({
   }, []);
 
   const buildResumeHtml = useCallback(
-    (resumeData, userInfo) => {
-      let htmlContent =
-        "<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #111;\">";
+    (resumeData, userInfo, profile) => {
+      const s =
+        "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #111;";
+      let html = `<div style="${s}">`;
 
-      if (userInfo?.name) {
-        const hasPhoto = userInfo.profileImageUrl;
+      // --- Header: name + phone ---
+      const displayName = profile?.name || userInfo?.name;
+      const displayPhone = profile?.phoneNumber || userInfo?.phone;
+      const displayPhoto =
+        profile?.profileImageUrl || userInfo?.profileImageUrl;
 
-        if (hasPhoto) {
-          htmlContent += `
-            <div style="display: flex; align-items: center; margin-bottom: 24px; padding-bottom: 16px;">
+      if (displayName) {
+        if (displayPhoto) {
+          html += `
+            <div style="display: flex; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
               <div style="flex-shrink: 0; margin-right: 20px;">
-                <img
-                  src="${userInfo.profileImageUrl}"
-                  alt="프로필 사진"
-                  style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; display: block;"
-                />
+                <img src="${displayPhoto}" alt="프로필 사진"
+                  style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; display: block;" />
               </div>
               <div style="flex: 1;">
-                <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #111;">${userInfo.name}</h1>
-                ${userInfo.phone ? `<p style="font-size: 16px; margin: 0; color: #333;">${userInfo.phone}</p>` : ''}
+                <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #111;">${displayName}</h1>
+                ${displayPhone ? `<p style="font-size: 14px; margin: 0; color: #555;">${displayPhone}</p>` : ''}
               </div>
-            </div>
-          `;
+            </div>`;
         } else {
-          htmlContent += `
-            <div style="margin-bottom: 24px; padding-bottom: 16px;">
-              <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #111;">${userInfo.name}</h1>
-              ${userInfo.phone ? `<p style="font-size: 16px; margin: 0; color: #333;">${userInfo.phone}</p>` : ''}
-            </div>
-          `;
+          html += `
+            <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+              <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #111;">${displayName}</h1>
+              ${displayPhone ? `<p style="font-size: 14px; margin: 0; color: #555;">${displayPhone}</p>` : ''}
+            </div>`;
         }
       }
 
-      if (resumeData?.name) {
-        htmlContent += `<h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0;">${resumeData.name}</h1>`;
-      }
-      if (resumeData?.position) {
-        htmlContent += `<h2 style="font-size: 16px; font-weight: 500; margin: 0 0 6px 0; color: #111;">${resumeData.position}</h2>`;
-      }
-      if (resumeData?.company) {
-        htmlContent += `<p style="font-size: 12px; margin: 0 0 10px 0; color: #333;">${resumeData.company}</p>`;
-      }
-
-      htmlContent +=
-        '<hr style="border: none; border-top: 1px solid #ccc; margin: 10px 0;">';
-
-      if (resumeData?.profile) {
-        htmlContent +=
-          '<h3 style="font-size: 12px; font-weight: bold; margin: 8px 0 4px 0;">연락처</h3>';
-        htmlContent += '<div style="margin-left: 5px;">';
-        if (resumeData.profile.email) {
-          htmlContent += `<p style="font-size: 10px; margin: 2px 0; color: #111;">이메일: ${resumeData.profile.email}</p>`;
+      if (profile) {
+        // --- 자기소개 ---
+        if (profile.introduction) {
+          html += `<h3 style="font-size: 14px; font-weight: 700; margin: 16px 0 6px 0; color: #2F6BFF;">자기소개</h3>`;
+          html += `<p style="font-size: 12px; margin: 0 0 16px 0; line-height: 1.7; white-space: pre-line; color: #333;">${profile.introduction}</p>`;
         }
-        if (resumeData.profile.phone) {
-          htmlContent += `<p style="font-size: 10px; margin: 2px 0; color: #111;">전화: ${resumeData.profile.phone}</p>`;
+
+        // --- 경력 ---
+        if (profile.experiences?.length > 0) {
+          html += `<h3 style="font-size: 14px; font-weight: 700; margin: 16px 0 8px 0; color: #2F6BFF;">경력</h3>`;
+          profile.experiences.forEach((exp) => {
+            const period = `${exp.startAt} ~ ${exp.isCurrentlyWorking ? '현재' : exp.endAt || ''}`;
+            const typeLabel =
+              EMPLOYMENT_TYPE_LABELS[exp.employmentType] ||
+              exp.employmentType ||
+              '';
+            const subLine = [exp.position, exp.department, typeLabel]
+              .filter(Boolean)
+              .join(' · ');
+            html += `<div style="margin-bottom: 12px;">`;
+            html += `<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+              <span style="font-size: 13px; font-weight: 600; color: #111;">${exp.companyName}</span>
+              <span style="font-size: 11px; color: #888;">${period}</span>
+            </div>`;
+            html += `<p style="font-size: 12px; margin: 0 0 4px 0; color: #555;">${subLine}</p>`;
+            if (exp.responsibilities) {
+              html += `<p style="font-size: 12px; margin: 0; line-height: 1.6; white-space: pre-line; color: #333;">${exp.responsibilities}</p>`;
+            }
+            html += `</div>`;
+          });
         }
-        if (resumeData.profile.github) {
-          htmlContent += `<p style="font-size: 10px; margin: 2px 0; color: #111;">GitHub: ${resumeData.profile.github}</p>`;
+
+        // --- 학력 ---
+        if (profile.educations?.length > 0) {
+          html += `<h3 style="font-size: 14px; font-weight: 700; margin: 16px 0 8px 0; color: #2F6BFF;">학력</h3>`;
+          profile.educations.forEach((edu) => {
+            const period = `${edu.startAt} ~ ${edu.endAt || ''}`;
+            const typeLabel =
+              EDUCATION_TYPE_LABELS[edu.educationType] ||
+              edu.educationType ||
+              '';
+            const statusLabel =
+              EDUCATION_STATUS_LABELS[edu.status] || edu.status || '';
+            const subLine = [edu.major, typeLabel, statusLabel]
+              .filter(Boolean)
+              .join(' · ');
+            html += `<div style="margin-bottom: 10px;">`;
+            html += `<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+              <span style="font-size: 13px; font-weight: 600; color: #111;">${edu.institution}</span>
+              <span style="font-size: 11px; color: #888;">${period}</span>
+            </div>`;
+            html += `<p style="font-size: 12px; margin: 0; color: #555;">${subLine}</p>`;
+            html += `</div>`;
+          });
         }
-        htmlContent += '</div>';
+
+        // --- 기술 스택 (profile) ---
+        if (profile.techStacks?.length > 0) {
+          html += `<h3 style="font-size: 14px; font-weight: 700; margin: 16px 0 6px 0; color: #2F6BFF;">기술 스택</h3>`;
+          html += `<p style="font-size: 12px; margin: 0 0 16px 0; color: #333;">${profile.techStacks.map((t) => t.name).join(', ')}</p>`;
+        }
+
+        // --- 활동 ---
+        if (profile.activities?.length > 0) {
+          html += `<h3 style="font-size: 14px; font-weight: 700; margin: 16px 0 8px 0; color: #2F6BFF;">활동</h3>`;
+          profile.activities.forEach((act) => {
+            html += `<div style="margin-bottom: 8px;">`;
+            html += `<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+              <span style="font-size: 13px; font-weight: 600; color: #111;">${act.title}</span>
+              ${act.year ? `<span style="font-size: 11px; color: #888;">${act.year}</span>` : ''}
+            </div>`;
+            if (act.organization) {
+              html += `<p style="font-size: 12px; margin: 0 0 2px 0; color: #555;">${act.organization}</p>`;
+            }
+            if (act.description) {
+              html += `<p style="font-size: 12px; margin: 0; color: #333;">${act.description}</p>`;
+            }
+            html += `</div>`;
+          });
+        }
+
+        // --- 자격증 ---
+        if (profile.certificates?.length > 0) {
+          html += `<h3 style="font-size: 14px; font-weight: 700; margin: 16px 0 8px 0; color: #2F6BFF;">자격증</h3>`;
+          profile.certificates.forEach((cert) => {
+            html += `<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">`;
+            html += `<div>
+              <span style="font-size: 13px; font-weight: 600; color: #111;">${cert.name}</span>
+              ${cert.issuer ? `<span style="font-size: 12px; color: #555;"> · ${cert.issuer}</span>` : ''}
+              ${cert.score ? `<span style="font-size: 12px; color: #555;"> · ${cert.score}점</span>` : ''}
+            </div>`;
+            if (cert.issuedAt) {
+              html += `<span style="font-size: 11px; color: #888;">${cert.issuedAt}</span>`;
+            }
+            html += `</div>`;
+          });
+        }
+      } else {
+        // No profile — legacy YAML-based rendering for education/experience/skills
+        if (resumeData?.education && Array.isArray(resumeData.education)) {
+          html += `<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 4px 0;">학력</h3>`;
+          html += `<div style="margin-left: 5px;">`;
+          resumeData.education.forEach((edu) => {
+            let eduText = '';
+            if (edu.degree) eduText += edu.degree;
+            if (edu.school) eduText += ` | ${edu.school}`;
+            if (edu.period) eduText += ` | ${edu.period}`;
+            html += `<p style="font-size: 12px; margin: 2px 0; color: #111;">${eduText}</p>`;
+          });
+          html += `</div>`;
+        }
+
+        if (resumeData?.experience && Array.isArray(resumeData.experience)) {
+          html += `<h3 style="font-size: 12px; font-weight: bold; margin: 12px 0 4px 0;">경력</h3>`;
+          html += `<div style="margin-left: 5px;">`;
+          resumeData.experience.forEach((exp) => {
+            let expText = '';
+            if (exp.title) expText += `<strong>${exp.title}</strong>`;
+            if (exp.company) expText += ` | ${exp.company}`;
+            if (exp.period) expText += ` | ${exp.period}`;
+            html += `<p style="font-size: 12px; margin: 4px 0; font-weight: bold; color: #111;">${expText}</p>`;
+            if (exp.description) {
+              html += `<p style="font-size: 12px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(exp.description)}</p>`;
+            }
+          });
+          html += `</div>`;
+        }
+
+        if (resumeData?.skills && Array.isArray(resumeData.skills)) {
+          html += `<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 4px 0;">기술 스택</h3>`;
+          html += `<p style="font-size: 12px; margin-left: 5px; color: #111;">${resumeData.skills.join(', ')}</p>`;
+        }
       }
 
-      if (resumeData?.education && Array.isArray(resumeData.education)) {
-        htmlContent +=
-          '<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 4px 0;">학력</h3>';
-        htmlContent += '<div style="margin-left: 5px;">';
-        resumeData.education.forEach((edu) => {
-          let eduText = '';
-          if (edu.degree) eduText += edu.degree;
-          if (edu.school) eduText += ` | ${edu.school}`;
-          if (edu.period) eduText += ` | ${edu.period}`;
-          htmlContent += `<p style="font-size: 12px; margin: 2px 0; color: #111;">${eduText}</p>`;
-        });
-        htmlContent += '</div>';
-      }
-
-      if (resumeData?.experience && Array.isArray(resumeData.experience)) {
-        htmlContent +=
-          '<h3 style="font-size: 12px; font-weight: bold; margin: 12px 0 4px 0;">경력</h3>';
-        htmlContent += '<div style="margin-left: 5px;">';
-        resumeData.experience.forEach((exp) => {
-          let expText = '';
-          if (exp.title) expText += `<strong>${exp.title}</strong>`;
-          if (exp.company) expText += ` | ${exp.company}`;
-          if (exp.period) expText += ` | ${exp.period}`;
-          htmlContent += `<p style="font-size: 12px; margin: 4px 0; font-weight: bold; color: #111;">${expText}</p>`;
-          if (exp.description) {
-            htmlContent += `<p style="font-size: 12px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(exp.description)}</p>`;
-          }
-        });
-        htmlContent += '</div>';
-      }
-
-      if (resumeData?.skills && Array.isArray(resumeData.skills)) {
-        htmlContent +=
-          '<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 4px 0;">기술 스택</h3>';
-        htmlContent += `<p style="font-size: 12px; margin-left: 5px; color: #111;">${resumeData.skills.join(', ')}</p>`;
-      }
-
+      // --- 프로젝트 (YAML) ---
       if (resumeData?.projects && Array.isArray(resumeData.projects)) {
-        htmlContent +=
-          '<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 18px 0;">프로젝트</h3>';
-        htmlContent += '<div style="margin-left: 5px;">';
+        html += `<h3 style="font-size: 14px; font-weight: bold; margin: 16px 0 8px 0; color: #2F6BFF;">프로젝트</h3>`;
+        html += `<div style="margin-left: 5px;">`;
         resumeData.projects.forEach((project) => {
-          htmlContent += '<div style="margin-bottom: 22px;">';
+          html += `<div style="margin-bottom: 22px;">`;
           let projText = '';
           if (project.name) projText += `<strong>${project.name}</strong>`;
           if (project.period) projText += ` | ${project.period}`;
-          htmlContent += `<p style="font-size: 12px; margin: 14px 0 6px 0; font-weight: bold; color: #111;">${projText}</p>`;
+          html += `<p style="font-size: 12px; margin: 14px 0 6px 0; font-weight: bold; color: #111;">${projText}</p>`;
           if (project.description) {
-            htmlContent += `<p style="font-size: 12px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(project.description)}</p>`;
+            html += `<p style="font-size: 12px; margin: 2px 0 6px 0; white-space: pre-wrap; color: #111;">${formatDescription(project.description)}</p>`;
           }
           const techStack = project.techStack || project.tech_stack;
           if (techStack) {
             const techText = Array.isArray(techStack)
               ? techStack.join(', ')
               : techStack;
-            htmlContent += `<p style="font-size: 11px; margin: 2px 0 8px 0; font-style: italic; color: #333;">기술: ${techText}</p>`;
+            html += `<p style="font-size: 11px; margin: 2px 0 8px 0; font-style: italic; color: #333;">기술: ${techText}</p>`;
           }
           if (project.repoUrl) {
-            htmlContent += `<p style="font-size: 11px; margin: 2px 0 10px 0; color: #333;">${project.repoUrl}</p>`;
+            html += `<p style="font-size: 11px; margin: 2px 0 10px 0; color: #333;">${project.repoUrl}</p>`;
           }
-          htmlContent += '</div>';
+          html += `</div>`;
         });
-        htmlContent += '</div>';
+        html += `</div>`;
       }
 
-      htmlContent += '</div>';
-      return htmlContent;
+      html += `</div>`;
+      return html;
     },
     [formatDescription]
   );
@@ -375,7 +467,11 @@ export function usePdfExport({
         phone: userPhone,
         profileImageUrl: profileImageUrl,
       };
-      const htmlContent = buildResumeHtml(normalizedData, userInfo);
+      const htmlContent = buildResumeHtml(
+        normalizedData,
+        userInfo,
+        resumeProfile
+      );
       const imgData = await htmlToImage(htmlContent);
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -487,6 +583,7 @@ export function usePdfExport({
     pdfUrl,
     userProfile,
     positions,
+    resumeProfile,
   ]);
 
   const handleClosePDF = useCallback(() => {
