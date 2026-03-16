@@ -27,6 +27,9 @@ import { InterviewSummaryPage } from './pages/interview/InterviewSummaryPage';
 import { InterviewDetailPage } from './pages/interview/InterviewDetailPage';
 import { InterviewListPage } from './pages/interview/InterviewListPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ProfileEditPage } from './pages/ProfileEditPage';
+import { ProfileOnboardingPage } from './pages/onboarding/ProfileOnboardingPage';
+import { ResumeProfileSetupPage } from './pages/resume/ResumeProfileSetupPage';
 import { useAuthStatus } from './hooks/queries/useUserQuery';
 
 function RootLayout() {
@@ -151,6 +154,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: '/resume-setup/:id?',
+        element: (
+          <ProtectedRoute>
+            <ResumeProfileSetupPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: '/create-resume',
         element: (
           <ProtectedRoute>
@@ -211,6 +222,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/settings/profile',
+        element: (
+          <ProtectedRoute>
+            <ProfileEditPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/onboarding/profile',
+        element: (
+          <ProtectedRoute>
+            <ProfileOnboardingPage />
           </ProtectedRoute>
         ),
       },

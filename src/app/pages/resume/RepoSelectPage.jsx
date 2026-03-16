@@ -48,7 +48,7 @@ export function RepoSelectPage() {
   }, []);
 
   const handleContinue = useCallback(() => {
-    navigate('/create-resume', {
+    navigate('/resume-setup', {
       state: {
         selectedRepos,
         fromRepoSelect: true,

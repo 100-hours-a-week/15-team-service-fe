@@ -110,6 +110,62 @@ export const RESUME_SORT_LABELS = {
   [RESUME_SORT_OPTIONS.UPDATED_ASC]: '오래된 순',
 };
 
+// Profile Type Maps (Korean UI ↔ Backend Enum)
+// ========================================
+
+export const EMPLOYMENT_TYPE_MAP = {
+  인턴: 'INTERN',
+  계약직: 'CONTRACT',
+  정규직: 'FULL_TIME',
+  '개인 사업': 'SOLE_PROPRIETOR',
+  프리랜서: 'FREELANCE',
+};
+
+export const REVERSE_EMPLOYMENT_TYPE_MAP = Object.fromEntries(
+  Object.entries(EMPLOYMENT_TYPE_MAP).map(([k, v]) => [v, k])
+);
+
+export const EDUCATION_STATUS_MAP = {
+  졸업: 'GRADUATED',
+  '졸업 유예': 'GRADUATION_POSTPONED',
+  '재학 중': 'ENROLLING',
+  중퇴: 'DROPPED_OUT',
+  수료: 'COMPLETED',
+};
+
+export const REVERSE_EDUCATION_STATUS_MAP = Object.fromEntries(
+  Object.entries(EDUCATION_STATUS_MAP).map(([k, v]) => [v, k])
+);
+
+export const EDUCATION_TYPE_MAP = {
+  고등학교: 'HIGH_SCHOOL',
+  '대학교(전문학사)': 'ASSOCIATE',
+  '대학교(학사)': 'BACHELOR',
+  '대학원(석사)': 'MASTER',
+  '대학원(박사)': 'DOCTOR',
+  '사설 교육': 'PRIVATE_INSTITUTE',
+};
+
+export const REVERSE_EDUCATION_TYPE_MAP = Object.fromEntries(
+  Object.entries(EDUCATION_TYPE_MAP).map(([k, v]) => [v, k])
+);
+
+// Country Code Constants
+// ========================================
+
+export const COUNTRY_CODES = [
+  { code: '+82', label: '대한민국 +82' },
+  { code: '+1', label: '미국/캐나다 +1' },
+  { code: '+81', label: '일본 +81' },
+  { code: '+86', label: '중국 +86' },
+  { code: '+852', label: '홍콩 +852' },
+  { code: '+65', label: '싱가포르 +65' },
+  { code: '+44', label: '영국 +44' },
+  { code: '+49', label: '독일 +49' },
+  { code: '+33', label: '프랑스 +33' },
+  { code: '+61', label: '호주 +61' },
+];
+
 // Upload Constants
 // ========================================
 

@@ -10,17 +10,12 @@ import { formatPhoneNumber } from '@/app/lib/utils';
 /**
  * Manages all PDF export state and logic for ResumeViewerPage.
  *
- * @param {{ yamlContent: string, userProfile: object, positions: Array, resumeName: string }} params
+ * @param {{ yamlContent: string, userProfile: object, resumeName: string }} params
  * @returns {{ showPDFViewer, pdfPage, pdfNumPages, pdfCanvasEl, isPdfRendering,
  *             pdfRenderError, pdfUrl, handleExportPDF, handleClosePDF,
  *             handleConfirmDownload, setPdfPage }}
  */
-export function usePdfExport({
-  yamlContent,
-  userProfile,
-  positions,
-  resumeName,
-}) {
+export function usePdfExport({ yamlContent, userProfile, resumeName }) {
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [pdfData, setPdfData] = useState(null);
@@ -328,9 +323,6 @@ export function usePdfExport({
       toast.loading('PDF 생성 중...', { id: 'pdf-loading' });
 
       const userName = userProfile?.name || '';
-      const userPositionId = userProfile?.positionId;
-      const userPositionName =
-        positions.find((p) => p.id === userPositionId)?.name || '';
       const userPhone = userProfile?.phone
         ? formatPhoneNumber(userProfile.phone)
         : null;
@@ -371,7 +363,6 @@ export function usePdfExport({
           : resumeData;
       const userInfo = {
         name: userName,
-        position: userPositionName,
         phone: userPhone,
         profileImageUrl: profileImageUrl,
       };
@@ -480,14 +471,7 @@ export function usePdfExport({
         error instanceof Error ? error.message : String(error);
       toast.error(`PDF 생성 중 오류가 발생했습니다: ${errorMessage}`);
     }
-  }, [
-    buildResumeHtml,
-    htmlToImage,
-    yamlContent,
-    pdfUrl,
-    userProfile,
-    positions,
-  ]);
+  }, [buildResumeHtml, htmlToImage, yamlContent, pdfUrl, userProfile]);
 
   const handleClosePDF = useCallback(() => {
     if (pdfUrl) {

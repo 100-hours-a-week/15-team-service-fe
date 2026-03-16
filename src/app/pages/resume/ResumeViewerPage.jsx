@@ -22,7 +22,6 @@ import {
   useResumeVersion,
 } from '@/app/hooks/queries/useResumeQueries';
 import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
-import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
 import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
 import { usePdfExport } from '@/app/hooks/usePdfExport';
 
@@ -84,7 +83,6 @@ export function ResumeViewerPage() {
   } = useResumeDetail(resumeId);
 
   const { data: userProfile } = useUserProfile();
-  const { data: positions = [] } = usePositions();
 
   const currentVersionNo = resumeDetail?.currentVersionNo || 1;
 
@@ -122,7 +120,6 @@ export function ResumeViewerPage() {
   } = usePdfExport({
     yamlContent,
     userProfile,
-    positions,
     resumeName: resumeDetail?.name,
   });
 
