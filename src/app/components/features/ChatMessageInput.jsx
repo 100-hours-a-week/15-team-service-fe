@@ -32,6 +32,10 @@ const getSafeImageSrc = (url) => {
  *   isUploading: boolean,
  *   isConnected: boolean,
  *   maxLength: number,
+ *   textareaRef: React.RefObject,
+ *   mentionQuery: string | null,
+ *   participants: Array<{ userId: number, label: string }>,
+ *   onMentionSelect: (participant: { userId: number, label: string }) => void,
  * }} props
  */
 export function ChatMessageInput({
@@ -47,9 +51,23 @@ export function ChatMessageInput({
   isUploading,
   isConnected,
   maxLength,
+  textareaRef,
+  mentionQuery,
+  participants,
+  onMentionSelect,
 }) {
+  const filteredParticipants =
+    mentionQuery === null
+      ? []
+      : participants.filter(
+          (p) =>
+            mentionQuery === '' ||
+            p.label.includes(mentionQuery) ||
+            p.label.replace('익명', '').startsWith(mentionQuery)
+        );
+
   return (
-    <div className="border-t border-gray-200 px-5 py-4">
+    <div className="border-t border-gray-200 px-5 py-4 relative">
       <input
         ref={attachFileInputRef}
         type="file"
@@ -76,8 +94,28 @@ export function ChatMessageInput({
         </div>
       )}
 
+      {/* Mention Dropdown */}
+      {filteredParticipants.length > 0 && (
+        <div className="absolute bottom-full left-5 right-5 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-36 overflow-y-auto z-10">
+          {filteredParticipants.map((p) => (
+            <button
+              key={p.userId}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onMentionSelect(p);
+              }}
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+            >
+              @{p.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
         <textarea
+          ref={textareaRef}
           value={inputText}
           onChange={(e) => {
             if (e.target.value.length > maxLength) {

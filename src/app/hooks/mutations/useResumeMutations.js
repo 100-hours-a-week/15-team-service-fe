@@ -7,7 +7,10 @@ import {
   renameResume,
   saveResumeVersion,
   deleteResume,
+  createResumeProfile,
+  updateResumeProfile,
 } from '@/app/api/endpoints/resumes';
+import { resumeKeys } from '../queries/useResumeQueries';
 
 export function useCreateResume() {
   const queryClient = useQueryClient();
@@ -15,7 +18,7 @@ export function useCreateResume() {
   return useMutation({
     mutationFn: createResume,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+      queryClient.invalidateQueries({ queryKey: resumeKeys.all });
     },
     onError: (error) => {
       const errorCode = error.response?.data?.code;
@@ -53,7 +56,7 @@ export function useRenameResume() {
   return useMutation({
     mutationFn: ({ resumeId, name }) => renameResume(resumeId, name),
     onSuccess: (_, { resumeId }) => {
-      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+      queryClient.invalidateQueries({ queryKey: resumeKeys.all });
       queryClient.invalidateQueries({ queryKey: ['resume', resumeId] });
       toast.success('이력서명이 수정되었습니다.');
     },
@@ -81,7 +84,7 @@ export function useSaveResumeVersion() {
     mutationFn: ({ resumeId, versionNo }) =>
       saveResumeVersion(resumeId, versionNo),
     onSuccess: (_, { resumeId, versionNo }) => {
-      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+      queryClient.invalidateQueries({ queryKey: resumeKeys.all });
       queryClient.invalidateQueries({ queryKey: ['resume', resumeId] });
       queryClient.invalidateQueries({
         queryKey: ['resume', resumeId, 'version', versionNo],
@@ -110,7 +113,7 @@ export function useDeleteResume() {
   return useMutation({
     mutationFn: deleteResume,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resumes'] });
+      queryClient.invalidateQueries({ queryKey: resumeKeys.all });
       toast.success('이력서가 삭제되었습니다.');
     },
     onError: (error) => {
@@ -125,6 +128,52 @@ export function useDeleteResume() {
       }
     },
   });
+}
+
+/**
+ * Hook for managing resume profile (create/update)
+ * @returns {Object} { createMutation, updateMutation }
+ */
+export function useResumeProfileMutations() {
+  const queryClient = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: createResumeProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: resumeKeys.all });
+      toast.success('이력서 프로필이 생성되었습니다.');
+    },
+    onError: (error) => {
+      const errorCode = error.response?.data?.code;
+      if (errorCode === 'RESUME_PROFILE_DUPLICATE_NAME') {
+        toast.error('동일한 이름의 이력서가 이미 존재합니다.');
+      } else if (errorCode === 'INVALID_RESUME_PROFILE_INPUT') {
+        toast.error('입력 형식이 올바르지 않습니다.');
+      } else {
+        toast.error('이력서 프로필 생성에 실패했습니다.');
+      }
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ resumeId, data }) => updateResumeProfile(resumeId, data),
+    onSuccess: (_, { resumeId }) => {
+      queryClient.invalidateQueries({ queryKey: resumeKeys.profile(resumeId) });
+      toast.success('이력서 프로필이 수정되었습니다.');
+    },
+    onError: (error) => {
+      const errorCode = error.response?.data?.code;
+      if (errorCode === 'RESUME_404') {
+        toast.error('이력서를 찾을 수 없습니다.');
+      } else if (errorCode === 'INVALID_RESUME_PROFILE_INPUT') {
+        toast.error('입력 형식이 올바르지 않습니다.');
+      } else {
+        toast.error('이력서 프로필 수정에 실패했습니다.');
+      }
+    },
+  });
+
+  return { createMutation, updateMutation };
 }
 
 /**

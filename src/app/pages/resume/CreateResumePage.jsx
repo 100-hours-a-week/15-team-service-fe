@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDialogStore } from '@/app/store/useDialogStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
@@ -10,7 +10,6 @@ import { StepProgress } from '../../components/common/StepProgress';
 import { SelectGrid } from '../../components/common/SelectGrid';
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import { usePositions } from '@/app/hooks/queries/usePositionsQuery';
-// import { useCompanies } from '@/app/hooks/queries/useCompaniesQuery';
 import { useCreateResume } from '@/app/hooks/mutations/useResumeMutations';
 import { useResumeVersion } from '@/app/hooks/queries/useResumeQueries';
 
@@ -19,16 +18,14 @@ const GENERATION_TIMEOUT_MS = 5 * 60 * 1000 + 30 * 1000; // 5분 30초
 export function CreateResumePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const selectedRepos = useMemo(
-    () => location.state?.selectedRepos || [],
-    [location.state?.selectedRepos]
-  );
+  const selectedRepos = location.state?.selectedRepos || [];
+  const masterProfile = location.state?.masterProfile || null;
 
   useEffect(() => {
-    if (location.state?.fromRepoSelect) {
+    if (location.state?.fromResumeSetup) {
       navigate(location.pathname, {
         replace: true,
-        state: { selectedRepos },
+        state: { selectedRepos, masterProfile },
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -36,22 +33,16 @@ export function CreateResumePage() {
 
   const { data: positions = [], isLoading: isLoadingPositions } =
     usePositions();
-  // const { data: companies = [], isLoading: isLoadingCompanies } = useCompanies();
   const createResumeMutation = useCreateResume();
 
-  const [step] = useState(1);
-  const [formData, setFormData] = useState({
-    positionId: null,
-    // companyId: null, // v1: company selection disabled
-  });
+  const [formData, setFormData] = useState({ positionId: null });
   const isConfirmDialogOpen = useDialogStore(
     (s) => s.openDialogs['resumeCreateConfirm']
   );
   const [createdResumeId, setCreatedResumeId] = useState(() => {
-    // RepoSelectPage에서 네비게이션했을 때만 sessionStorage 무시
-    const fromRepoSelect = location.state?.fromRepoSelect;
-    if (fromRepoSelect) {
-      // 새로운 이력서 생성 - sessionStorage 무시
+    // ResumeProfileSetupPage에서 네비게이션했을 때만 sessionStorage 무시
+    const fromResumeSetup = location.state?.fromResumeSetup;
+    if (fromResumeSetup) {
       return null;
     }
     // 브라우저 새로고침 - sessionStorage에서 복구
@@ -73,6 +64,7 @@ export function CreateResumePage() {
   const handleCloseConfirmDialog = useCallback(() => {
     useDialogStore.getState().closeDialog('resumeCreateConfirm');
   }, []);
+
 
   const { data: versionData, isError: isVersionError } = useResumeVersion(
     createdResumeId,
@@ -124,7 +116,6 @@ export function CreateResumePage() {
     }
   }, [isGenerationFailed]);
 
-  // API 에러 시 (이력서가 없거나 조회 실패) sessionStorage 정리
   useEffect(() => {
     if (isVersionError && createdResumeId) {
       toast.error('프로젝트 요약 상태를 확인할 수 없습니다');
@@ -141,7 +132,6 @@ export function CreateResumePage() {
     const remaining = GENERATION_TIMEOUT_MS - elapsed;
 
     if (remaining <= 0) {
-      // 이미 타임아웃됨
       sessionStorage.removeItem('generatingResumeId');
       sessionStorage.removeItem('generatingStartedAt');
       setCreatedResumeId(null);
@@ -176,7 +166,6 @@ export function CreateResumePage() {
   // 컴포넌트 unmount 시 sessionStorage 정리 (뒤로가기 등)
   useEffect(() => {
     return () => {
-      // 생성 진행 중이 아닐 때만 정리 (새로고침 복구 기능 보존)
       if (!isGenerating && !createResumeMutation.isPending) {
         sessionStorage.removeItem('generatingResumeId');
         sessionStorage.removeItem('generatingStartedAt');
@@ -195,7 +184,7 @@ export function CreateResumePage() {
   const handleConfirmGenerate = useCallback(() => {
     handleCloseConfirmDialog();
 
-    const repoUrls = selectedRepos.map(
+    const repoUrls = (location.state?.selectedRepos || []).map(
       (repo) => repo.htmlUrl || `https://github.com/${repo.owner}/${repo.name}`
     );
 
@@ -203,7 +192,7 @@ export function CreateResumePage() {
       {
         repoUrls,
         positionId: formData.positionId,
-        // companyId: formData.companyId, // v1: company selection disabled
+        masterProfile,
       },
       {
         onSuccess: (data) => {
@@ -214,9 +203,10 @@ export function CreateResumePage() {
       }
     );
   }, [
-    selectedRepos,
+    location.state?.selectedRepos,
     formData.positionId,
     createResumeMutation,
+    masterProfile,
     handleCloseConfirmDialog,
   ]);
 
@@ -299,15 +289,12 @@ export function CreateResumePage() {
   const selectedPositionName = positions.find(
     (p) => p.id === formData.positionId
   )?.name;
-  // const companyItems = ['미지정', ...companies.map((c) => c.name)];
-  // const selectedCompanyName =
-  //   companies.find((c) => c.id === formData.companyId)?.name || '미지정';
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <TopAppBar title="프로젝트 요약 생성" showBack />
 
-      <StepProgress current={step} total={1} />
+      <StepProgress current={1} total={1} />
 
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto">
@@ -326,100 +313,46 @@ export function CreateResumePage() {
             </div>
           )}
 
-          {step === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="mb-2">희망 포지션을 선택하세요.</h2>
-                <p className="text-sm text-gray-600">
-                  프로젝트 요약에 맞춤형 내용이 생성됩니다.
-                </p>
-              </div>
-
-              {isLoadingPositions ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="h-12 bg-gray-200 rounded-xl animate-pulse"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <SelectGrid
-                  items={positionItems}
-                  selected={selectedPositionName || ''}
-                  onSelect={(posName) => {
-                    const position = positions.find((p) => p.name === posName);
-                    setFormData({
-                      ...formData,
-                      positionId: position?.id || null,
-                    });
-                  }}
-                />
-              )}
-
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={handleNext}
-                disabled={!formData.positionId}
-              >
-                AI로 프로젝트 요약 생성
-              </Button>
+          <div className="space-y-6">
+            <div>
+              <h2 className="mb-2">희망 포지션을 선택하세요.</h2>
+              <p className="text-sm text-gray-600">
+                프로젝트 요약에 맞춤형 내용이 생성됩니다.
+              </p>
             </div>
-          )}
 
-          {/*
-            v1: company selection disabled
-
-          {step === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="mb-2">희망 기업을 선택하세요</h2>
-                <p className="text-sm text-gray-600">
-                  선택사항입니다. 미지정으로 진행할 수 있어요
-                </p>
+            {isLoadingPositions ? (
+              <div className="grid grid-cols-2 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="h-12 bg-gray-200 rounded-xl animate-pulse"
+                  />
+                ))}
               </div>
+            ) : (
+              <SelectGrid
+                items={positionItems}
+                selected={selectedPositionName || ''}
+                onSelect={(posName) => {
+                  const position = positions.find((p) => p.name === posName);
+                  setFormData({
+                    ...formData,
+                    positionId: position?.id || null,
+                  });
+                }}
+              />
+            )}
 
-              {isLoadingCompanies ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="h-12 bg-gray-200 rounded-xl animate-pulse"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <SelectGrid
-                  items={companyItems}
-                  selected={selectedCompanyName}
-                  onSelect={(companyName) => {
-                    if (companyName === '미지정') {
-                      setFormData({ ...formData, companyId: null });
-                      return;
-                    }
-                    const company = companies.find((c) => c.name === companyName);
-                    setFormData({ ...formData, companyId: company?.id || null });
-                  }}
-                />
-              )}
-
-              <div className="space-y-3">
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={handleOpenConfirmDialog}
-                >
-                  AI로 이력서 생성
-                </Button>
-                <Button variant="ghost" fullWidth onClick={() => setStep(1)}>
-                  이전
-                </Button>
-              </div>
-            </div>
-          )}
-          */}
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={handleNext}
+              disabled={!formData.positionId}
+            >
+              AI로 프로젝트 요약 생성
+            </Button>
+          </div>
         </div>
       </div>
 
