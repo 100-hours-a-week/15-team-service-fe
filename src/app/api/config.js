@@ -1,10 +1,17 @@
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const BASE_URL = rawBaseUrl.replace(/\/+$/, '');
 
+const rawChatBaseUrl = import.meta.env.VITE_CHAT_API_BASE_URL || BASE_URL;
+const CHAT_BASE_URL = rawChatBaseUrl.replace(/\/+$/, '');
+
 export const API_CONFIG = {
   BASE_URL,
   WS_URL:
     BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws',
+  CHAT_BASE_URL,
+  CHAT_WS_URL:
+    CHAT_BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://') +
+    '/ws',
   ENDPOINTS: {
     // Auth
     GITHUB_LOGIN_URL: '/auth/github/loginUrl',
@@ -21,6 +28,8 @@ export const API_CONFIG = {
     // Resumes
     RESUMES: '/resumes',
     RESUME_BY_ID: (id) => `/resumes/${id}`,
+    RESUME_PROFILE: '/resumes/profile',
+    RESUME_PROFILE_BY_ID: (id) => `/resumes/${id}/profile`,
     RESUME_RENAME: (id) => `/resumes/${id}/name`,
     RESUME_VERSION: (id, versionNo) => `/resumes/${id}/versions/${versionNo}`,
     RESUME_AI_CHAT: (id) => `/resumes/${id}/chat`,

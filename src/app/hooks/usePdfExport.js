@@ -420,9 +420,6 @@ export function usePdfExport({
       toast.loading('PDF 생성 중...', { id: 'pdf-loading' });
 
       const userName = userProfile?.name || '';
-      const userPositionId = userProfile?.positionId;
-      const userPositionName =
-        positions.find((p) => p.id === userPositionId)?.name || '';
       const userPhone = userProfile?.phone
         ? formatPhoneNumber(userProfile.phone)
         : null;
@@ -463,7 +460,6 @@ export function usePdfExport({
           : resumeData;
       const userInfo = {
         name: userName,
-        position: userPositionName,
         phone: userPhone,
         profileImageUrl: profileImageUrl,
       };

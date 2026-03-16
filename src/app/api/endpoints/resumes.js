@@ -104,3 +104,64 @@ export const editResume = async (resumeId, message) => {
   );
   return response.data.data;
 };
+
+/**
+ * Fetch master resume profile (base template for new resumes)
+ * @returns {Promise<Object>} Master profile data
+ */
+export const fetchMasterProfile = async () => {
+  const response = await apiClient.get(API_CONFIG.ENDPOINTS.RESUME_PROFILE);
+  return response.data.data;
+};
+
+/**
+ * Update master resume profile
+ * @param {Object} data - Master profile data
+ * @returns {Promise<Object>} Updated master profile data
+ */
+export const updateMasterProfile = async (data) => {
+  const response = await mutatingClient.put(
+    API_CONFIG.ENDPOINTS.RESUME_PROFILE,
+    data
+  );
+  return response.data.data;
+};
+
+/**
+ * Fetch resume profile data (8.3)
+ * @param {number} resumeId - Resume ID
+ * @returns {Promise<Object>} Resume profile data
+ */
+export const fetchResumeProfile = async (resumeId) => {
+  const response = await apiClient.get(
+    API_CONFIG.ENDPOINTS.RESUME_PROFILE_BY_ID(resumeId)
+  );
+  return response.data.data;
+};
+
+/**
+ * Create a new resume profile (8.1)
+ * @param {Object} data - Profile data
+ * @returns {Promise<{resumeId: number}>}
+ */
+export const createResumeProfile = async (data) => {
+  const response = await mutatingClient.post(
+    API_CONFIG.ENDPOINTS.RESUME_PROFILE,
+    data
+  );
+  return response.data.data;
+};
+
+/**
+ * Update an existing resume profile (8.2)
+ * @param {number} resumeId - Resume ID
+ * @param {Object} data - Profile data
+ * @returns {Promise<{resumeId: number, updatedAt: string}>}
+ */
+export const updateResumeProfile = async (resumeId, data) => {
+  const response = await mutatingClient.put(
+    API_CONFIG.ENDPOINTS.RESUME_PROFILE_BY_ID(resumeId),
+    data
+  );
+  return response.data.data;
+};
