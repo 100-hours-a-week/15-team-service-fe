@@ -3,7 +3,7 @@ import { useDialogStore } from '@/app/store/useDialogStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '../../components/common/Button';
-import { cn } from '../../lib/utils';
+import { cn, formatKoreanTimestamp } from '../../lib/utils';
 import { useInterviewSSE } from '@/app/hooks/useInterviewSSE';
 import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import {
@@ -563,7 +563,7 @@ export function InterviewSessionPage() {
                 <p
                   className={`text-xs ${msg.type === 'question' ? 'text-gray-500' : 'text-blue-100'}`}
                 >
-                  {msg.timestamp}
+                  {formatKoreanTimestamp(msg.timestamp)}
                 </p>
               </div>
             </div>

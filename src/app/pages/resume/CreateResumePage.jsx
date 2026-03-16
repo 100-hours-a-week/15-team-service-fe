@@ -112,7 +112,7 @@ export function CreateResumePage() {
 
   useEffect(() => {
     if (isVersionError && createdResumeId) {
-      toast.error('프로젝트 요약 상태를 확인할 수 없습니다');
+      toast.error('이력서 상태를 확인할 수 없습니다');
     }
   }, [isVersionError, createdResumeId]);
 
@@ -126,7 +126,7 @@ export function CreateResumePage() {
     const timeout = () => {
       useResumeCreationStore.getState().cancelGeneration();
       setIsClientTimeout(true);
-      toast.error('프로젝트 요약 생성 시간이 초과되었습니다');
+      toast.error('이력서 생성 시간이 초과되었습니다');
     };
 
     if (remaining <= 0) {
@@ -210,7 +210,7 @@ export function CreateResumePage() {
 
     return (
       <div className="min-h-screen flex flex-col">
-        <TopAppBar title="프로젝트 요약 생성 중" />
+        <TopAppBar title="이력서 생성 중" />
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
             <div className="bg-white rounded-2xl p-8 text-center space-y-4">
@@ -239,13 +239,13 @@ export function CreateResumePage() {
 
   if (isGenerationFailed || isClientTimeout) {
     const errorMessage = isClientTimeout
-      ? '프로젝트 요약 생성 시간이 초과되었습니다'
+      ? '이력서 생성 시간이 초과되었습니다'
       : versionData?.errorLog || '알 수 없는 오류가 발생했습니다';
 
     return (
       <div className="min-h-screen flex flex-col">
         <TopAppBar
-          title="프로젝트 요약 생성 실패"
+          title="이력서 생성 실패"
           showBack
           onBack={() => navigate('/')}
           noTruncate
@@ -254,7 +254,7 @@ export function CreateResumePage() {
           <div className="max-w-[390px] w-full">
             <div className="rounded-2xl p-8 text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
-              <h3>프로젝트 요약 생성에 실패했습니다.</h3>
+              <h3>이력서 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">{errorMessage}</p>
               <div className="flex justify-center">
                 <Button variant="primary" onClick={handleRetryGeneration}>
@@ -276,7 +276,7 @@ export function CreateResumePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <TopAppBar title="프로젝트 요약 생성" showBack />
+      <TopAppBar title="이력서 생성" showBack />
 
       <StepProgress current={1} total={1} />
 
@@ -334,7 +334,7 @@ export function CreateResumePage() {
               onClick={handleNext}
               disabled={!formData.positionId}
             >
-              AI로 프로젝트 요약 생성
+              AI로 이력서 생성
             </Button>
           </div>
         </div>

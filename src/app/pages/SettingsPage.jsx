@@ -445,7 +445,7 @@ export function SettingsPage() {
               <div className="flex-1 pr-4">
                 <p className="font-medium text-sm mb-1">알림 받기</p>
                 <p className="text-xs text-gray-600">
-                  프로젝트 요약 생성 및 수정 알림을 받을 수 있습니다.
+                  이력서 생성 및 수정 알림을 받을 수 있습니다.
                 </p>
               </div>
               <div className="relative inline-block w-12 h-7 flex-shrink-0">

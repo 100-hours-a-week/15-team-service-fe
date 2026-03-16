@@ -15,7 +15,7 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
  * const createdResumeId = useResumeCreationStore(s => s.generatingResumeId)
  *
  * // On success redirect
- * useResumeCreationStore.getState().completeGeneration('프로젝트 요약이 생성되었습니다')
+ * useResumeCreationStore.getState().completeGeneration('이력서가 생성되었습니다')
  *
  * // Read and clear message (in ResumeViewerPage)
  * const message = useResumeCreationStore(s => s.resumeCreatedMessage)

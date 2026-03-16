@@ -96,7 +96,7 @@ export function HomePage() {
   const debouncedKeyword = useDebounce(searchKeyword, 300);
   const [sortBy, setSortBy] = useState('UPDATED_DESC');
 
-  // 프로젝트 요약 생성 완료 메시지 표시
+  // 이력서 생성 완료 메시지 표시
   useEffect(() => {
     const message = location.state?.toastMessage;
     if (message) {
@@ -183,7 +183,7 @@ export function HomePage() {
       <div className="px-5 py-6">
         <div className="max-w-[390px] mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <h3>내 프로젝트 요약</h3>
+            <h3>내 이력서</h3>
             <Button
               variant="ghost"
               onClick={() => navigate('/repo-select')}
@@ -202,7 +202,7 @@ export function HomePage() {
                 type="text"
                 value={searchKeyword}
                 onChange={handleSearchChange}
-                placeholder="프로젝트 요약 검색"
+                placeholder="이력서 검색"
                 maxLength={30}
                 className="w-full min-h-[44px] pl-10 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
@@ -275,7 +275,7 @@ export function HomePage() {
                     variant="primary"
                     onClick={() => navigate('/repo-select')}
                   >
-                    프로젝트 요약 생성
+                    이력서 생성
                   </Button>
                 </>
               )}
@@ -418,21 +418,18 @@ const ResumeCard = React.memo(({ resume }) => {
       <div className="flex gap-2">
         <Button
           variant="secondary"
-          className="flex-1"
+          className="flex-1 px-3 text-sm"
           onClick={handleViewResume}
         >
-          <FileText className="w-4 h-4" strokeWidth={1.5} />
-          <span className="flex flex-col leading-tight">
-            <span>프로젝트</span>
-            <span>요약 보기</span>
-          </span>
+          <FileText className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+          이력서 보기
         </Button>
         <Button
           variant="primary"
-          className="flex-1"
+          className="flex-1 px-3 text-sm"
           onClick={handleStartInterview}
         >
-          <Mic className="w-4 h-4" strokeWidth={1.5} />
+          <Mic className="w-5 h-5 shrink-0" strokeWidth={1.5} />
           모의 면접
         </Button>
       </div>
