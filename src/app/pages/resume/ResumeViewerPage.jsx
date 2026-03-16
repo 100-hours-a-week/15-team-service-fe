@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useParams, useBlocker, useNavigate } from 'react-router-dom';
 import yaml from 'js-yaml';
 import {
@@ -8,13 +8,16 @@ import {
   AlertCircle,
   X,
   RefreshCw,
+  History,
 } from 'lucide-react';
+import { Drawer } from 'vaul';
 import { toast } from '@/app/lib/toast';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
 import { ChatbotBottomSheet } from '../../components/features/ChatbotBottomSheet';
 import { ParsedResumeViewer } from '../../components/features/ParsedResumeViewer';
 import { UnsavedChangesDialog } from '../../components/modals/UnsavedChangesDialog';
+import { ConfirmDialog } from '../../components/modals/ConfirmDialog';
 import { Button } from '../../components/common/Button';
 import { useChatbot } from '@/app/hooks/useChatbot';
 import {
@@ -69,6 +72,137 @@ function normalizeResumeContent(content) {
   return { ...content, projects: normalizedProjects };
 }
 
+function formatVersionDate(isoStr) {
+  const diffDays = Math.floor(
+    (Date.now() - new Date(isoStr)) / (1000 * 60 * 60 * 24)
+  );
+  if (diffDays === 0) return '오늘';
+  if (diffDays === 1) return '어제';
+  return `${diffDays}일 전`;
+}
+
+/**
+ * Mock resume profile data — replace with useResumeProfile(resumeId) when API is ready.
+ * API: GET /resumes/{id}/profile
+ */
+const MOCK_RESUME_PROFILE = {
+  name: '홍길동',
+  profileImageUrl: null,
+  phoneCountryCode: '+82',
+  phoneNumber: '010-1234-5678',
+  introduction:
+    '사용자 경험을 최우선으로 생각하는 프론트엔드 개발자입니다. React 생태계를 기반으로 확장 가능하고 유지보수하기 쉬운 웹 애플리케이션을 개발합니다.',
+  techStacks: [
+    { name: 'React' },
+    { name: 'TypeScript' },
+    { name: 'Next.js' },
+    { name: 'Tailwind CSS' },
+    { name: 'Node.js' },
+  ],
+  experiences: [
+    {
+      companyName: '카카오',
+      position: '프론트엔드 개발자',
+      department: '서비스개발팀',
+      startAt: '2022.03',
+      endAt: null,
+      isCurrentlyWorking: true,
+      employmentType: 'FULL_TIME',
+      responsibilities:
+        '카카오톡 웹 클라이언트 개발 및 유지보수\nReact 기반 컴포넌트 라이브러리 설계 및 구현\n성능 최적화로 LCP 40% 개선',
+    },
+  ],
+  educations: [
+    {
+      educationType: 'BACHELOR',
+      institution: '한국대학교',
+      major: '컴퓨터공학과',
+      status: 'GRADUATED',
+      startAt: '2018.03',
+      endAt: '2022.02',
+    },
+  ],
+  activities: [
+    {
+      title: '카카오테크 부트캠프',
+      organization: '카카오',
+      year: 2024,
+      description: '클라우드 트랙 수료',
+    },
+  ],
+  certificates: [
+    {
+      name: '정보처리기사',
+      score: null,
+      issuer: '한국산업인력공단',
+      issuedAt: '2022.11',
+    },
+  ],
+};
+
+const MOCK_VERSIONS = [
+  {
+    versionNo: 5,
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    yamlContent:
+      'techStack:\n  - React\n  - TypeScript\n  - Tailwind CSS v4\nprojects:\n  - name: CommitMe\n    description:\n      - 이력서 관리 및 면접 준비 플랫폼 개발\n      - React Query로 서버 상태 관리\n    techStack: React, Node.js, PostgreSQL',
+  },
+  {
+    versionNo: 4,
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    yamlContent:
+      'techStack:\n  - React\n  - TypeScript\n  - Tailwind CSS\nprojects:\n  - name: CommitMe\n    description:\n      - 이력서 관리 플랫폼 개발\n      - Zustand로 상태 관리\n    techStack: React, Node.js',
+  },
+  {
+    versionNo: 3,
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    yamlContent:
+      'techStack:\n  - React\n  - JavaScript\n  - CSS\nprojects:\n  - name: CommitMe\n    description:\n      - 이력서 관리 플랫폼 초기 개발\n    techStack: React, Express',
+  },
+  {
+    versionNo: 2,
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    yamlContent:
+      'techStack:\n  - React\n  - JavaScript\nprojects:\n  - name: Portfolio\n    description:\n      - 포트폴리오 사이트 제작\n    techStack: React',
+  },
+  {
+    versionNo: 1,
+    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    yamlContent:
+      'techStack:\n  - HTML\n  - CSS\n  - JavaScript\nprojects:\n  - name: Portfolio\n    description:\n      - 최초 포트폴리오 사이트 제작\n    techStack: Vanilla JS',
+  },
+];
+
+/**
+ * Line-by-line diff between two YAML content strings.
+ * Returns array of { type: 'added'|'removed'|'same', line, key }
+ * Compares selectedVersion (old) vs current yamlContent (new).
+ */
+function computeDiff(oldContent, newContent) {
+  const oldLines = (oldContent || '').split('\n');
+  const newLines = (newContent || '').split('\n');
+  const maxLen = Math.max(oldLines.length, newLines.length);
+  const result = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    const oldLine = oldLines[i];
+    const newLine = newLines[i];
+
+    if (oldLine === undefined) {
+      result.push({ type: 'added', line: newLine, key: `a-${i}` });
+    } else if (newLine === undefined) {
+      result.push({ type: 'removed', line: oldLine, key: `r-${i}` });
+    } else if (oldLine !== newLine) {
+      result.push({ type: 'removed', line: oldLine, key: `r-${i}` });
+      result.push({ type: 'added', line: newLine, key: `ad-${i}` });
+    } else {
+      result.push({ type: 'same', line: oldLine, key: `s-${i}` });
+    }
+  }
+
+  return result;
+}
+
 export function ResumeViewerPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -103,9 +237,15 @@ export function ResumeViewerPage() {
   const [activeTab, setActiveTab] = useState('preview');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showChatbot, setShowChatbot] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState(null);
+  const [showDiffMode, setShowDiffMode] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
   // Tracks which version was already initialized so refetch after save
   // doesn't override hasUnsavedChanges back to true
   const initializedVersionRef = useRef(null);
+
+  const resumeProfile = MOCK_RESUME_PROFILE;
 
   const {
     showPDFViewer,
@@ -124,6 +264,7 @@ export function ResumeViewerPage() {
     userProfile,
     positions,
     resumeName: resumeDetail?.name,
+    resumeProfile,
   });
 
   useEffect(() => {
@@ -131,9 +272,7 @@ export function ResumeViewerPage() {
       const parsed = parseResumeContent(versionData.content);
       setYamlContent(parsed);
       setRawContent(versionData.content);
-      // Only set initial unsaved state on first load of this version.
-      // Later refetches (e.g. after save cache invalidation) must not
-      // override the user's in-memory hasUnsavedChanges value.
+
       const versionKey = `${resumeId}-${currentVersionNo}`;
       if (initializedVersionRef.current !== versionKey) {
         initializedVersionRef.current = versionKey;
@@ -230,6 +369,31 @@ export function ResumeViewerPage() {
       blocker.proceed();
     }
   }, [blocker]);
+
+  const handleVersionSelect = (version) => {
+    setSelectedVersion(version);
+    setShowDiffMode(false);
+  };
+
+  const diffLines = useMemo(
+    () => computeDiff(selectedVersion?.yamlContent || '', yamlContent),
+    [selectedVersion?.yamlContent, yamlContent]
+  );
+
+  const handleRestoreVersion = () => {
+    saveVersionMutation.mutate(
+      { resumeId, versionNo: selectedVersion.versionNo },
+      {
+        onSuccess: () => {
+          toast.success('선택한 버전을 최신으로 지정했습니다');
+          setShowRestoreModal(false);
+          setSelectedVersion(null);
+          setShowVersionHistory(false);
+          setShowDiffMode(false);
+        },
+      }
+    );
+  };
 
   const status = versionData?.status;
   const isProcessing = status === 'QUEUED' || status === 'PROCESSING';
@@ -356,6 +520,14 @@ export function ResumeViewerPage() {
           <div className="flex items-center gap-0">
             <button
               type="button"
+              onClick={() => setShowVersionHistory(true)}
+              className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="버전 기록"
+            >
+              <History className="w-5 h-5 text-gray-900" strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
               onClick={handleSave}
               className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="이력서 저장"
@@ -413,6 +585,7 @@ export function ResumeViewerPage() {
               <ParsedResumeViewer
                 ref={resumeViewerRef}
                 yamlContent={rawContent || yamlContent}
+                resumeProfile={resumeProfile}
               />
             ) : (
               <div className="bg-gray-900 rounded-2xl p-4 overflow-auto max-w-[390px] mx-auto">
@@ -538,6 +711,175 @@ export function ResumeViewerPage() {
           </div>
         </>
       )}
+
+      {/* Version History List Sheet */}
+      <Drawer.Root
+        open={showVersionHistory && !selectedVersion}
+        onOpenChange={(open) => {
+          if (!open) setShowVersionHistory(false);
+        }}
+      >
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-y-0 left-1/2 z-50 w-full max-w-[390px] -translate-x-1/2 bg-black/40" />
+          <Drawer.Content className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 flex flex-col max-w-[390px] mx-auto w-full max-h-[75vh]">
+            {/* Handle */}
+            <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 my-4" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 flex-shrink-0">
+              <Drawer.Title className="text-base font-semibold">
+                버전 기록
+              </Drawer.Title>
+              <button
+                type="button"
+                onClick={() => setShowVersionHistory(false)}
+                className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" strokeWidth={1.5} />
+              </button>
+            </div>
+
+            {/* Version list */}
+            <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
+              {MOCK_VERSIONS.map((version) => {
+                const isCurrent = version.versionNo === currentVersionNo;
+                return (
+                  <button
+                    key={version.versionNo}
+                    type="button"
+                    onClick={() => handleVersionSelect(version)}
+                    className="w-full text-left bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 rounded-lg p-4 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">
+                          버전 {version.versionNo}
+                        </span>
+                        {isCurrent && (
+                          <span className="text-xs font-medium text-primary bg-blue-50 px-2 py-0.5 rounded-full">
+                            현재
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-400">
+                        {formatVersionDate(version.createdAt)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+
+      {/* Version Detail Sheet */}
+      <Drawer.Root
+        open={showVersionHistory && !!selectedVersion}
+        onOpenChange={(open) => {
+          if (!open) setSelectedVersion(null);
+        }}
+      >
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-y-0 left-1/2 z-50 w-full max-w-[390px] -translate-x-1/2 bg-black/40" />
+          <Drawer.Content className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 flex flex-col max-w-[390px] mx-auto w-full max-h-[80vh]">
+            {/* Handle */}
+            <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 my-4" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedVersion(null)}
+                  className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors mr-1"
+                  aria-label="목록으로"
+                >
+                  <X className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
+                </button>
+                <Drawer.Title className="text-base font-semibold">
+                  버전 {selectedVersion?.versionNo}
+                </Drawer.Title>
+                {selectedVersion?.versionNo === currentVersionNo && (
+                  <span className="text-xs font-medium text-primary bg-blue-50 px-2 py-0.5 rounded-full">
+                    현재
+                  </span>
+                )}
+              </div>
+
+              {/* Diff toggle */}
+              <button
+                type="button"
+                onClick={() => setShowDiffMode((prev) => !prev)}
+                className={`text-xs font-medium px-3 py-2 rounded-lg border transition-colors min-h-[36px] ${
+                  showDiffMode
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                변경점 표시
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-5 min-h-0">
+              {showDiffMode ? (
+                <div className="bg-gray-900 rounded-xl p-4 font-mono text-xs">
+                  {diffLines.map(({ type, line, key }) => (
+                    <div
+                      key={key}
+                      className={`whitespace-pre-wrap ${
+                        type === 'added'
+                          ? 'text-green-400 bg-green-900/20'
+                          : type === 'removed'
+                            ? 'text-red-400 bg-red-900/20'
+                            : 'text-gray-400'
+                      }`}
+                    >
+                      {type === 'added'
+                        ? '+ '
+                        : type === 'removed'
+                          ? '- '
+                          : '  '}
+                      {line}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-gray-900 rounded-xl p-4">
+                  <pre className="text-sm text-green-400 font-mono whitespace-pre-wrap">
+                    {selectedVersion?.yamlContent}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* CTA */}
+            {selectedVersion?.versionNo !== currentVersionNo && (
+              <div className="px-5 py-4 border-t border-gray-200 flex-shrink-0">
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => setShowRestoreModal(true)}
+                >
+                  이 버전을 최신으로 지정
+                </Button>
+              </div>
+            )}
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+
+      {/* Restore Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={showRestoreModal}
+        onClose={() => setShowRestoreModal(false)}
+        onConfirm={handleRestoreVersion}
+        title="이 버전을 최신으로 지정할까요?"
+        description="선택한 과거 버전을 기준으로 현재 이력서가 최신 상태로 저장돼요."
+        confirmText="지정하기"
+      />
 
       <UnsavedChangesDialog
         isOpen={blocker.state === 'blocked'}
