@@ -142,6 +142,7 @@ export function CreateResumePage() {
       retry: 2,
     }
   );
+  const normalizedStatus = versionData?.status?.toUpperCase();
 
   const generationStatus = versionData?.status;
   const normalizedStatus = generationStatus?.toUpperCase();
