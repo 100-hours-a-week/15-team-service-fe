@@ -48,6 +48,8 @@ export function ChatRoomListSheet() {
   const [mentionQuery, setMentionQuery] = useState(null); // null = 비활성, string = 활성
   const attachFileInputRef = useRef(null);
   const textareaRef = useRef(null);
+  // 모바일에서 드롭다운 클릭 시 textarea blur 후 selectionStart가 소실되는 것을 방지
+  const cursorPosRef = useRef(0);
   const scrollContainerRef = useRef(null);
   const contentRef = useRef(null); // Wrapper for ResizeObserver
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -202,15 +204,30 @@ export function ChatRoomListSheet() {
 
   const handleInputChange = (e) => {
     const text = e.target.value;
-    setInputText(text);
     const cursor = e.target.selectionStart ?? text.length;
+    cursorPosRef.current = cursor;
+    setInputText(text);
+
+    // 텍스트에서 사라진 @태그는 mentions에서 제거 (stale mention 방지)
+    setMentions((prev) =>
+      prev.filter((m) => {
+        const tag = `@${m.label}`;
+        const idx = text.indexOf(tag);
+        if (idx === -1) return false;
+        // @익명1이 @익명10의 일부로 남아있는 경우 제외
+        const charAfter = text[idx + tag.length];
+        return charAfter === undefined || !/\d/.test(charAfter);
+      })
+    );
+
     const before = text.slice(0, cursor);
     const match = before.match(/@([^\s@]*)$/);
     setMentionQuery(match ? match[1] : null);
   };
 
   const handleMentionSelect = (participant) => {
-    const cursor = textareaRef.current?.selectionStart ?? inputText.length;
+    // cursorPosRef를 사용해 모바일에서 blur 후 selectionStart 소실 문제 방지
+    const cursor = cursorPosRef.current ?? inputText.length;
     const before = inputText.slice(0, cursor);
     const match = before.match(/@([^\s@]*)$/);
     if (!match) return;
@@ -340,7 +357,16 @@ export function ChatRoomListSheet() {
 
     const messageText = inputText;
     const imageData = attachedImage;
-    const mentionsToSend = mentions.map((m) => m.userId);
+
+    // 드롭다운 선택 mentions + 텍스트에서 직접 파싱한 @익명N mentions 병합
+    // 백엔드가 메시지 텍스트를 파싱하지 않고 mentionUserIds 필드만 사용하므로
+    // 프론트에서 텍스트 파싱 후 userId로 변환해서 함께 전송해야 알림이 정상 발송됨
+    const textMentionIds = [...messageText.matchAll(/@(익명\d+)/g)]
+      .map((m) => participants.find((p) => p.label === m[1])?.userId)
+      .filter(Boolean);
+    const mentionsToSend = [
+      ...new Set([...mentions.map((m) => m.userId), ...textMentionIds]),
+    ];
     if (imageData?.file) {
       const validation = validateImageFile(imageData.file);
       if (!validation.ok) return;

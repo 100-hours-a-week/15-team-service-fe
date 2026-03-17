@@ -96,16 +96,27 @@ export function ChatMessageInput({
 
       {/* Mention Dropdown */}
       {filteredParticipants.length > 0 && (
-        <div className="absolute bottom-full left-5 right-5 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-36 overflow-y-auto z-10">
+        // onPointerDown stopPropagation: Vaul 드로어의 drag-to-dismiss 감지가
+        // 드롭다운 클릭을 가로채는 것을 방지
+        <div
+          className="absolute bottom-full left-5 right-5 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-36 overflow-y-auto z-10"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           {filteredParticipants.map((p) => (
             <button
               key={p.userId}
               type="button"
               onMouseDown={(e) => {
+                // 데스크탑: textarea blur 방지 후 선택
                 e.preventDefault();
                 onMentionSelect(p);
               }}
-              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+              onTouchEnd={(e) => {
+                // 모바일: touchEnd에서도 처리 (mouseDown이 늦게 오는 경우 대비)
+                e.preventDefault();
+                onMentionSelect(p);
+              }}
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
               @{p.label}
             </button>
