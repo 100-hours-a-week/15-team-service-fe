@@ -27,6 +27,9 @@ import { InterviewSummaryPage } from './pages/interview/InterviewSummaryPage';
 import { InterviewDetailPage } from './pages/interview/InterviewDetailPage';
 import { InterviewListPage } from './pages/interview/InterviewListPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ProfileEditPage } from './pages/ProfileEditPage';
+import { ProfileOnboardingPage } from './pages/onboarding/ProfileOnboardingPage';
+import { ResumeProfileSetupPage } from './pages/resume/ResumeProfileSetupPage';
 import { useAuthStatus } from './hooks/queries/useUserQuery';
 
 function RootLayout() {
@@ -56,7 +59,9 @@ function RootLayout() {
           <Toaster
             position="bottom-center"
             expand={true}
+            duration={4000}
             toastOptions={{
+              duration: 4000,
               style: {
                 backgroundColor: 'rgba(75, 85, 99, 0.8)',
                 backdropFilter: 'blur(8px)',
@@ -65,7 +70,7 @@ function RootLayout() {
                 border: 'none',
                 width: '320px',
                 position: 'absolute',
-                bottom: '20px',
+                bottom: '0px',
                 left: 'calc(47%)',
                 transform: 'translateX(-50%)',
               },
@@ -151,6 +156,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: '/resume-setup/:id?',
+        element: (
+          <ProtectedRoute>
+            <ResumeProfileSetupPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: '/create-resume',
         element: (
           <ProtectedRoute>
@@ -211,6 +224,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/settings/profile',
+        element: (
+          <ProtectedRoute>
+            <ProfileEditPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/onboarding/profile',
+        element: (
+          <ProtectedRoute>
+            <ProfileOnboardingPage />
           </ProtectedRoute>
         ),
       },

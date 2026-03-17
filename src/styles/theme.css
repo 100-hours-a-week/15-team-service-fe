@@ -207,3 +207,23 @@
   transform: translateX(-50%);
   width: min(390px, 100%);
 }
+
+/* Month picker: transparent overlay trick for custom display */
+input[type='month'] {
+  position: relative;
+  padding-right: 2px;
+  font-size: 13px;
+  background-color: white !important;
+}
+input[type='month']::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+}

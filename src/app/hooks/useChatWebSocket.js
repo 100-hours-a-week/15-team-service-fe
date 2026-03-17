@@ -23,7 +23,7 @@ export function useChatWebSocket(chatroomId) {
     let subscription = null;
 
     const client = new Client({
-      brokerURL: API_CONFIG.WS_URL,
+      brokerURL: API_CONFIG.CHAT_WS_URL,
       reconnectDelay: 5000,
       onConnect: () => {
         setIsConnected(true);

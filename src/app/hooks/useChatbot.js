@@ -10,7 +10,7 @@ const getTimestamp = () => new Date().toISOString();
  * Chatbot hook for resume editing with real SSE and API integration.
  *
  * Resume refresh events come from the unified /notifications/stream SSE connection
- * via the sse:resume-refresh-required custom window event dispatched by useNotificationSSE.
+ * via the subscribeResumeRefresh function provided by NotificationContext.
  *
  * @param {Object} options
  * @param {number} options.resumeId - Resume ID to edit
@@ -24,10 +24,10 @@ export const useChatbot = (options = {}) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const queryClient = useQueryClient();
 
-  // isConnected comes from the single global SSE stream
-  const { isConnected } = useNotificationContext();
+  // isConnected and subscribeResumeRefresh come from the single global SSE stream
+  const { isConnected, subscribeResumeRefresh } = useNotificationContext();
 
-  // Mirror isUpdating in a ref to prevent stale closures in the window event handler
+  // Mirror isUpdating in a ref to prevent stale closures in the SSE callback
   const isUpdatingRef = useRef(false);
 
   const appendMessage = useCallback((role, content) => {
@@ -41,10 +41,10 @@ export const useChatbot = (options = {}) => {
     ]);
   }, []);
 
-  // Listen for resume-refresh-required events from the unified SSE stream
+  // Subscribe to resume-refresh-required events from the unified SSE stream
   useEffect(() => {
-    const handler = (e) => {
-      const { resumeId: eventResumeId, status } = e.detail;
+    const unsubscribe = subscribeResumeRefresh((data) => {
+      const { resumeId: eventResumeId, status } = data;
       if (Number(eventResumeId) !== resumeId) return;
 
       // 이력서 목록 캐시 갱신 (updatedAt 반영)
@@ -65,12 +65,10 @@ export const useChatbot = (options = {}) => {
         setIsUpdating(false);
         isUpdatingRef.current = false;
       }
-    };
+    });
 
-    window.addEventListener('sse:resume-refresh-required', handler);
-    return () =>
-      window.removeEventListener('sse:resume-refresh-required', handler);
-  }, [resumeId, queryClient, appendMessage]);
+    return unsubscribe;
+  }, [resumeId, queryClient, appendMessage, subscribeResumeRefresh]);
 
   // Edit resume mutation (PATCH /resumes/{id})
   const editMutation = useMutation({

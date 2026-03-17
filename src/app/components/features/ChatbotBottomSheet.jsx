@@ -37,6 +37,20 @@ import {
  *
  * @param {ChatbotBottomSheetProps} props
  */
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-1 h-1 bg-current rounded-full animate-bounce"
+          style={{ animationDelay: `${i * 150}ms`, animationDuration: '800ms' }}
+        />
+      ))}
+    </span>
+  );
+}
+
 export const ChatbotBottomSheet = ({
   isOpen,
   onClose,
@@ -224,17 +238,22 @@ export const ChatbotBottomSheet = ({
                 CommitMe Assistant
               </Drawer.Title>
               {!isConnected && (
-                <p className="text-xs text-gray-500 mt-1">연결 중...</p>
+                <div className="flex items-center gap-1.5 mt-1 text-gray-500">
+                  <TypingDots />
+                  <p className="text-xs">연결 중</p>
+                </div>
               )}
               {isConnected && isEditing && !isUpdating && (
-                <p className="text-xs text-primary animate-pulse mt-1">
-                  이력서 수정이 진행 중입니다...
-                </p>
+                <div className="flex items-center gap-1.5 mt-1 text-primary">
+                  <TypingDots />
+                  <p className="text-xs">이력서 수정 중</p>
+                </div>
               )}
               {isConnected && isUpdating && (
-                <p className="text-xs text-primary mt-1">
-                  수정 요청 처리 중...
-                </p>
+                <div className="flex items-center gap-1.5 mt-1 text-primary">
+                  <TypingDots />
+                  <p className="text-xs">처리 중</p>
+                </div>
               )}
             </div>
 

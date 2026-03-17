@@ -15,6 +15,10 @@ export const NotificationContext = createContext({
   hasNew: false,
   clearBadge: () => {},
   isConnected: false,
+  /** @type {(cb: (detail: object) => void) => () => void} */
+  subscribeResumeRefresh: () => () => {},
+  /** @type {(cb: (detail: object) => void) => () => void} */
+  subscribeNotification: () => () => {},
 });
 
 /** Consume the SSE badge state provided by RootLayout. */
@@ -28,7 +32,7 @@ const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
  * Unified stream — handles all SSE events:
  * - connected: { hasNew, latestId } → 초기 뱃지 설정
  * - notification: { id, type, payload, createdAt } → hasNew + toast + cache invalidate
- * - resume-refresh-required: { resumeId, versionNo, status } → dispatches sse:resume-refresh-required
+ * - resume-refresh-required: { resumeId, versionNo, status } → calls resume refresh subscribers
  * - heartbeat: 무시
  *
  * All event.data payloads use the common wrapper:
@@ -36,7 +40,7 @@ const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
  * so actual data is accessed via JSON.parse(event.data).data.
  *
  * @param {boolean} enabled
- * @returns {{ hasNew: boolean, clearBadge: Function, isConnected: boolean }}
+ * @returns {{ hasNew: boolean, clearBadge: Function, isConnected: boolean, subscribeResumeRefresh: Function, subscribeNotification: Function }}
  */
 export function useNotificationSSE(enabled = true) {
   const [hasNew, setHasNew] = useState(false);
@@ -46,6 +50,21 @@ export function useNotificationSSE(enabled = true) {
   const eventSourceRef = useRef(null);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef(null);
+
+  /** @type {React.MutableRefObject<Set<Function>>} */
+  const resumeRefreshSubscribersRef = useRef(new Set());
+  /** @type {React.MutableRefObject<Set<Function>>} */
+  const notificationSubscribersRef = useRef(new Set());
+
+  const subscribeResumeRefresh = useCallback((cb) => {
+    resumeRefreshSubscribersRef.current.add(cb);
+    return () => resumeRefreshSubscribersRef.current.delete(cb);
+  }, []);
+
+  const subscribeNotification = useCallback((cb) => {
+    notificationSubscribersRef.current.add(cb);
+    return () => notificationSubscribersRef.current.delete(cb);
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -98,13 +117,11 @@ export function useNotificationSSE(enabled = true) {
         try {
           const { data } = JSON.parse(event.data);
           setHasNew(true);
-          window.dispatchEvent(
-            new CustomEvent('notification-toast', {
-              detail: {
-                type: data.type,
-                message: data.payload?.message ?? '새 알림이 도착했습니다.',
-                payload: data.payload,
-              },
+          notificationSubscribersRef.current.forEach((cb) =>
+            cb({
+              type: data.type,
+              message: data.payload?.message ?? '새 알림이 도착했습니다.',
+              payload: data.payload,
             })
           );
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -116,9 +133,7 @@ export function useNotificationSSE(enabled = true) {
       es.addEventListener('resume-refresh-required', (event) => {
         try {
           const { data } = JSON.parse(event.data);
-          window.dispatchEvent(
-            new CustomEvent('sse:resume-refresh-required', { detail: data })
-          );
+          resumeRefreshSubscribersRef.current.forEach((cb) => cb(data));
         } catch {
           // Malformed — ignore
         }
@@ -160,5 +175,11 @@ export function useNotificationSSE(enabled = true) {
 
   const clearBadge = useCallback(() => setHasNew(false), []);
 
-  return { hasNew, clearBadge, isConnected };
+  return {
+    hasNew,
+    clearBadge,
+    isConnected,
+    subscribeResumeRefresh,
+    subscribeNotification,
+  };
 }

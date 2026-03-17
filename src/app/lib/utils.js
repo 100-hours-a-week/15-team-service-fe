@@ -1,7 +1,15 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import yaml from 'js-yaml';
-import { FILTER_UNSPECIFIED_LABEL } from '@/app/constants';
+import {
+  FILTER_UNSPECIFIED_LABEL,
+  EMPLOYMENT_TYPE_MAP,
+  REVERSE_EMPLOYMENT_TYPE_MAP,
+  EDUCATION_STATUS_MAP,
+  REVERSE_EDUCATION_STATUS_MAP,
+  EDUCATION_TYPE_MAP,
+  REVERSE_EDUCATION_TYPE_MAP,
+} from '@/app/constants';
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -217,24 +225,35 @@ export function stripPhoneFormat(input = '') {
 /**
  * Validate phone number format
  * @param {string} input - Phone number string
- * @returns {boolean} True if valid Korean mobile number (11 digits only)
+ * @param {string} countryCode - Country code (default: '+82')
+ * @returns {boolean} True if valid
  */
-export function validatePhoneNumber(input = '') {
+export function validatePhoneNumber(input = '', countryCode = '+82') {
   const digits = String(input).replace(/\D/g, '');
-  return digits.startsWith('01') && digits.length === 11;
+  if (countryCode === '+82') {
+    return digits.startsWith('01') && digits.length === 11;
+  }
+  return digits.length >= 6 && digits.length <= 15;
 }
 
 /**
  * Get error message for invalid phone number
  * @param {string} input - Phone number string
- * @returns {string} Error message (empty if valid, 11 digits only)
+ * @param {string} countryCode - Country code (default: '+82')
+ * @returns {string} Error message (empty if valid)
  */
-export function getPhoneErrorMessage(input = '') {
+export function getPhoneErrorMessage(input = '', countryCode = '+82') {
   const digits = String(input).replace(/\D/g, '');
   if (!digits) return '전화번호를 입력해주세요.';
-  if (!digits.startsWith('01')) return '휴대폰 번호 형식이 올바르지 않습니다.';
-  if (digits.length < 11) return '전화번호가 너무 짧습니다.';
-  if (digits.length > 11) return '전화번호가 너무 깁니다.';
+  if (countryCode === '+82') {
+    if (!digits.startsWith('01'))
+      return '휴대폰 번호 형식이 올바르지 않습니다.';
+    if (digits.length < 11) return '전화번호가 너무 짧습니다.';
+    if (digits.length > 11) return '전화번호가 너무 깁니다.';
+  } else {
+    if (digits.length < 6) return '전화번호가 너무 짧습니다.';
+    if (digits.length > 15) return '전화번호가 너무 깁니다.';
+  }
   return '';
 }
 
@@ -397,4 +416,131 @@ export function sortInterviews(interviews = [], sortOption = 'newest') {
     }
     return toTime(b.date) - toTime(a.date);
   });
+}
+
+// Re-export type maps from constants for convenience
+export {
+  EMPLOYMENT_TYPE_MAP,
+  REVERSE_EMPLOYMENT_TYPE_MAP,
+  EDUCATION_STATUS_MAP,
+  REVERSE_EDUCATION_STATUS_MAP,
+  EDUCATION_TYPE_MAP,
+  REVERSE_EDUCATION_TYPE_MAP,
+} from '@/app/constants';
+
+/**
+ * Map API profile response to react-hook-form field values.
+ * Handles both master profile and resume-specific profile shapes.
+ * Includes `id` fields so edit-mode pages can pass them back to the API.
+ * @param {Object} profileData - Raw API response from GET /resumes/profile or GET /resumes/:id/profile
+ * @returns {Object} Form default values
+ */
+export function mapProfileDataToForm(profileData) {
+  return {
+    name: profileData.name || '',
+    countryCode: profileData.phoneCountryCode || '+82',
+    phone: profileData.phoneNumber
+      ? formatPhoneNumber(profileData.phoneNumber)
+      : '',
+    bio: profileData.introduction || '',
+    techStacks: profileData.techStacks?.map((t) => t.name) || [],
+    experiences:
+      profileData.experiences?.map((exp) => ({
+        ...(exp.id && { id: exp.id }),
+        company: exp.companyName || '',
+        position: exp.position || '',
+        department: exp.department || '',
+        startDate: exp.startAt?.replace(/\./g, '-') || '',
+        endDate: exp.endAt?.replace(/\./g, '-') || '',
+        isCurrent: exp.isCurrentlyWorking || false,
+        workType: REVERSE_EMPLOYMENT_TYPE_MAP[exp.employmentType] || '정규직',
+        description: exp.responsibilities || '',
+      })) || [],
+    educations:
+      profileData.educations?.map((edu) => ({
+        ...(edu.id && { id: edu.id }),
+        type: REVERSE_EDUCATION_TYPE_MAP[edu.educationType] || '대학교(학사)',
+        institution: edu.institution || '',
+        major: edu.major || '',
+        status: REVERSE_EDUCATION_STATUS_MAP[edu.status] || '졸업',
+        startDate: edu.startAt?.replace(/\./g, '-') || '',
+        endDate: edu.endAt?.replace(/\./g, '-') || '',
+      })) || [],
+    activities:
+      profileData.activities?.map((act) => ({
+        ...(act.id && { id: act.id }),
+        name: act.title || '',
+        organization: act.organization || '',
+        year: String(act.year || ''),
+        description: act.description || '',
+      })) || [],
+    certifications:
+      profileData.certificates?.map((cert) => ({
+        ...(cert.id && { id: cert.id }),
+        name: cert.name || '',
+        score: cert.score || '',
+        issuer: cert.issuer || '',
+        date: cert.issuedAt?.replace(/\./g, '-') || '',
+      })) || [],
+  };
+}
+
+/**
+ * Build API payload from react-hook-form data.
+ * Filters out empty list entries and maps field names back to API shape.
+ * Preserves `id` fields when present (required for resume-specific profile updates).
+ * @param {Object} data - Form values from handleSubmit
+ * @param {string | null} profileImageUrl - S3 key or existing URL
+ * @returns {Object} Payload for PUT /resumes/profile or PUT /resumes/:id/profile
+ */
+export function buildProfilePayload(data, profileImageUrl) {
+  const experiences = data.experiences.filter((e) => e.company || e.startDate);
+  const educations = data.educations.filter(
+    (e) => e.institution || e.startDate
+  );
+  const activities = data.activities.filter((a) => a.name || a.year);
+  const certifications = data.certifications.filter((c) => c.name);
+
+  return {
+    name: data.name,
+    profileImageUrl,
+    phoneCountryCode: data.phone ? data.countryCode : null,
+    phoneNumber: data.phone ? stripPhoneFormat(data.phone) : null,
+    introduction: data.bio,
+    techStacks: data.techStacks.map((name) => ({ name })),
+    experiences: experiences.map((exp) => ({
+      ...(exp.id && { id: exp.id }),
+      companyName: exp.company,
+      position: exp.position,
+      department: exp.department,
+      startAt: exp.startDate.replace(/-/g, '.'),
+      endAt: exp.isCurrent ? null : exp.endDate.replace(/-/g, '.'),
+      isCurrentlyWorking: exp.isCurrent,
+      employmentType: EMPLOYMENT_TYPE_MAP[exp.workType] || 'FULL_TIME',
+      responsibilities: exp.description,
+    })),
+    educations: educations.map((edu) => ({
+      ...(edu.id && { id: edu.id }),
+      educationType: EDUCATION_TYPE_MAP[edu.type] || 'BACHELOR',
+      institution: edu.institution,
+      major: edu.major,
+      status: EDUCATION_STATUS_MAP[edu.status] || 'GRADUATED',
+      startAt: edu.startDate.replace(/-/g, '.'),
+      endAt: edu.endDate.replace(/-/g, '.'),
+    })),
+    activities: activities.map((act) => ({
+      ...(act.id && { id: act.id }),
+      title: act.name,
+      organization: act.organization,
+      year: Number(act.year),
+      description: act.description,
+    })),
+    certificates: certifications.map((cert) => ({
+      ...(cert.id && { id: cert.id }),
+      name: cert.name,
+      score: cert.score,
+      issuer: cert.issuer,
+      issuedAt: cert.date.replace(/-/g, '.'),
+    })),
+  };
 }
