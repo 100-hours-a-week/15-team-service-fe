@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { useState, useCallback, useMemo } from 'react';
+import { useNavigate, useNavigationType } from 'react-router-dom';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Search, Lock, AlertCircle, ChevronDown } from 'lucide-react';
 import { toast } from '@/app/lib/toast';
 import { TopAppBar } from '../../components/layout/TopAppBar';
@@ -12,6 +12,14 @@ const MAX_REPO_SELECTION = 6;
 
 export function RepoSelectPage() {
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
+
+  // 생성 플로우 완료 후 뒤로가기로 진입한 경우 홈으로 리다이렉트
+  useEffect(() => {
+    if (navigationType === 'POP') {
+      navigate('/', { replace: true });
+    }
+  }, [navigationType, navigate]);
 
   const { data: repos = [], isLoading, isError, refetch } = useRepositories();
 

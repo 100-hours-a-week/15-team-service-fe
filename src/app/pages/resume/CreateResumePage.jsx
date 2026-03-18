@@ -161,7 +161,7 @@ export function CreateResumePage() {
         .getState()
         .completeGeneration('프로젝트 요약이 생성되었습니다');
       setTimeout(() => {
-        window.location.href = `/resume/${createdResumeId}`;
+        navigate(`/resume/${createdResumeId}`, { replace: true });
       }, 500);
     }
   }, [isGenerationSucceeded, isRedirecting, createdResumeId]);
@@ -169,8 +169,9 @@ export function CreateResumePage() {
   useEffect(() => {
     if (isGenerationFailed) {
       useResumeCreationStore.getState().cancelGeneration();
+      navigate('/', { replace: true });
     }
-  }, [isGenerationFailed]);
+  }, [isGenerationFailed, navigate]);
 
   useEffect(() => {
     if (isVersionError && createdResumeId) {
@@ -259,7 +260,8 @@ export function CreateResumePage() {
   const handleRetryGeneration = useCallback(() => {
     useResumeCreationStore.getState().cancelGeneration();
     setIsClientTimeout(false);
-  }, []);
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   if (createResumeMutation.isPending || isGenerating || isRedirecting) {
     const statusMessage = !createdResumeId
@@ -305,19 +307,19 @@ export function CreateResumePage() {
                   isActive={!createdResumeId && createResumeMutation.isPending}
                   isDone={!!createdResumeId}
                 />
-                <div className="w-5 h-px mx-1 bg-gray-200" />
+                <div className="w-5 h-px mx-2 bg-gray-200" />
                 <StageStep
                   label="대기"
                   isActive={normalizedStatus === 'QUEUED'}
                   isDone={normalizedStatus === 'PROCESSING' || isRedirecting}
                 />
-                <div className="w-5 h-px mx-1 bg-gray-200" />
+                <div className="w-5 h-px mx-2 bg-gray-200" />
                 <StageStep
                   label="분석"
                   isActive={normalizedStatus === 'PROCESSING'}
                   isDone={isRedirecting}
                 />
-                <div className="w-5 h-px mx-1 bg-gray-200" />
+                <div className="w-5 h-px mx-2 bg-gray-200" />
                 <StageStep
                   label="완료"
                   isActive={isRedirecting}

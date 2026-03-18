@@ -218,6 +218,9 @@ export function ResumeViewerPage() {
       if (initializedVersionRef.current !== versionKey) {
         initializedVersionRef.current = versionKey;
         setHasUnsavedChanges(versionData.committedAt === null);
+      } else if (versionData.committedAt !== null) {
+        // 같은 버전인데 committedAt이 설정됨 = 저장 완료 → 저장 필요 상태 해제
+        setHasUnsavedChanges(false);
       }
     }
   }, [versionData, resumeId, currentVersionNo]);
@@ -423,32 +426,6 @@ export function ResumeViewerPage() {
     );
   }
 
-  if (isProcessing) {
-    return (
-      <div className="min-h-screen bg-gray-50 pb-24">
-        <TopAppBar title={resumeDetail?.name || '이력서'} showBack />
-        <div className="px-5 py-6">
-          <div className="max-w-[390px] mx-auto">
-            <div className="bg-white rounded-2xl p-8 text-center space-y-4">
-              <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <h3>AI가 이력서를 생성 중입니다.</h3>
-              <p className="text-sm text-gray-500">
-                {status === 'QUEUED' ? '대기 중...' : '분석 중...'}
-              </p>
-              <p className="text-xs text-gray-400">
-                잠시만 기다려주세요. 페이지를 벗어나도 진행됩니다.
-              </p>
-              <Button variant="ghost" onClick={() => navigate('/')}>
-                홈으로 이동
-              </Button>
-            </div>
-          </div>
-        </div>
-        <BottomNav />
-      </div>
-    );
-  }
-
   if (isFailed) {
     return (
       <div className="min-h-screen bg-gray-50 pb-24">
@@ -459,7 +436,7 @@ export function ResumeViewerPage() {
               <AlertCircle className="w-12 h-12 mx-auto text-gray-500" />
               <h3>이력서 생성에 실패했습니다.</h3>
               <p className="text-sm text-gray-500">
-                {versionData?.errorLog || '알 수 없는 오류가 발생했습니다'}
+                {versionData?.errorLog || '알 수 없는 오류가 발생했습니다.'}
               </p>
               <div className="flex gap-2 justify-center">
                 <Button variant="ghost" onClick={() => navigate('/')}>

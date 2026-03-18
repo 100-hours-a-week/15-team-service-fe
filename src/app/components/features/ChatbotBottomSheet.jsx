@@ -235,7 +235,7 @@ export const ChatbotBottomSheet = ({
           <div className="p-5 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
             <div className="flex-1">
               <Drawer.Title className="text-base font-semibold">
-                CommitMe Assistant
+                이력서 수정
               </Drawer.Title>
               {!isConnected && (
                 <div className="flex items-center gap-1.5 mt-1 text-gray-500">
@@ -402,11 +402,11 @@ export const ChatbotBottomSheet = ({
             <div className="flex items-end gap-2">
               <textarea
                 placeholder={
-                  isEditing && !isUpdating
-                    ? '수정 완료 후 이용 가능합니다'
+                  isEditing || isUpdating
+                    ? '수정 완료 후 이용 가능합니다.'
                     : !isConnected
                       ? '연결 중...'
-                      : 'AI에게 수정 요청하기'
+                      : '수정 요청 내용을 입력하세요.'
                 }
                 value={chatInput}
                 onChange={(e) => {

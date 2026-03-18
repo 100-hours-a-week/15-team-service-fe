@@ -91,7 +91,12 @@ export function NotificationToastBanner() {
       ].join(' ')}
       onClick={() => {
         if (banner.type === 'RESUME' && banner.payload?.resumeId) {
-          navigate(`/resume/${banner.payload.resumeId}`);
+          // 생성 실패 알림은 이동 불가 (준비된 버전이 없음)
+          const isFailed = banner.payload?.status === 'FAILED';
+          const isCreate = banner.payload?.source === 'CREATE';
+          if (!(isFailed && isCreate)) {
+            navigate(`/resume/${banner.payload.resumeId}`);
+          }
         } else if (banner.type === 'CHAT') {
           useChatSheetStore
             .getState()

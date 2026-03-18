@@ -208,7 +208,7 @@ export function ChatRoomListSheet() {
     cursorPosRef.current = cursor;
     setInputText(text);
 
-    // 텍스트에서 사라진 @태그는 mentions에서 제거 (stale mention 방지)
+    // 텍스트에서 사라진 @태그는 mentions에서 제거
     setMentions((prev) =>
       prev.filter((m) => {
         const tag = `@${m.label}`;

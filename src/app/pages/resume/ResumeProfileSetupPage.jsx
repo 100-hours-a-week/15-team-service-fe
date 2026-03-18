@@ -122,6 +122,7 @@ export function ResumeProfileSetupPage() {
     } else if (fromRepoSelect) {
       // AI 생성 플로우: 프로필 데이터를 가지고 CreateResumePage로 이동
       navigate('/create-resume', {
+        replace: true,
         state: {
           selectedRepos,
           masterProfile: payload,
