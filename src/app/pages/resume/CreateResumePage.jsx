@@ -164,7 +164,7 @@ export function CreateResumePage() {
         navigate(`/resume/${createdResumeId}`, { replace: true });
       }, 500);
     }
-  }, [isGenerationSucceeded, isRedirecting, createdResumeId]);
+  }, [isGenerationSucceeded, isRedirecting, createdResumeId, navigate]);
 
   useEffect(() => {
     if (isGenerationFailed) {

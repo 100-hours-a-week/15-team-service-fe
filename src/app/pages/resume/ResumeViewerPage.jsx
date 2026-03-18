@@ -337,7 +337,6 @@ export function ResumeViewerPage() {
   };
 
   const status = versionData?.status;
-  const isProcessing = status === 'QUEUED' || status === 'PROCESSING';
   const isFailed = status === 'FAILED';
 
   if (isLoadingDetail || isLoadingVersion) {
