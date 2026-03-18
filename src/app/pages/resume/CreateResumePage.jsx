@@ -3,7 +3,7 @@ import { useDialogStore } from '@/app/store/useDialogStore';
 import { useResumeCreationStore } from '@/app/store/useResumeCreationStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/app/lib/toast';
-import { AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { TopAppBar } from '../../components/layout/TopAppBar';
 import { BottomNav } from '../../components/layout/BottomNav';
@@ -78,6 +78,33 @@ export function CreateResumePage() {
   const [isClientTimeout, setIsClientTimeout] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  const { data: versionData, isError: isVersionError } = useResumeVersion(
+    createdResumeId,
+    1,
+    {
+      enabled: !!createdResumeId,
+      refetchInterval: (query) => {
+        const status = query.state.data?.status?.toUpperCase();
+        if (!status || status === 'QUEUED' || status === 'PROCESSING') {
+          return 3000;
+        }
+        return false;
+      },
+      retry: 2,
+    }
+  );
+  const generationStatus = versionData?.status;
+  const normalizedStatus = generationStatus?.toUpperCase();
+  const isGenerating =
+    createdResumeId &&
+    (!normalizedStatus ||
+      normalizedStatus === 'QUEUED' ||
+      normalizedStatus === 'PROCESSING');
+  const isGenerationFailed = normalizedStatus === 'FAILED';
+  const isGenerationSucceeded =
+    !!normalizedStatus &&
+    !['QUEUED', 'PROCESSING', 'FAILED'].includes(normalizedStatus);
+
   // Manage progress bar value based on generation status
   useEffect(() => {
     if (createResumeMutation.isPending && !createdResumeId) {
@@ -126,33 +153,6 @@ export function CreateResumePage() {
   const handleCloseConfirmDialog = useCallback(() => {
     useDialogStore.getState().closeDialog('resumeCreateConfirm');
   }, []);
-
-  const { data: versionData, isError: isVersionError } = useResumeVersion(
-    createdResumeId,
-    1,
-    {
-      enabled: !!createdResumeId,
-      refetchInterval: (query) => {
-        const status = query.state.data?.status?.toUpperCase();
-        if (!status || status === 'QUEUED' || status === 'PROCESSING') {
-          return 3000;
-        }
-        return false;
-      },
-      retry: 2,
-    }
-  );
-  const generationStatus = versionData?.status;
-  const normalizedStatus = generationStatus?.toUpperCase();
-  const isGenerating =
-    createdResumeId &&
-    (!normalizedStatus ||
-      normalizedStatus === 'QUEUED' ||
-      normalizedStatus === 'PROCESSING');
-  const isGenerationFailed = normalizedStatus === 'FAILED';
-  const isGenerationSucceeded =
-    !!normalizedStatus &&
-    !['QUEUED', 'PROCESSING', 'FAILED'].includes(normalizedStatus);
 
   useEffect(() => {
     if (isGenerationSucceeded && !isRedirecting) {
@@ -276,20 +276,11 @@ export function CreateResumePage() {
         <div className="flex-1 flex flex-col items-center justify-center px-5">
           <div className="max-w-[390px] w-full">
             <div className="bg-white rounded-2xl p-8 text-center space-y-6">
-              {/* Animated icon */}
-              {isRedirecting ? (
-                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle2 className="w-8 h-8 text-green-500" />
-                </div>
-              ) : (
-                <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              )}
-
-              <h3>
+              <h2>
                 {isRedirecting
                   ? '생성이 완료되었습니다!'
-                  : 'AI가 프로젝트 요약을 생성 중입니다'}
-              </h3>
+                  : '이력서를 생성하는 중입니다.'}
+              </h2>
 
               {/* Progress bar */}
               <div className="space-y-2">
@@ -314,19 +305,19 @@ export function CreateResumePage() {
                   isActive={!createdResumeId && createResumeMutation.isPending}
                   isDone={!!createdResumeId}
                 />
-                <div className="w-6 h-px bg-gray-200" />
+                <div className="w-5 h-px mx-1 bg-gray-200" />
                 <StageStep
                   label="대기"
                   isActive={normalizedStatus === 'QUEUED'}
                   isDone={normalizedStatus === 'PROCESSING' || isRedirecting}
                 />
-                <div className="w-6 h-px bg-gray-200" />
+                <div className="w-5 h-px mx-1 bg-gray-200" />
                 <StageStep
                   label="분석"
                   isActive={normalizedStatus === 'PROCESSING'}
                   isDone={isRedirecting}
                 />
-                <div className="w-6 h-px bg-gray-200" />
+                <div className="w-5 h-px mx-1 bg-gray-200" />
                 <StageStep
                   label="완료"
                   isActive={isRedirecting}
