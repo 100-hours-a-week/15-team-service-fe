@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Bell, FileText, MessageSquare } from 'lucide-react';
 import { useNotificationContext } from '@/app/hooks/useNotificationSSE';
+import { useChatSheetStore } from '@/app/store/useChatSheetStore';
 
 const TYPE_CONFIG = {
   RESUME: {
@@ -34,7 +35,7 @@ const AUTO_DISMISS_MS = 7000;
  * - 배너 클릭으로 즉시 닫기 (X 버튼 없음 — 아이폰 스타일)
  */
 export function NotificationToastBanner() {
-  const [banner, setBanner] = useState(null); // { type, message, payload }
+  const [banner, setBanner] = useState(null); // { type, message, body, payload }
   const [visible, setVisible] = useState(false);
   const timerRef = useRef(null);
   const navigate = useNavigate();
@@ -47,16 +48,18 @@ export function NotificationToastBanner() {
   };
 
   useEffect(() => {
-    const unsubscribe = subscribeNotification(({ type, message, payload }) => {
-      // 이전 타이머 취소
-      if (timerRef.current) clearTimeout(timerRef.current);
+    const unsubscribe = subscribeNotification(
+      ({ type, message, body, payload }) => {
+        // 이전 타이머 취소
+        if (timerRef.current) clearTimeout(timerRef.current);
 
-      setBanner({ type, message, payload });
-      // 다음 tick에 visible=true로 슬라이드-다운 시작
-      requestAnimationFrame(() => setVisible(true));
+        setBanner({ type, message, body, payload });
+        // 다음 tick에 visible=true로 슬라이드-다운 시작
+        requestAnimationFrame(() => setVisible(true));
 
-      timerRef.current = setTimeout(dismiss, AUTO_DISMISS_MS);
-    });
+        timerRef.current = setTimeout(dismiss, AUTO_DISMISS_MS);
+      }
+    );
 
     return () => {
       unsubscribe();
@@ -89,6 +92,13 @@ export function NotificationToastBanner() {
       onClick={() => {
         if (banner.type === 'RESUME' && banner.payload?.resumeId) {
           navigate(`/resume/${banner.payload.resumeId}`);
+        } else if (banner.type === 'CHAT') {
+          useChatSheetStore
+            .getState()
+            .openSheet(
+              banner.payload?.chatroomId,
+              banner.payload?.chatroomName
+            );
         }
         dismiss();
       }}
@@ -110,6 +120,11 @@ export function NotificationToastBanner() {
         <p className="text-sm font-medium text-gray-900 leading-snug truncate">
           {banner.message ?? '새 알림이 도착했습니다.'}
         </p>
+        {banner.body && (
+          <p className="text-xs text-gray-500 leading-snug truncate">
+            {banner.body}
+          </p>
+        )}
       </div>
     </div>,
     container
