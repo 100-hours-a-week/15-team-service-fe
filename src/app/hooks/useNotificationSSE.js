@@ -84,6 +84,7 @@ export function useNotificationSSE(enabled = true) {
       };
 
       es.onerror = () => {
+        if (destroyed) return;
         es.close();
         eventSourceRef.current = null;
         setIsConnected(false);
@@ -117,10 +118,14 @@ export function useNotificationSSE(enabled = true) {
         try {
           const { data } = JSON.parse(event.data);
           setHasNew(true);
+          const isChatType = data.type === 'CHAT';
           notificationSubscribersRef.current.forEach((cb) =>
             cb({
               type: data.type,
-              message: data.payload?.message ?? '새 알림이 도착했습니다.',
+              message: isChatType
+                ? `${data.payload?.chatroomName ?? '채팅'} 채팅에서 ${data.payload?.senderName ?? '누군가'}님이 답장을 보냈습니다.`
+                : (data.payload?.message ?? '이력서 알림이 있습니다.'),
+              body: isChatType ? (data.payload?.messagePreview ?? '') : null,
               payload: data.payload,
             })
           );

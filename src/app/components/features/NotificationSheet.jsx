@@ -74,7 +74,9 @@ export function NotificationSheet() {
     if (item.type.startsWith('RESUME') && item.payload?.resumeId) {
       navigate(`/resume/${item.payload.resumeId}`);
     } else if (item.type === 'CHAT') {
-      useChatSheetStore.getState().openSheet();
+      useChatSheetStore
+        .getState()
+        .openSheet(item.payload?.chatroomId, item.payload?.chatroomName);
     }
   };
 
@@ -150,14 +152,13 @@ export function NotificationSheet() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm line-clamp-2">
-                        {item.payload?.message ??
-                          (item.type === 'RESUME'
-                            ? '이력서 알림'
-                            : '채팅 알림')}
+                        {item.type === 'CHAT'
+                          ? `${item.payload?.chatroomName ?? '채팅'} 채팅에서 ${item.payload?.senderName ?? '누군가'}님이 답장을 보냈습니다.`
+                          : (item.payload?.message ?? '이력서 알림')}
                       </p>
-                      {item.payload?.body && (
+                      {item.type === 'CHAT' && item.payload?.messagePreview && (
                         <p className="text-sm text-gray-500 truncate">
-                          {item.payload.body}
+                          {item.payload.messagePreview}
                         </p>
                       )}
                       <p className="text-xs text-gray-400 mt-1">
