@@ -50,6 +50,19 @@ export const fetchResumeById = async (resumeId) => {
   return response.data.data;
 };
 
+export const fetchResumeVersions = async (
+  resumeId,
+  { next = null, size = 50 } = {}
+) => {
+  const params = { size };
+  if (next) params.next = next;
+  const response = await apiClient.get(
+    API_CONFIG.ENDPOINTS.RESUME_VERSIONS(resumeId),
+    { params }
+  );
+  return response.data.data;
+};
+
 export const fetchResumeVersion = async (resumeId, versionNo) => {
   const response = await apiClient.get(
     API_CONFIG.ENDPOINTS.RESUME_VERSION(resumeId, versionNo)

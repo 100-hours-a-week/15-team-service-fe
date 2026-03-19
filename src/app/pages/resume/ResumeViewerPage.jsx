@@ -25,6 +25,7 @@ import { useResumeCreationStore } from '@/app/store/useResumeCreationStore';
 import {
   useResumeDetail,
   useResumeVersion,
+  useResumeVersions,
 } from '@/app/hooks/queries/useResumeQueries';
 import { useUserProfile } from '@/app/hooks/queries/useUserQuery';
 import { useSaveResumeVersion } from '@/app/hooks/mutations/useResumeMutations';
@@ -81,39 +82,6 @@ function formatVersionDate(isoStr) {
   if (diffDays === 1) return '어제';
   return `${diffDays}일 전`;
 }
-
-const MOCK_VERSIONS = [
-  {
-    versionNo: 5,
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    yamlContent:
-      'techStack:\n  - React\n  - TypeScript\n  - Tailwind CSS v4\nprojects:\n  - name: CommitMe\n    description:\n      - 이력서 관리 및 면접 준비 플랫폼 개발\n      - React Query로 서버 상태 관리\n    techStack: React, Node.js, PostgreSQL',
-  },
-  {
-    versionNo: 4,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    yamlContent:
-      'techStack:\n  - React\n  - TypeScript\n  - Tailwind CSS\nprojects:\n  - name: CommitMe\n    description:\n      - 이력서 관리 플랫폼 개발\n      - Zustand로 상태 관리\n    techStack: React, Node.js',
-  },
-  {
-    versionNo: 3,
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    yamlContent:
-      'techStack:\n  - React\n  - JavaScript\n  - CSS\nprojects:\n  - name: CommitMe\n    description:\n      - 이력서 관리 플랫폼 초기 개발\n    techStack: React, Express',
-  },
-  {
-    versionNo: 2,
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    yamlContent:
-      'techStack:\n  - React\n  - JavaScript\nprojects:\n  - name: Portfolio\n    description:\n      - 포트폴리오 사이트 제작\n    techStack: React',
-  },
-  {
-    versionNo: 1,
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    yamlContent:
-      'techStack:\n  - HTML\n  - CSS\n  - JavaScript\nprojects:\n  - name: Portfolio\n    description:\n      - 최초 포트폴리오 사이트 제작\n    techStack: Vanilla JS',
-  },
-];
 
 /**
  * Line-by-line diff between two YAML content strings.
@@ -180,7 +148,7 @@ export function ResumeViewerPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showChatbot, setShowChatbot] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState(null);
+  const [selectedVersionNo, setSelectedVersionNo] = useState(null);
   const [showDiffMode, setShowDiffMode] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   // Tracks which version was already initialized so refetch after save
@@ -188,6 +156,28 @@ export function ResumeViewerPage() {
   const initializedVersionRef = useRef(null);
 
   const resumeProfile = resumeDetail?.profile;
+
+  const { data: versionsData, isLoading: isLoadingVersions } =
+    useResumeVersions(resumeId, {
+      enabled: showVersionHistory,
+    });
+  const versions = versionsData?.data ?? [];
+
+  const { data: selectedVersionData, isLoading: isLoadingSelectedVersion } =
+    useResumeVersion(resumeId, selectedVersionNo, {
+      enabled: !!selectedVersionNo && selectedVersionNo !== currentVersionNo,
+    });
+
+  const selectedVersionYaml = useMemo(() => {
+    if (selectedVersionNo === currentVersionNo) return yamlContent;
+    if (!selectedVersionData?.content) return '';
+    return parseResumeContent(selectedVersionData.content);
+  }, [
+    selectedVersionData?.content,
+    selectedVersionNo,
+    currentVersionNo,
+    yamlContent,
+  ]);
 
   const {
     showPDFViewer,
@@ -312,23 +302,23 @@ export function ResumeViewerPage() {
   }, [blocker]);
 
   const handleVersionSelect = (version) => {
-    setSelectedVersion(version);
+    setSelectedVersionNo(version.versionNo);
     setShowDiffMode(false);
   };
 
   const diffLines = useMemo(
-    () => computeDiff(selectedVersion?.yamlContent || '', yamlContent),
-    [selectedVersion?.yamlContent, yamlContent]
+    () => computeDiff(selectedVersionYaml, yamlContent),
+    [selectedVersionYaml, yamlContent]
   );
 
   const handleRestoreVersion = () => {
     saveVersionMutation.mutate(
-      { resumeId, versionNo: selectedVersion.versionNo },
+      { resumeId, versionNo: selectedVersionNo },
       {
         onSuccess: () => {
           toast.success('선택한 버전을 최신으로 지정했습니다');
           setShowRestoreModal(false);
-          setSelectedVersion(null);
+          setSelectedVersionNo(null);
           setShowVersionHistory(false);
           setShowDiffMode(false);
         },
@@ -663,7 +653,7 @@ export function ResumeViewerPage() {
 
       {/* Version History List Sheet */}
       <Drawer.Root
-        open={showVersionHistory && !selectedVersion}
+        open={showVersionHistory && !selectedVersionNo}
         onOpenChange={(open) => {
           if (!open) setShowVersionHistory(false);
         }}
@@ -691,33 +681,46 @@ export function ResumeViewerPage() {
 
             {/* Version list */}
             <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
-              {MOCK_VERSIONS.map((version) => {
-                const isCurrent = version.versionNo === currentVersionNo;
-                return (
-                  <button
-                    key={version.versionNo}
-                    type="button"
-                    onClick={() => handleVersionSelect(version)}
-                    className="w-full text-left bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 rounded-lg p-4 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">
-                          버전 {version.versionNo}
-                        </span>
-                        {isCurrent && (
-                          <span className="text-xs font-medium text-primary bg-blue-50 px-2 py-0.5 rounded-full">
-                            현재
+              {isLoadingVersions ? (
+                [1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-14 bg-gray-100 rounded-lg animate-pulse"
+                  />
+                ))
+              ) : versions.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">
+                  저장된 버전이 없습니다.
+                </p>
+              ) : (
+                versions.map((version) => {
+                  const isCurrent = version.versionNo === currentVersionNo;
+                  return (
+                    <button
+                      key={version.versionNo}
+                      type="button"
+                      onClick={() => handleVersionSelect(version)}
+                      className="w-full text-left bg-white border border-gray-200 hover:bg-gray-50 active:bg-gray-100 rounded-lg p-4 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900">
+                            버전 {version.versionNo}
                           </span>
-                        )}
+                          {isCurrent && (
+                            <span className="text-xs font-medium text-primary bg-blue-50 px-2 py-0.5 rounded-full">
+                              현재
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {formatVersionDate(version.committedAt)}
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-400">
-                        {formatVersionDate(version.createdAt)}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </Drawer.Content>
         </Drawer.Portal>
@@ -725,9 +728,9 @@ export function ResumeViewerPage() {
 
       {/* Version Detail Sheet */}
       <Drawer.Root
-        open={showVersionHistory && !!selectedVersion}
+        open={showVersionHistory && !!selectedVersionNo}
         onOpenChange={(open) => {
-          if (!open) setSelectedVersion(null);
+          if (!open) setSelectedVersionNo(null);
         }}
       >
         <Drawer.Portal>
@@ -741,16 +744,16 @@ export function ResumeViewerPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedVersion(null)}
+                  onClick={() => setSelectedVersionNo(null)}
                   className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors mr-1"
                   aria-label="목록으로"
                 >
                   <X className="w-4 h-4 text-gray-500" strokeWidth={1.5} />
                 </button>
                 <Drawer.Title className="text-base font-semibold">
-                  버전 {selectedVersion?.versionNo}
+                  버전 {selectedVersionNo}
                 </Drawer.Title>
-                {selectedVersion?.versionNo === currentVersionNo && (
+                {selectedVersionNo === currentVersionNo && (
                   <span className="text-xs font-medium text-primary bg-blue-50 px-2 py-0.5 rounded-full">
                     현재
                   </span>
@@ -773,7 +776,16 @@ export function ResumeViewerPage() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5 min-h-0">
-              {showDiffMode ? (
+              {isLoadingSelectedVersion ? (
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="h-4 bg-gray-100 rounded animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : showDiffMode ? (
                 <div className="bg-gray-900 rounded-xl p-4 font-mono text-xs">
                   {diffLines.map(({ type, line, key }) => (
                     <div
@@ -798,14 +810,14 @@ export function ResumeViewerPage() {
               ) : (
                 <div className="bg-gray-900 rounded-xl p-4">
                   <pre className="text-sm text-green-400 font-mono whitespace-pre-wrap">
-                    {selectedVersion?.yamlContent}
+                    {selectedVersionYaml}
                   </pre>
                 </div>
               )}
             </div>
 
             {/* CTA */}
-            {selectedVersion?.versionNo !== currentVersionNo && (
+            {selectedVersionNo !== currentVersionNo && (
               <div className="px-5 py-4 border-t border-gray-200 flex-shrink-0">
                 <Button
                   variant="primary"

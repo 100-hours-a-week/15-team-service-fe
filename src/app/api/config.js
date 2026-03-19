@@ -31,6 +31,7 @@ export const API_CONFIG = {
     RESUME_PROFILE: '/resumes/profile',
     RESUME_PROFILE_BY_ID: (id) => `/resumes/${id}/profile`,
     RESUME_RENAME: (id) => `/resumes/${id}/name`,
+    RESUME_VERSIONS: (id) => `/resumes/${id}/versions`,
     RESUME_VERSION: (id, versionNo) => `/resumes/${id}/versions/${versionNo}`,
     RESUME_AI_CHAT: (id) => `/resumes/${id}/chat`,
     RESUME_EDIT: (id) => `/resumes/${id}`,

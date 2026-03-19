@@ -8,6 +8,7 @@ import {
   fetchResumes,
   fetchResumeById,
   fetchResumeVersion,
+  fetchResumeVersions,
   fetchResumeProfile,
 } from '@/app/api/endpoints/resumes';
 
@@ -22,6 +23,7 @@ export const resumeKeys = {
   detail: (id) => [...resumeKeys.details(), id],
   profiles: () => [...resumeKeys.all, 'profile'],
   profile: (id) => [...resumeKeys.profiles(), id],
+  versions: (id) => [...resumeKeys.all, 'versions', id],
 };
 
 /**
@@ -72,6 +74,15 @@ export function useResumeVersion(
     queryFn: () => fetchResumeVersion(resumeId, versionNo),
     enabled: enabled && !!resumeId && !!versionNo,
     refetchInterval,
+  });
+}
+
+export function useResumeVersions(resumeId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: resumeKeys.versions(resumeId),
+    queryFn: () => fetchResumeVersions(resumeId),
+    enabled: enabled && !!resumeId,
+    staleTime: 0,
   });
 }
 
