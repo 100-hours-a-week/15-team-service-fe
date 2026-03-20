@@ -12,8 +12,8 @@ export function useUpdateMasterProfile() {
 
   return useMutation({
     mutationFn: updateMasterProfile,
-    onSuccess: (data) => {
-      queryClient.setQueryData(masterProfileKeys.all, data);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterProfileKeys.all });
       toast.success('프로필 정보가 저장되었습니다.');
     },
     onError: () => {
