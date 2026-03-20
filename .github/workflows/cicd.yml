@@ -3,21 +3,21 @@ name: FrontEnd CI/CD
 on:
   pull_request:
     paths:
-      - "src/**"
-      - "index.html"
-      - "package.json"
-      - "package-lock.json"
-      - "vite.config.js"
-      - "postcss.config.mjs"
-      - "eslint.config.js"
-      - "jsconfig.json"
-      - ".github/workflows/cicd.yml"
+      - 'src/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'postcss.config.mjs'
+      - 'eslint.config.js'
+      - 'jsconfig.json'
+      - '.github/workflows/cicd.yml'
   push:
-    branches: [ "main", "dev" ]
+    branches: ['main', 'dev']
   workflow_dispatch:
     inputs:
       ci_run_id:
-        description: "Existing FrontEnd CI run-id to redeploy"
+        description: 'Existing FrontEnd CI run-id to redeploy'
         required: false
         type: string
 
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [ "24" ]
+        node-version: ['24']
 
     steps:
       # Step 1) Checkout
@@ -48,13 +48,13 @@ jobs:
 
       # Step 1.1) Trivy Secret Scan
       - name: Trivy Secret Scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
-          scan-type: "fs"
-          scan-ref: "."
-          scanners: "secret"
-          format: "table"
-          exit-code: "1"
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'secret'
+          format: 'table'
+          exit-code: '1'
 
       # Step 1.2) CodeQL Init (SAST 준비)
       - name: Initialize CodeQL
@@ -109,7 +109,7 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:javascript-typescript"
+          category: '/language:javascript-typescript'
 
       # Step 10) Upload test artifacts
       - name: Upload test artifacts
@@ -121,15 +121,14 @@ jobs:
             test-results/
             coverage/
           retention-days: 1
-          
-          
+
       - name: Upload dist
         uses: actions/upload-artifact@v4
         with:
-            name: web-dist
-            path: dist/
-            if-no-files-found: error
-            retention-days: 1
+          name: web-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
 
   #######################################
   ### 아래는 V1 빅뱅 인스턴스에 배포하는 코드임 ###
@@ -187,7 +186,7 @@ jobs:
   #         script_stop: true
   #         command_timeout: 15m
   #         envs: WEB_ROOT,NGINX_RELOAD,HEALTH_URL,HEALTH_TIMEOUT,HEALTH_INTERVAL,BRANCH_NAME
-          
+
   #         script: |
   #           set -euo pipefail
   #           WEB_ROOT="${WEB_ROOT:-/var/www/myweb}"
@@ -226,7 +225,7 @@ jobs:
   #             elapsed=$((elapsed + HEALTH_INTERVAL))
   #           done
   #           echo "[7/7] deploy done (release=$TS, branch=${BRANCH_NAME:-unknown})"
-  
+
   deploy-s3:
     name: Deploy (S3 + CloudFront)
     needs: fe-ci
@@ -288,7 +287,6 @@ jobs:
       - name: Deploy done
         run: echo "Deploy completed (S3 + CloudFront)"
 
-
   ###################################################
   ### 아래는 빅뱅 인스턴스에 이전 아티팩트 수동 배포하는 코드임 ###
   ###################################################
@@ -326,8 +324,8 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
-          source: "dist.tgz"
-          target: "/tmp"
+          source: 'dist.tgz'
+          target: '/tmp'
 
       - name: Deploy via SSH (reuse artifact)
         uses: appleboy/ssh-action@v1.0.3
