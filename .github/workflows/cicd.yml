@@ -48,7 +48,7 @@ jobs:
 
       # Step 1.1) Trivy Secret Scan
       - name: Trivy Secret Scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.34.1
         with:
           scan-type: "fs"
           scan-ref: "."
