@@ -134,6 +134,13 @@ export function InterviewSessionPage() {
   const submitAnswerMutation = useSubmitInterviewAnswer();
   const completeInterviewMutation = useCompleteInterview();
 
+  const clearQuestionFallbackTimer = useCallback(() => {
+    if (questionFallbackTimerRef.current) {
+      clearTimeout(questionFallbackTimerRef.current);
+      questionFallbackTimerRef.current = null;
+    }
+  }, []);
+
   // Close dialogs on unmount to prevent stale-open state on navigation back
   useEffect(() => {
     return () => {
@@ -408,13 +415,6 @@ export function InterviewSessionPage() {
       streamRef.current = null;
     }
   };
-
-  const clearQuestionFallbackTimer = useCallback(() => {
-    if (questionFallbackTimerRef.current) {
-      clearTimeout(questionFallbackTimerRef.current);
-      questionFallbackTimerRef.current = null;
-    }
-  }, []);
 
   const startQuestionFallbackTimer = useCallback(() => {
     clearQuestionFallbackTimer();
