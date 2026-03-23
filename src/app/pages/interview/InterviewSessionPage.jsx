@@ -441,10 +441,13 @@ export function InterviewSessionPage() {
     }, 5000);
   }, [numericInterviewId, clearQuestionFallbackTimer]);
 
-  const onQuestion = useCallback((data) => {
-    clearQuestionFallbackTimer();
-    dispatch({ type: 'QUESTION_RECEIVED', payload: data });
-  }, [clearQuestionFallbackTimer]);
+  const onQuestion = useCallback(
+    (data) => {
+      clearQuestionFallbackTimer();
+      dispatch({ type: 'QUESTION_RECEIVED', payload: data });
+    },
+    [clearQuestionFallbackTimer]
+  );
 
   const onFeedback = useCallback((data) => {
     if (data?.totalFeedback) {
