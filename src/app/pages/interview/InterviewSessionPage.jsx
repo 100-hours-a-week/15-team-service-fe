@@ -10,6 +10,7 @@ import {
   useSubmitInterviewAnswer,
   useCompleteInterview,
 } from '@/app/hooks/mutations/useInterviewMutations';
+import { fetchInterviewMessages } from '@/app/api/endpoints/interviews';
 import { toast } from '@/app/lib/toast';
 import {
   requestUploadUrl,
@@ -128,9 +129,17 @@ export function InterviewSessionPage() {
   // Ref to access latest messages in async handlers without stale closure
   const messagesRef = useRef(messages);
   const messagesEndRef = useRef(null);
+  const questionFallbackTimerRef = useRef(null);
 
   const submitAnswerMutation = useSubmitInterviewAnswer();
   const completeInterviewMutation = useCompleteInterview();
+
+  const clearQuestionFallbackTimer = useCallback(() => {
+    if (questionFallbackTimerRef.current) {
+      clearTimeout(questionFallbackTimerRef.current);
+      questionFallbackTimerRef.current = null;
+    }
+  }, []);
 
   // Close dialogs on unmount to prevent stale-open state on navigation back
   useEffect(() => {
@@ -138,8 +147,9 @@ export function InterviewSessionPage() {
       const { closeDialog } = useDialogStore.getState();
       closeDialog('interviewEnd');
       closeDialog('interviewComplete');
+      clearQuestionFallbackTimer();
     };
-  }, []);
+  }, [clearQuestionFallbackTimer]);
 
   const handleAnswer = () => {
     if (isTranscribing) return;
@@ -241,6 +251,7 @@ export function InterviewSessionPage() {
         answerInputType: 'TEXT',
         audioUrl: null,
       });
+      startQuestionFallbackTimer();
     } catch {
       toast.error('답변 전송에 실패했습니다.');
     }
@@ -307,6 +318,7 @@ export function InterviewSessionPage() {
         answerInputType: 'AUDIO',
         audioUrl: confirmed.s3Key,
       });
+      startQuestionFallbackTimer();
     } catch {
       toast.error('음성 처리에 실패했습니다.');
     } finally {
@@ -404,9 +416,38 @@ export function InterviewSessionPage() {
     }
   };
 
-  const onQuestion = useCallback((data) => {
-    dispatch({ type: 'QUESTION_RECEIVED', payload: data });
-  }, []);
+  const startQuestionFallbackTimer = useCallback(() => {
+    clearQuestionFallbackTimer();
+    questionFallbackTimerRef.current = setTimeout(async () => {
+      try {
+        const messages = await fetchInterviewMessages(numericInterviewId);
+        // 질문이 있고 답변이 없는 메시지 찾기 (가장 최근 질문)
+        const unanswered = messages
+          .filter((m) => m.turnNo && m.askedAt && !m.answer)
+          .sort((a, b) => b.turnNo - a.turnNo)[0];
+        if (unanswered) {
+          dispatch({
+            type: 'QUESTION_RECEIVED',
+            payload: {
+              turnNo: unanswered.turnNo,
+              question: unanswered.question,
+              askedAt: unanswered.askedAt,
+            },
+          });
+        }
+      } catch {
+        // fallback 실패 시 무시
+      }
+    }, 5000);
+  }, [numericInterviewId, clearQuestionFallbackTimer]);
+
+  const onQuestion = useCallback(
+    (data) => {
+      clearQuestionFallbackTimer();
+      dispatch({ type: 'QUESTION_RECEIVED', payload: data });
+    },
+    [clearQuestionFallbackTimer]
+  );
 
   const onFeedback = useCallback((data) => {
     if (data?.totalFeedback) {
